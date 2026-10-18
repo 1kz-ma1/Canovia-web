@@ -16,9 +16,11 @@ sys.dont_write_bytecode = True
 from integrated_release20_audit import BASE, ROOT, source, snapshot, parse_full_ledger
 from integrated_release20_diagnose import CANDIDATE, KIND, diagnose, projections
 from p0_mysql_metadata_grants_guard import verify_grants
+from integrated_release20_semantics import KIND as SEMANTIC_KIND, parse, semantic_diagnose
+from integrated_release20_semantic_fixtures import canonical_cases, structural_cases
 
 
-def rehearse(series, write_reference=False):
+def rehearse(series, write_reference=False, write_semantic_reference=False):
     name, port = {'8.0': ('canovia-integration-80', '13380'),
                   '8.4': ('canovia-integration-84', '13384')}[series]
     with tempfile.TemporaryDirectory(prefix='canovia-diagnostic-ci-') as tmp:
@@ -78,6 +80,13 @@ def rehearse(series, write_reference=False):
             diagnostic = dict(kind=KIND, candidate_sha=CANDIDATE, baseline_sha=BASE,
                               migration_seal=src['migration_seal'], engine=series,
                               baseline94=projections(baseline_raw))
+            supplement = (ROOT / 'scripts/sql/integrated_release20_semantic_metadata.sql').read_text()
+            semantic = dict(kind=SEMANTIC_KIND, candidate_sha=CANDIDATE, baseline_sha=BASE,
+                            migration_seal=src['migration_seal'], engine=series,
+                            baseline94=parse(sql(supplement), baseline_raw)[0])
+            semantic_reports = structural_cases(sql, metadata_sql, supplement)
+            semantic_reports.update(canonical_cases(sql, src, old_ledger, baseline_raw, reference,
+                                                     diagnostic, semantic, metadata_sql, supplement))
             reports = {}
 
             def check(label, ledger, raw, expected_result, expected_sections):
@@ -111,6 +120,12 @@ def rehearse(series, write_reference=False):
             if snapshot(full_raw) != reference['candidate114']:
                 raise ValueError()
             diagnostic['candidate114'] = projections(full_raw)
+            semantic['candidate114'] = parse(sql(supplement), full_raw)[0]
+            full_semantic = semantic_diagnose(src, full_ledger, full_raw, reference, diagnostic,
+                                             sql(supplement), semantic)
+            if full_semantic['result'] != 'REVIEW_REQUIRED' or any(s['classification'] != 'MATCH' for s in full_semantic['semantic_sections']):
+                raise ValueError()
+            semantic_reports['semantic_normal114'] = dict(result='REVIEW_REQUIRED')
             check('normal114', full_ledger, full_raw, 'REVIEW_REQUIRED', {})
             sql('ALTER TABLE learning_context_source_epochs DROP FOREIGN KEY learning_context_source_epochs_plan_id_foreign')
             check('missing_foreign_key114', full_ledger, sql(metadata_sql), 'BLOCK', {'foreign_key': 'COUNT_DIFFERENCE'})
@@ -127,6 +142,12 @@ def rehearse(series, write_reference=False):
                 sql('SELECT * FROM users LIMIT 0', narrow=True, deny=True)
                 sql('CREATE TRIGGER diagnostic_denied BEFORE UPDATE ON users FOR EACH ROW SET NEW.name=OLD.name', narrow=True, deny=True)
                 narrow_raw = sql(metadata_sql, narrow=True)
+                narrow_semantic = semantic_diagnose(src, full_ledger, narrow_raw, reference, diagnostic,
+                                                   sql(supplement, narrow=True), semantic)
+                if narrow_semantic['result'] != 'BLOCK' or any(s['classification'] != 'MATCH' for s in narrow_semantic['semantic_sections']):
+                    raise ValueError()
+                semantic_reports['narrow_semantic_visibility'] = dict(result='BLOCK', index_and_foreign_key_definitions_match=True,
+                                                                    trigger_visibility_proven=False)
                 result = check('trigger_invisible114', full_ledger, narrow_raw, 'BLOCK', {'trigger': 'COUNT_DIFFERENCE'})
                 if result['trigger_visibility'] != 'ABSENCE_OR_INVISIBILITY_NOT_DISTINGUISHABLE':
                     raise ValueError()
@@ -144,6 +165,43 @@ def rehearse(series, write_reference=False):
                     raise ValueError()
             finally:
                 sql("DROP USER IF EXISTS 'canovia_diagnostic_auditor'@'%'")
+            # Rehearse all 20 candidate migrations with historical aliases.
+            # Semantic equality at94 does NOT prove migration-name compatibility.
+            historical = Path(tmp) / 'historical-only'
+            historical.mkdir()
+            for migration in src['baseline']:
+                (historical / (migration + '.php')).write_bytes((migration_dir / (migration + '.php')).read_bytes())
+            for alias_transition in (False, True):
+                sql('DROP DATABASE canovia_p0_ci; CREATE DATABASE canovia_p0_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;')
+                run(['php', 'artisan', 'migrate', '--realpath', '--path=' + str(historical), '--force', '--no-interaction'], env=env)
+                sql('ALTER TABLE intelligence_decision_traces RENAME INDEX intelligence_decision_traces_domain_index TO diagnostic_alias_idx')
+                fk = next(row.split('\t') for row in baseline_raw.splitlines() if row.startswith('foreign_key\tintelligence_decision_traces\tintelligence_decision_traces_user_id_foreign\t'))
+                sql(f'ALTER TABLE intelligence_decision_traces DROP FOREIGN KEY intelligence_decision_traces_user_id_foreign, ADD CONSTRAINT diagnostic_alias_fk FOREIGN KEY (user_id) REFERENCES users(id) ON UPDATE {fk[7]} ON DELETE {fk[8]}')
+                if alias_transition:
+                    sql('ALTER TABLE mcp_linked_subjects RENAME INDEX mcp_linked_subjects_identity_fingerprint_unique TO diagnostic_identity_alias')
+                before_alias = sql(metadata_sql)
+                check_alias = semantic_diagnose(src, old_ledger, before_alias, reference, diagnostic, sql(supplement), semantic)
+                if check_alias['result'] != 'BLOCK' or any(s['classification'] != 'NAME_ONLY_DIFFERENCE' for s in check_alias['semantic_sections']):
+                    raise ValueError()
+                run(['php', 'artisan', 'migrate', '--realpath', '--path=' + str(migration_dir), '--force', '--no-interaction'], env=env)
+                after_alias, after_ledger = sql(metadata_sql), parse_full_ledger(sql(ledger_sql))
+                if set(after_ledger) != set(src['candidate']):
+                    raise ValueError()
+                result = semantic_diagnose(src, after_ledger, after_alias, reference, diagnostic, sql(supplement), semantic)
+                expected = {'index': 'SEMANTIC_DEFINITION_DIFFERENCE' if alias_transition else 'NAME_ONLY_DIFFERENCE',
+                            'foreign_key': 'NAME_ONLY_DIFFERENCE'}
+                if result['result'] != 'BLOCK' or {s['section']: s['classification'] for s in result['semantic_sections']} != expected:
+                    raise ValueError()
+                semantic_reports['upgrade_named_transition_alias' if alias_transition else 'upgrade_p0_aliases'] = dict(
+                    result='BLOCK', applied_count=114, classifications=expected)
+            semantic_path = ROOT / 'scripts/ci/integrated_release20_semantic_reference' / (series + '.json')
+            if write_semantic_reference:
+                if os.environ.get('GITHUB_ACTIONS') == 'true':
+                    raise ValueError()
+                semantic_path.parent.mkdir(exist_ok=True)
+                semantic_path.write_text(json.dumps(semantic, indent=2, sort_keys=True) + '\n')
+            elif json.loads(semantic_path.read_text()) != semantic:
+                raise ValueError()
             path = ROOT / 'scripts/ci/integrated_release20_diagnostic_reference' / (series + '.json')
             if write_reference:
                 if os.environ.get('GITHUB_ACTIONS') == 'true':
@@ -153,7 +211,7 @@ def rehearse(series, write_reference=False):
             elif json.loads(path.read_text()) != diagnostic:
                 raise ValueError()
             return dict(result='SYNTHETIC_TESTED', tooling_sha=head, candidate_sha=CANDIDATE,
-                        engine=series, fixtures=reports, reference_exact_hashes_unchanged=True,
+                        engine=series, fixtures=reports, semantic_fixtures=semantic_reports, reference_exact_hashes_unchanged=True,
                         real_aiven_connected=False, release_authorized=False)
 
 
@@ -161,9 +219,10 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--series', choices=('8.0', '8.4'), required=True)
     p.add_argument('--write-reference', action='store_true')
+    p.add_argument('--write-semantic-reference', action='store_true')
     args = p.parse_args()
     try:
-        result = rehearse(args.series, args.write_reference)
+        result = rehearse(args.series, args.write_reference, args.write_semantic_reference)
     except Exception:
         print(json.dumps({'result': 'BLOCK', 'code': 'DISPOSABLE_DIAGNOSTIC_FIXTURE_FAILED'}))
         return 2

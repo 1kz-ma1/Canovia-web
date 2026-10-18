@@ -100,7 +100,8 @@ class DiagnosisTest(unittest.TestCase):
 class DiagnosticCollectorTest(unittest.TestCase):
     def test_missing_new_approval_ci_and_wrong_target_never_query(self):
         for env in ({}, {'CANOVIA_RELEASE20_OPERATOR_APPROVED': 'YES', 'CANOVIA_P0_TARGET_VERIFIED': 'YES'},
-                    {'CI': 'true', 'CANOVIA_RELEASE20_DIAGNOSTIC_APPROVED': 'YES', 'CANOVIA_P0_TARGET_VERIFIED': 'YES'}):
+                    {'CANOVIA_RELEASE20_DIAGNOSTIC_APPROVED': 'YES', 'CANOVIA_P0_TARGET_VERIFIED': 'YES'},
+                    {'CI': 'true', 'CANOVIA_RELEASE20_SEMANTIC_APPROVED': 'YES', 'CANOVIA_P0_TARGET_VERIFIED': 'YES'}):
             with patch.dict(os.environ, env, clear=True), patch.object(collect, 'private_query') as query:
                 with self.assertRaises(ValueError):
                     collect.collect('a' * 40, diag.CANDIDATE)
@@ -130,7 +131,7 @@ class DiagnosticCollectorTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             ca = Path(tmp) / 'ca.pem'
             ca.write_text('synthetic')
-            env = dict(CANOVIA_RELEASE20_DIAGNOSTIC_APPROVED='YES', CANOVIA_P0_TARGET_VERIFIED='YES',
+            env = dict(CANOVIA_RELEASE20_SEMANTIC_APPROVED='YES', CANOVIA_P0_TARGET_VERIFIED='YES',
                        CANOVIA_RELEASE20_RELEASE_REF=diag.RELEASE_REF, CANOVIA_P0_LOGIN_PATH='synthetic',
                        CANOVIA_P0_DATABASE='synthetic', CANOVIA_P0_CA_FILE=str(ca))
             with patch.dict(os.environ, env, clear=True), patch.object(collect, 'preflight'), \

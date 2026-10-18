@@ -6,9 +6,11 @@ on:
     paths:
       - 'scripts/ci/integrated_release20*'
       - 'scripts/ci/integrated_release20_diagnostic_reference/**'
+      - 'scripts/ci/integrated_release20_semantic_reference/**'
       - 'scripts/ci/integrated_release20_reference/**'
       - 'scripts/ops/integrated_release20*'
       - 'scripts/sql/integrated_release20_metadata.sql'
+      - 'scripts/sql/integrated_release20_semantic_metadata.sql'
       - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
       - 'tests/ci/test_integrated_release20*'
       - 'database/migrations/**'
@@ -56,7 +58,7 @@ jobs:
             sleep 1
           done
           exit 1
-      - name: Normal, collation, definition, missing constraint, hidden trigger and partial DDL
+      - name: Strict and semantic negatives, names, composites and all20 alias upgrade
         env:
           SERIES: ${{ matrix.series }}
         run: python3 -B scripts/ci/integrated_release20_diagnostic_mysql.py --series "$SERIES"

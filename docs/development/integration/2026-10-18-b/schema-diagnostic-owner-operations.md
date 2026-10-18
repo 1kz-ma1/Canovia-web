@@ -1,5 +1,7 @@
 # B案：物理スキーマBLOCKの診断専用操作票 / Draft・NO-GO
 
+**旧tooling `dbe3b11c…` の操作記録。** #791の後続HEADはIndex/FK意味比較を追加して承認範囲が変わるため、新しい[意味比較用の操作票](constraint-semantics-owner-operations.md)を優先する。以下の旧承認変数だけでは新版の実接続を開始できない。
+
 正本は [Issue #488](https://github.com/1kz-ma1/Canovia-web/issues/488) と [統合 #790](https://github.com/1kz-ma1/Canovia-web/pull/790)。2026-10-19 JST。
 固定候補 **`c09a8fc718c338f98a4045a4b5f2260c7571fdaa`** / **`release/2026-10-19-c09a8fc7`** は動かさない。
 オーナー提出の `applied_count=94 / mismatched_section_count=2 / PARTIAL_DDL_OR_UNEXPECTED_PHYSICAL_SCHEMA` は **BLOCKのまま**。本票の準備・CIは実Aiven再接続の承認でも、別候補の採用でもない。

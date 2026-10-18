@@ -18,7 +18,8 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / 'scripts/ci'))
 from integrated_release20_audit import git, outcome, source, parse_full_ledger, snapshot
-from integrated_release20_diagnose import CANDIDATE, RELEASE_REF, KIND, diagnose
+from integrated_release20_diagnose import CANDIDATE, RELEASE_REF, KIND
+from integrated_release20_semantics import KIND as SEMANTIC_KIND, semantic_diagnose
 from integrated_release20_collect import preflight as original_preflight, release_boundary
 from p0_mysql_metadata_grants_guard import verify_grants
 
@@ -30,7 +31,11 @@ ORIGINAL = [
 ADDITIONAL = [
     'scripts/ops/integrated_release20_diagnostic_collect.py', 'scripts/ci/integrated_release20_diagnose.py',
     'scripts/ci/integrated_release20_diagnostic_reference/8.0.json',
-    'scripts/ci/integrated_release20_diagnostic_reference/8.4.json']
+    'scripts/ci/integrated_release20_diagnostic_reference/8.4.json',
+    'scripts/ci/integrated_release20_semantics.py',
+    'scripts/sql/integrated_release20_semantic_metadata.sql',
+    'scripts/ci/integrated_release20_semantic_reference/8.0.json',
+    'scripts/ci/integrated_release20_semantic_reference/8.4.json']
 
 
 def preflight(tooling_sha, candidate_sha):
@@ -58,6 +63,11 @@ def preflight(tooling_sha, candidate_sha):
                 or ref['migration_seal'] != src['migration_seal'] or ref['baseline_sha'] != exact['baseline_sha']
                 or any(ref[stage]['physical'] != exact[stage] for stage in ('baseline94', 'candidate114'))):
             raise ValueError()
+        sem = json.loads((ROOT / 'scripts/ci/integrated_release20_semantic_reference' / (series + '.json')).read_text())
+        if (sem['kind'] != SEMANTIC_KIND or sem['candidate_sha'] != candidate_sha or sem['engine'] != series
+                or sem['migration_seal'] != src['migration_seal'] or sem['baseline_sha'] != exact['baseline_sha']
+                or any(sem[stage]['physical'] != exact[stage] for stage in ('baseline94', 'candidate114'))):
+            raise ValueError()
     return src
 
 
@@ -76,7 +86,7 @@ def private_query(args, sql):
 def collect(tooling_sha, candidate_sha):
     # A previous release/audit approval is deliberately NOT sufficient.
     if (os.environ.get('CI') == 'true' or os.environ.get('GITHUB_ACTIONS') == 'true'
-            or os.environ.get('CANOVIA_RELEASE20_DIAGNOSTIC_APPROVED') != 'YES'
+            or os.environ.get('CANOVIA_RELEASE20_SEMANTIC_APPROVED') != 'YES'
             or os.environ.get('CANOVIA_P0_TARGET_VERIFIED') != 'YES'):
         raise ValueError()
     src = preflight(tooling_sha, candidate_sha)
@@ -92,15 +102,22 @@ def collect(tooling_sha, candidate_sha):
     args = ['mysql', '--no-defaults', '--login-path=' + login, '--ssl-mode=VERIFY_IDENTITY',
             '--ssl-ca=' + str(ca), '--database=' + database, '--connect-timeout=10',
             '--batch', '--raw', '--skip-column-names', '--skip-auto-rehash']
-    # Three queries only: grant proof, ledger, existing information_schema SQL.
+    # Three client invocations: grants, ledger, original metadata + SELECT-only
+    # semantic supplement. No application rows or permission expansion.
     if not verify_grants(private_query(args, 'SHOW GRANTS FOR CURRENT_USER()'), database):
         raise ValueError()
     ledger = parse_full_ledger(private_query(args, (ROOT / 'scripts/sql/p0_mysql_readonly_full_migration_ledger.sql').read_text()))
-    metadata = private_query(args, (ROOT / 'scripts/sql/integrated_release20_metadata.sql').read_text())
+    combined = private_query(args, (ROOT / 'scripts/sql/integrated_release20_metadata.sql').read_text()
+                             + '\n' + (ROOT / 'scripts/sql/integrated_release20_semantic_metadata.sql').read_text())
+    # Retain complete rows and their terminating newline. Unknown/malformed
+    # rows reach the original strict parser and fail closed, never discarded.
+    metadata = ''.join(line for line in combined.splitlines(keepends=True) if not line.startswith('semantic_'))
+    supplemental = ''.join(line for line in combined.splitlines(keepends=True) if line.startswith('semantic_'))
     series = snapshot(metadata)['engine']
     reference = json.loads((ROOT / 'scripts/ci/integrated_release20_reference' / (series + '.json')).read_text())
     diagnostic = json.loads((ROOT / 'scripts/ci/integrated_release20_diagnostic_reference' / (series + '.json')).read_text())
-    result = diagnose(src, ledger, metadata, reference, diagnostic)
+    semantic = json.loads((ROOT / 'scripts/ci/integrated_release20_semantic_reference' / (series + '.json')).read_text())
+    result = semantic_diagnose(src, ledger, metadata, reference, diagnostic, supplemental, semantic)
     result['metadata_visibility'] = 'NARROW_REFERENCES_AND_LEDGER_SELECT_CONFIRMED'
     return result
 
