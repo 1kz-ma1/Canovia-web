@@ -26,6 +26,7 @@ git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
 production_release_parent_not_in_main"""
         self.pilot_is_main_ancestor = False
         self.pilot_is_prod_descendant = True
+        self.pilot_triggers_production = False
 
     def __call__(self, *args):
         if args[0] == "rev-parse":
@@ -53,7 +54,14 @@ production_release_parent_not_in_main"""
         if args[0] == "diff":
             return self.diff
         if args[0] == "show":
-            return self.main_policy
+            sha, path = args[1].split(":", 1)
+            if sha == audit.MAIN:
+                return self.main_policy
+            if sha == audit.PILOT:
+                if self.pilot_triggers_production:
+                    return "on:\n  pull_request:\n    branches: [production]\n  push:\n    branches:\n      - production\n"
+                return "on:\n  pull_request:\n    branches: [main]\n  push:\n    branches:\n      - fix/testing\n"
+            raise AssertionError(args)
         raise AssertionError(args)
 
 
@@ -77,8 +85,16 @@ class ApLegacyReleaseBridgeReviewTests(unittest.TestCase):
         self.assertFalse(v["candidate_is_main_ancestor"])
         self.assertFalse(v["candidate_has_release_branch_name"])
         self.assertEqual(
-            sorted(audit.REQUIRED_CHECK_WORKFLOWS),
+            ["Production promotion contract"],
             v["required_check_workflow_files_missing_on_candidate"],
+        )
+        self.assertEqual(
+            sorted(audit.REQUIRED_CHECK_WORKFLOWS),
+            v["required_check_contexts_not_runnable_on_production_pr"],
+        )
+        self.assertEqual(
+            sorted(audit.REQUIRED_CHECK_WORKFLOWS),
+            v["required_check_contexts_not_runnable_on_production_push"],
         )
 
     def test_unreviewed_main_or_pilot_sha_blocks(self):
@@ -147,6 +163,37 @@ class ApLegacyReleaseBridgeReviewTests(unittest.TestCase):
         self.assertEqual("REVIEW_REQUIRED", v["result"])
         self.assertTrue(v["candidate_is_main_ancestor"])
         self.assertEqual([], v["required_check_workflow_files_missing_on_candidate"])
+        self.assertEqual(
+            sorted(audit.REQUIRED_CHECK_WORKFLOWS),
+            v["required_check_contexts_not_runnable_on_production_pr"],
+        )
+        self.assertFalse(v["production_release_authorized"])
+
+    def test_triggers_are_real_production_event_branches_not_incidental_text(self):
+        false_positive = (
+            "on:\n  pull_request:\n    branches: [main]\n"
+            "    paths:\n      - 'docs/production.md'\n"
+            "  push:\n    branches:\n      - feature/production-docs\n"
+        )
+        self.assertFalse(audit.triggers_production(false_positive, "pull_request"))
+        self.assertFalse(audit.triggers_production(false_positive, "push"))
+        self.assertTrue(audit.triggers_production(
+            "on:\n  pull_request:\n    branches: [main, production]\n", "pull_request"
+        ))
+        self.assertTrue(audit.triggers_production(
+            "on:\n  push:\n    branches:\n      - main\n      - production\n", "push"
+        ))
+
+    def test_even_active_production_triggers_are_not_a_release_go(self):
+        self.repo.pilot_triggers_production = True
+        self.repo.files.update(
+            (audit.PILOT, path)
+            for path in set(audit.REQUIRED_CHECK_WORKFLOWS.values())
+        )
+        v = self.check()
+        self.assertEqual("REVIEW_REQUIRED", v["result"])
+        self.assertEqual([], v["required_check_contexts_not_runnable_on_production_pr"])
+        self.assertEqual([], v["required_check_contexts_not_runnable_on_production_push"])
         self.assertFalse(v["production_release_authorized"])
         self.assertFalse(v["independent_backup_restore_verified"])
 
