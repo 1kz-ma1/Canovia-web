@@ -72,6 +72,10 @@ def evaluate(env: dict[str, str]) -> dict:
             and env.get("APP_DEBUG", "").lower() == "false",
             "PRODUCTION_MODE_NOT_CONFIRMED")
     require(env.get("DB_CONNECTION") == "mysql", "PRODUCTION_MYSQL_NOT_CONFIRMED")
+    # Laravel DB_URL may supersede the individual mysql settings; no predeploy
+    # shape-only success when a separate, uninspected URL could retarget data.
+    require(not env.get("DB_URL") and not env.get("DATABASE_URL"),
+            "DATABASE_URL_PRECEDENCE_NEEDS_SEPARATE_AUDIT")
 
     app_url = env.get("APP_URL", "")
     issuer = env.get("CANOVIA_MCP_OAUTH_ISSUER", "")
