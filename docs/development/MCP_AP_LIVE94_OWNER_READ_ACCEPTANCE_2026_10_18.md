@@ -45,3 +45,32 @@ Decision required before shipping:
 ## 5. Current decision
 
 **Keep Draft/HOLD.** No production branch updates, Render or Auth0 settings, Aiven operations, real user-plan reads, billing or public roadmap release labels are authorized by this document. Existing plans and data remain unchanged.
+
+
+## 6. Latest synthetic OAuth negative-path acceptance (2026-10-18)
+
+The Live94 branch now includes additional Laravel HTTP/DB tests. These are **synthetic**—they neither contact the actual production Auth0 tenant nor prove a real account is connected.
+
+1. **Wrong callback issuer**: The callback consumes its one-time OAuth state, rejects a mismatched RFC 9207 `iss`, does not exchange a code for a local link, and rejects subsequent replay of the same state.
+2. **Wrong Canovia owner**: An ordinary account outside the server-side allowlist cannot initiate the owner-only AP account-link flow.
+3. **Plan changed after callback**: If a previously private Study Plan becomes collaborative after external re-verification but before the final owner confirmation, no grant is created; retrying that one-time confirmation after restoring private status still cannot create a grant.
+4. **Subject unlink**: An existing, otherwise valid ChatGPT bearer that read the approved owner Plan is denied once the local external subject has been revoked and all its grants revoked. No token renewal or expiry is needed.
+5. Original synthetic positive acceptance remains: explicit GitHub PKCE link confirmation -> fresh per-Plan PKCE consent confirmation -> owner-only overview read -> grant revoke -> same-token denial. Both disposable MySQL 8.0/8.4 and SQLite are covered by the existing workflows.
+
+## 7. Real Auth0 / ChatGPT operator acceptance packet (not yet executable in production)
+
+**Before starting:** exact immutable Web release SHA, 94-migration real Aiven ledger/physical-schema operator check, restore method, GitHub ruleset bootstrap, effective Render settings, secure real Auth0 tenant/client setup and separate deployment/enablement owner GO must all be accepted. Do not use the old isolated staging database for private user data.
+
+| Test order | Required observation (no raw IDs/tokens in PR or chat) | Must stop if |
+| --- | --- | --- |
+| OFF smoke | Ordinary Canovia sign-in, existing Plan/Task, session, CSRF, Mac Safari and iPhone WebView operate normally; external MCP discovery and reads are unavailable. | Site/session/UI regression or unexpected MCP exposure |
+| Auth0 issuer/client probe | Real Auth0 issuer, resource, scoped audience, GitHub-only social identity, distinct confidential Link client and issued ChatGPT CIMD internal client identity were independently verified. Same immutable `iss+sub` across clients. | Only email matched; third-party client claim unknown or scope/audience wrong |
+| No-grant deny | Valid third-party bearer, exact owner Plan ID, no active Plan approval: MCP returns denied. Non-owner, Development Plan, collaborative/public Plan and Task scope all denied. | Any private payload visible before grant |
+| Owner confirmation | Same logged-in Canovia actor explicitly links external ID, chooses one private Study Plan, passes fresh S256/issuer proof and final CSRF confirmation; only one-day `overview` grant exists. | Silent approval, stale callback, missing fingerprint match or grant on different Plan |
+| One bounded read | Actual ChatGPT session reads only the owner-entered exact Plan ID, displaying title and recorded deadline but no Task, score, practice, evidence, profile or credential data. | Wrong owner/Plan, unexpected fields or cannot prove client binding |
+| Same-token revocation | Revoke grant, then try same still-valid bearer: denied. Separately unlink the subject: all related grants revoked, same bearer denied. | Revocation requires waiting for token expiry, grants silently revive |
+| Emergency OFF | Disable through separately approved operator control, verify discovery/tool are denied and existing user data retained. | Read still succeeds or normal Canovia use breaks |
+
+**Evidence format:** record only the tested release SHA, test category, `PASS / FAIL / NOT_RUN`, coarse timestamp and sanitized response code / predeclared event identifier. The operator must never paste OAuth code, callback URL query, `state`, access token, cookies, GitHub subject, account IDs, Plan titles or private Aiven records into ChatGPT/GitHub/CI artifacts.
+
+**Current outcome:** all live acceptance items remain `NOT_RUN`; Draft #785 and production remain on HOLD. Synthetic CI is not release approval.
