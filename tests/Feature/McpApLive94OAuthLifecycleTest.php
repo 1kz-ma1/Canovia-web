@@ -233,4 +233,47 @@ final class McpApLive94OAuthLifecycleTest extends TestCase
         Http::assertSentCount(1);
     }
 
+
+    public function test_verified_consent_does_not_survive_plan_visibility_change(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $plan = Plan::query()->create([
+            'user_id' => $owner->id,
+            'owner_token' => Str::random(64),
+            'public_slug' => (string) Str::uuid(),
+            'title' => 'Private AP plan',
+            'category' => '資格学習',
+            'priority' => 1,
+            'priority_mode' => 'manual',
+            'start_date' => today(),
+            'deadline' => today()->addDays(14),
+            'is_public' => false,
+            'is_collaborative' => false,
+        ]);
+
+        $this->actingAs($owner);
+        $link = $this->begin(route('auth.account.mcp_link.start'));
+        $this->finishOAuthRedirect($link['state']);
+        $this->post(route('auth.account.mcp_link.confirm'))
+            ->assertRedirect(route('auth.account'));
+
+        $consent = $this->begin(
+            route('auth.account.mcp_plan_consent.start', ['plan' => $plan->id]),
+            ['scope' => 'overview', 'duration_days' => 1]
+        );
+        $this->finishOAuthRedirect($consent['state']);
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $plan->forceFill(['is_collaborative' => true])->save();
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+
+        $plan->forceFill(['is_collaborative' => false])->save();
+        $this->post(route('auth.account.mcp_plan_consent.confirm'))
+            ->assertRedirect(route('auth.account'));
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+    }
+
 }
