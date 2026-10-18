@@ -7,10 +7,14 @@ from pathlib import Path
 import subprocess
 import time
 
+ROOT = Path(__file__).resolve().parents[2]
+
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--artifacts', type=Path, required=True)
 parser.add_argument('--series', choices=['8.0', '8.4', 'all'], default='all')
 args = parser.parse_args()
+subprocess.run(['git', '-C', str(ROOT), 'diff', '--quiet', 'HEAD'], check=True)
+candidate = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
 out = args.artifacts.resolve()
 out.mkdir(parents=True, exist_ok=True)
 for series, name, port in [('8.0','canovia-integration-80','13380'), ('8.4','canovia-integration-84','13384')]:
@@ -49,7 +53,7 @@ for series, name, port in [('8.0','canovia-integration-80','13380'), ('8.4','can
                     dump_bytes=len(data),data_sha256=hashlib.sha256(before).hexdigest(),
                     trigger_sha256=hashlib.sha256(source_triggers).hexdigest(),
                     schema_sha256=hashlib.sha256(source_schema).hexdigest(),
-                    candidate_sha=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip(),
+                    candidate_sha=candidate,source_clean_verified=True,
                     elapsed_seconds=round(time.monotonic()-start,2),
                     scope='DISPOSABLE_LOGICAL_RESTORE_ONLY',aiven_backup_verified=False,release_authorized=False)
         (out/(name+'-restore.json')).write_text(json.dumps(result,indent=2)+'\n')
