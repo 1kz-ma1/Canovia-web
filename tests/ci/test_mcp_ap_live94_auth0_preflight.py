@@ -50,8 +50,18 @@ class OperatorPredeployTests(unittest.TestCase):
                       "credentials_or_identifiers_disclosed",
                       "network_or_database_access_performed"):
             self.assertFalse(d[field])
-        for value in healthy().values():
-            self.assertNotIn(value, json.dumps(d))
+        # Generic words like "production" legitimately appear in fixed
+        # verdict field names; only actual identifiers and secrets are private.
+        for name in (
+            "CANOVIA_MCP_OAUTH_ISSUER",
+            "CANOVIA_MCP_RESOURCE_URL",
+            "CANOVIA_MCP_ALLOWED_CLIENT_ID",
+            "CANOVIA_MCP_ACCOUNT_LINK_CLIENT_ID",
+            "CANOVIA_MCP_ACCOUNT_LINK_CLIENT_SECRET",
+            "CANOVIA_MCP_IDENTITY_FINGERPRINT_KEY",
+            "CANOVIA_MCP_AP_PILOT_OWNER_ID",
+        ):
+            self.assertNotIn(healthy()[name], json.dumps(d))
 
     def test_every_sensitive_mcp_flag_must_stay_off_for_first_deploy(self):
         for flag in checker.FLAGS:
