@@ -90,6 +90,19 @@ class OperatorPredeployTests(unittest.TestCase):
                 env[field] = value
                 self.assertEqual("BLOCK", checker.evaluate(env)["result"])
 
+    def test_db_url_precedence_must_get_separate_operator_audit(self):
+        for var in ("DB_URL", "DATABASE_URL"):
+            with self.subTest(var=var):
+                env = healthy()
+                env[var] = "mysql://private:do-not-print@different.invalid/other"
+                d = checker.evaluate(env)
+                self.assertEqual("BLOCK", d["result"])
+                self.assertIn("DATABASE_URL_PRECEDENCE_NEEDS_SEPARATE_AUDIT", d["codes"])
+                self.assertNotIn("private", json.dumps(d))
+        env = healthy()
+        env["DB_URL"] = ""
+        self.assertEqual("REVIEW_REQUIRED", checker.evaluate(env)["result"])
+
     def test_resource_origin_drift_and_untrusted_urls_denied(self):
         for app in (
             "http://fixture-canovia.example.com",
