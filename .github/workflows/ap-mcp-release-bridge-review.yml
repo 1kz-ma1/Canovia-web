@@ -34,7 +34,7 @@ jobs:
           test "$(git rev-parse refs/remotes/origin/main)" = "4e3a6e97949602409ea337290c4d4f2052fda998"
           test "$(git rev-parse refs/remotes/origin/production)" = "15abdc9de6f24b5250fb255c579d1aa55facaf1a"
           observed="$(git rev-parse refs/remotes/origin/feature/ap-mcp-live94-auth0-20261018)"
-          if [ "$observed" != "7bc025f48e5146813223b290ee32d08803a27558" ]; then
+          if [ "$observed" != "ef3c814128cd6aa317ba7a23d073291f0dcc443b" ]; then
             echo "::warning::AP pilot branch moved; the report applies only to frozen SHA and NOT latest PR HEAD."
           fi
       - name: Inspect source-level exception blockers, not authorization
@@ -43,7 +43,7 @@ jobs:
           python3 scripts/ci/ap_mcp_release_bridge_review.py \
             --main-sha 4e3a6e97949602409ea337290c4d4f2052fda998 \
             --production-sha 15abdc9de6f24b5250fb255c579d1aa55facaf1a \
-            --pilot-sha 7bc025f48e5146813223b290ee32d08803a27558 \
+            --pilot-sha ef3c814128cd6aa317ba7a23d073291f0dcc443b \
             --pilot-branch feature/ap-mcp-live94-auth0-20261018 \
             > "$RUNNER_TEMP/ap-mcp-release-bridge.json"
           python3 - "$RUNNER_TEMP/ap-mcp-release-bridge.json" <<'PY'
