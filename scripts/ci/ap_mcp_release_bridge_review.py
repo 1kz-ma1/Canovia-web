@@ -15,7 +15,7 @@ from typing import Callable
 
 LIVE = "15abdc9de6f24b5250fb255c579d1aa55facaf1a"
 MAIN = "4e3a6e97949602409ea337290c4d4f2052fda998"
-PILOT = "d28899ddc647ec74fbe7c0e4d28967582a910067"
+PILOT = "389533459dc2d45d9c1318ebea27506e8ebfdb6a"
 PILOT_BRANCH = "feature/ap-mcp-live94-auth0-20261018"
 
 REQUIRED_CHECK_WORKFLOWS = {
