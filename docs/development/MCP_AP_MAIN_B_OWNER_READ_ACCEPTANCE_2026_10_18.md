@@ -7,6 +7,7 @@
 - 旧A案 #785/#786は94件限定のバックポート/政策検査であり、Bへcherry-pickしない。mainにはJWT/PKCE/同意・取消/Study/richer Contextが既にあるため再実装しない。
 - **再現した不足:** 既存mainのAP本人policyは `is_public` を見ず、既存grant付きStudy Planがpublicへ変わっても許可した。新しい合成テストは修正前に1件失敗。Bの共通policyでprivateかつnon-collaborativeの明示falseを要求し、欠けた属性も拒否する。新scope/公開/書込基盤は作らない。
 - 同意前・OAuth確認後から最終確定までのpublic化・既存grantでの4読取projectionを拒否する。DBロック下で権限を再確認し、public/共同化/owner変更がcommitした後の読取も拒否する。拒否時に内容やcontext_read監査を増やさない。
+- 通常Accountの折りたたみ内に**ログイン中の本人自身のCanovia IDだけ**を表示する。MCPがOFFでも本人は確認でき、allowlist設定のためにusers tableを直接読む必要を避ける。番号は権限でも外部IDでもない。別ユーザーの画面へ渡さず、実IDをGitHub/チャットへ記録しない。
 - 本人pilotのAccount案内をStudy入口へ向け、本人が確認中/有効な自分のPlanだけのIDを表示。AccountのPlan relationはdomain/public/collaborativeも明示取得して判定する。foreign/失効/public PlanのID案内を出さず、「保存＝ChatGPT接続済み」「常にMCP無効」という誤表示を避ける。通常DevelopmentとStagingの既存境界は維持。
 - A案はStudy-only tool一覧、mainはDevelopment tool定義も残る。**定義の存在はデータ許可ではない**。今回のpilotでDevelopment/他Plan grantを配らず、Auth0の本人限定入場も独立受入する。Study allowlistを共通Account連携全体の制限だと扱わない。
 

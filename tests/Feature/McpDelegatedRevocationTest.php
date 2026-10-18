@@ -42,6 +42,7 @@ final class McpDelegatedRevocationTest extends TestCase
             ->get(route('auth.account'))
             ->assertOk()
             ->assertSee('data-mcp-delegated-revocation', false)
+            ->assertSee('data-mcp-self-account-id>'.$user->id.'</code>', false)
             ->assertSee('現在、取り消し対象のPlan共有許可はありません。')
             ->assertSee('現在、外部IDの紐付け記録はありません。')
             ->assertDontSee('data-mcp-revoke-grant', false)
@@ -250,6 +251,8 @@ final class McpDelegatedRevocationTest extends TestCase
             ->assertSee('接続状態は未確認')
             ->assertDontSee($link->identity_fingerprint);
         $this->actingAs($other)->get(route('auth.account'))->assertOk()
+            ->assertSee('data-mcp-self-account-id>'.$other->id.'</code>', false)
+            ->assertDontSee('data-mcp-self-account-id>'.$owner->id.'</code>', false)
             ->assertDontSee('SYNTHETIC_OWNER_PRIVATE_AP')
             ->assertDontSee('data-mcp-owner-plan-id', false)
             ->assertDontSee('次へ：Studyで共有する計画を選ぶ');

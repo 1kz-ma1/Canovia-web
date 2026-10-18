@@ -73,6 +73,11 @@
             </p>
         @endif
     @endif
+    <details class="mt-4 text-xs leading-6 text-slate-400" data-mcp-self-account-info>
+        <summary class="cursor-pointer text-slate-200">本人限定テストの設定に使うアカウント情報</summary>
+        <p class="mt-2">このCanoviaアカウントの本人ID：<code data-mcp-self-account-id>{{ $user->id }}</code></p>
+        <p>運用者が本人限定テストの対象を確認するためのIDです。Plan IDや外部サービスの本人IDとは異なり、この番号だけで共有は許可されません。</p>
+    </details>
     <details class="mt-4 text-xs leading-6 text-slate-400" data-mcp-owner-guide-troubleshooting>
         <summary class="cursor-pointer text-slate-200">接続に失敗したとき</summary>
         <p class="mt-2">
