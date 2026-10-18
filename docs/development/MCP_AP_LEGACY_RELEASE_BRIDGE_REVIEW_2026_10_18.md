@@ -9,7 +9,7 @@
 |---|---|
 | GitHub `main` | `4e3a6e97949602409ea337290c4d4f2052fda998`。通常の `release/*` 昇格規則が実装されている |
 | `production` / Render Live | `15abdc9de6f24b5250fb255c579d1aa55facaf1a`。別途 read-only Render確認。起動は `php artisan migrate --force` を実行 |
-| AP限定 `feature/ap-mcp-live94-auth0-20261018` | `995d554db480adce89175587c494f52d9949dfaa`。旧Live94から派生。合成JWT/OAuth、旧94 MySQL 8.0/8.4、ソース限定CI合格。本番実データには未接続 |
+| AP限定 `feature/ap-mcp-live94-auth0-20261018` | `d28899ddc647ec74fbe7c0e4d28967582a910067`。旧Live94から派生。合成JWT/OAuth、旧94 MySQL 8.0/8.4、ソース限定CI合格。本番実データには未接続 |
 | GitHub Ruleset | [Canovia Production Protection](https://github.com/1kz-ma1/Canovia-web/rules/24954459) active、merge-only、force push / 削除不可、bypass actorなし。次の5件必須 |
 
 GitHub `production` Rulesetで要求するcheck context:
@@ -42,3 +42,8 @@ GitHub `production` Rulesetで要求するcheck context:
 既存 `.github/workflows/production-promotion-policy.yml` の書き換え、GitHub `production` Ruleset/branch、Render、Aiven、Auth0 tenant設定、MCPフラグ、実データ、課金は一切変更しない。古いPR #513も保持する。
 
 **結論: 候補Aは機能合成テスト成功、配備ルートは依然としてHOLD。** いまの実用化スピードを優先しながらも、現状のrequired status checksは機械的に突破できないという事実を保存する。次のオーナー判断は「限定版の本番昇格例外を審査対象として採用するか」と「実DB/復旧の検証作業を承認するか」であり、どちらも自動GOにはならない。
+
+
+### 後続のセキュリティテストに伴う固定SHA更新
+
+元のAP候補PR #785に、別コミットで非owner紐付け拒否、OAuth issuer不一致時のstate再利用拒否、Plan共同化後の同意拒否、subject解除直後のbearer拒否テストが追加されたため、固定調査対象を `d28899ddc647ec74fbe7c0e4d28967582a910067` に更新した。CI実行中に同PRがさらに動いた場合はwarningを表示するが、**現在のブランチ最新HEADの受入とは見なさない**。レビュー結果は明示した固定SHAについてのみ成立し、今後の変更は再審査する。
