@@ -87,6 +87,26 @@ def run(series, artifacts, write_reference=False):
         command(['php', 'artisan', 'canovia:release-schema-ready'])
         upgraded = snapshot(sql(metadata_sql))
         new_ledger = parse_full_ledger(sql(ledger_sql))
+        command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'fences'])
+        # Independent ordinary upgrade: the review reference must also match
+        # a clean 94->114 execution, not merely the repaired failure scenario.
+        command(['docker', 'exec', '-e', 'MYSQL_PWD=ci-only-root-password', name,
+                 'mysql', '-uroot', '-e', 'DROP DATABASE canovia_p0_ci; CREATE DATABASE canovia_p0_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'])
+        command(['php', 'artisan', 'migrate', '--realpath', '--path=' + directory, '--force', '--no-interaction'])
+        command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'seed'])
+        command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'snapshot', seal])
+        if snapshot(sql(metadata_sql)) != baseline:
+            raise RuntimeError('Fresh baseline physical schema is not reproducible')
+        command(['php', 'artisan', 'migrate', '--force', '--no-interaction'])
+        if snapshot(sql(metadata_sql)) != upgraded:
+            raise RuntimeError('Forward repair and ordinary full upgrade physical schemas differ')
+        # verify expects the known recovery row; add the SAME synthetic row in
+        # the ordinary path, then compare every historical table independently.
+        sql("INSERT INTO learning_context_source_epochs (plan_id,epoch,last_mutation_kind) SELECT id,7,'synthetic_recovery_seal' FROM plans WHERE category='資格学習'")
+        command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'verify', seal])
+        command(['php', 'artisan', 'migrate', '--force', '--no-interaction'])
+        command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'verify', seal])
+        command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'fences'])
         reference = dict(kind='DISPOSABLE_SOURCE_REFERENCE_ONLY', baseline_sha=BASE,
                          migration_seal=src['migration_seal'], engine=series,
                          baseline94=baseline, candidate114=upgraded)
@@ -104,13 +124,13 @@ def run(series, artifacts, write_reference=False):
                                         (partial_ledger, partial_shape, 'BLOCK')]:
             if compare(src, ledger, shape, reference)['result'] != expected:
                 raise RuntimeError('Dedicated20 audit misclassified actual disposable state')
-        command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'fences'])
     image = target['Image']
     result = dict(series=series, version=version, image_id=image, base_sha=BASE, candidate_sha=candidate,
                   baseline_migrations=94, candidate_migrations=114, result='passed',
                   all_twenty_in_order=True, legacy_rows_retained=True, repeated_migration_passed=True,
                   committed_partial_ddl_detected=True, partial_replay_refused=True,
                   explicit_disposable_forward_recovery_passed=True,
+                  normal_and_recovered_schema_identical=True,
                   audit_reference_verified=not write_reference,
                   real_aiven_verified=False, physical_device_verified=False, release_authorized=False)
     (artifacts / f'mysql-{series}.json').write_text(json.dumps(result, indent=2) + '\n')
