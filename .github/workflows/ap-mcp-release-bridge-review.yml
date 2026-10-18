@@ -55,7 +55,13 @@ jobs:
           assert d["code"] == "EXCEPTION_BOOTSTRAP_REQUIRES_OWNER_REVIEW"
           assert d["candidate_is_main_ancestor"] is False
           assert d["candidate_has_release_branch_name"] is False
-          assert len(d["required_check_workflow_files_missing_on_candidate"]) == 5
+          assert d["required_check_workflow_files_missing_on_candidate"] == ["Production promotion contract"]
+          expected = {
+              "Production promotion contract", "workspace-resume", "migration-recovery",
+              "P0 schema integrity (MySQL 8.0)", "P0 schema integrity (MySQL 8.4)",
+          }
+          assert set(d["required_check_contexts_not_runnable_on_production_pr"]) == expected
+          assert set(d["required_check_contexts_not_runnable_on_production_push"]) == expected
           assert d["production_release_authorized"] is False
           assert d["github_required_status_checks_verified"] is False
           print("legacy AP release gap verified; production HOLD")
