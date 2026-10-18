@@ -34,10 +34,11 @@
         <p class="mt-2 text-xs leading-5 text-slate-400">
             認証プロバイダーで本人IDを再確認しました。
             以下の内容をCanoviaに保存するには、別途「許可を確定」を押してください。
-            保存してもMCPの直接読み取り機能はまだ有効になりません。
+            共有許可は、Canovia側のMCP読み取り設定とChatGPT側のOAuth接続が整った場合にだけ利用できます。
         </p>
         <div class="mt-3 min-w-0 rounded-xl border border-white/10 bg-slate-950/25 p-3 text-xs leading-6 text-slate-200">
             <p class="break-words">対象Plan：{{ $mcpConsentPlan->title }}</p>
+            <p>ChatGPTへ指定するPlan ID：<code>{{ $mcpConsentPlan->id }}</code>（このPlanだけが対象です）</p>
             <p>接続先：ChatGPT（承認対象クライアント）</p>
             <p>共有範囲：{{ $mcpVerifiedGrant['scope'] === 'learning_context' ? 'Learning Context Snapshot：学習Plan・進行中Task・反映済み演習集計・弱点傾向・暫定的な復習提案' : ($mcpVerifiedGrant['scope'] === 'study_progress' ? '学習Plan概要＋進行中Task＋反映済み演習の正答率・弱点集計' : ($mcpVerifiedGrant['scope'] === 'tasks' ? '概要＋進行中Task' : '概要のみ')) }}</p>
             <p>共有期間：{{ $mcpVerifiedGrant['duration_days'] === \App\Services\McpExplicitPlanConsentService::UNTIL_REVOKED ? '取り消すまで' : '承認から'.$mcpVerifiedGrant['duration_days'].'日' }}</p>

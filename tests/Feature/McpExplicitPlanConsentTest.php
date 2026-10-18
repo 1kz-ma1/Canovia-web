@@ -423,6 +423,34 @@ final class McpExplicitPlanConsentTest extends TestCase
         ));
     }
 
+    public function test_public_study_is_denied_before_oauth_and_if_visibility_changes_before_confirm(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id,
+            'canovia_mcp.study_read_enabled' => true]);
+        $study = $this->plan($owner, '資格学習');
+        $this->linked($owner);
+        $this->provider();
+        $study->update(['is_public' => true]);
+        $this->actingAs($owner)->post($this->startUrl($study), [
+            'scope' => 'overview', 'duration_days' => 1,
+        ])->assertNotFound();
+        Http::assertNothingSent();
+
+        $study->update(['is_public' => false]);
+        $q = $this->start($owner, $study, 'overview', 1);
+        $this->oauthCallback($q['state'])->assertRedirect();
+        $study->update(['is_public' => true]);
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('data-mcp-plan-consent-invalid', false)
+            ->assertDontSee('data-mcp-plan-consent-confirm', false);
+        $this->actingAs($owner)->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect();
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+        $study->update(['is_public' => false]);
+        $this->actingAs($owner)->post(route('auth.account.mcp_plan_consent.confirm'))->assertRedirect();
+        $this->assertDatabaseCount('mcp_delegated_grants', 0);
+    }
+
     public function test_ap_progress_scope_requires_separate_opt_in_and_fresh_oauth_confirmation(): void
     {
         $owner = User::factory()->create(['first_run_completed_at' => now()]);

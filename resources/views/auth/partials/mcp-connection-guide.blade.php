@@ -3,6 +3,8 @@
     $mcpIdentityRecorded = $mcpLinkedSubjects->total() > 0;
     $mcpLinkReady = app(\App\Services\McpOAuthAccountLinkConfiguration::class)->settings() !== null;
     $mcpConsentReady = app(\App\Services\McpExplicitPlanConsentService::class)->isEnabled();
+    $mcpStudyGuide = config('canovia_mcp.study_read_enabled') === true
+        && app(\App\Services\McpStudyPilotAccessPolicy::class)->allowsOwnerId((int) $user->id);
     $mcpReadEnabled = config('canovia_mcp.tools_enabled') === true
         && config('canovia_mcp.delegated_policy_enabled') === true
         && $mcpConsentReady;
@@ -38,7 +40,7 @@
             <li>
                 <strong>2. 計画と共有する情報を選ぶ</strong>
                 <span class="ml-1 text-slate-400">{{ $mcpHasCurrentConsentRecord ? '期間内の許可記録があります' : '許可記録なし／期限切れ' }}</span>
-                <p class="text-slate-400">Developmentの自分の計画から対象・範囲・期間を選び、改めて本人確認した後に承認します。概要だけの共有から始めることをおすすめします。</p>
+                <p class="text-slate-400">{{ $mcpStudyGuide ? 'Studyの自分の非公開・個人学習Plan' : 'Developmentの自分の計画' }}から対象・範囲・期間を選び、改めて本人確認した後に承認します。概要だけの共有から始めることをおすすめします。</p>
             </li>
             <li>
                 <strong>3. ChatGPT側でCanoviaを接続する</strong>
@@ -54,8 +56,8 @@
             </a>
         @elseif (! $mcpHasCurrentConsentRecord)
             <a class="btn-secondary mt-4 inline-flex min-h-11 items-center px-4 text-xs"
-                href="{{ route('workspace.development.index') }}" data-mcp-owner-guide-next-consent>
-                次へ：Developmentで共有する計画を選ぶ
+                href="{{ route($mcpStudyGuide ? 'workspace.study.index' : 'workspace.development.index') }}" data-mcp-owner-guide-next-consent>
+                次へ：{{ $mcpStudyGuide ? 'Study' : 'Development' }}で共有する計画を選ぶ
             </a>
         @elseif ($mcpReadEnabled)
             <p class="mt-3 text-xs leading-6 text-amber-100" data-mcp-owner-guide-next-chatgpt>
@@ -71,6 +73,11 @@
             </p>
         @endif
     @endif
+    <details class="mt-4 text-xs leading-6 text-slate-400" data-mcp-self-account-info>
+        <summary class="cursor-pointer text-slate-200">本人限定テストの設定に使うアカウント情報</summary>
+        <p class="mt-2">このCanoviaアカウントの本人ID：<code data-mcp-self-account-id>{{ $user->id }}</code></p>
+        <p>運用者が本人限定テストの対象を確認するためのIDです。Plan IDや外部サービスの本人IDとは異なり、この番号だけで共有は許可されません。</p>
+    </details>
     <details class="mt-4 text-xs leading-6 text-slate-400" data-mcp-owner-guide-troubleshooting>
         <summary class="cursor-pointer text-slate-200">接続に失敗したとき</summary>
         <p class="mt-2">
