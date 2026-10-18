@@ -21,6 +21,7 @@
 2. 現在の`production`と選択移植候補には **このpromotion-policyワークフロー自体が存在しない**。したがって`main`にある昇格規則や今回のソース検査が成功しただけでは、GitHub上の本番ブランチ保護・承認を満たしたとはみなせない。
 3. 旧Liveの `docker/render-start.sh` は本番起動のたび `php artisan migrate --force` を実行する。候補の0追加migrationは「実Aiven ledger一致」「既存テーブル実物一致」「起動時DDLなし」の証明にはならない。
 4. Render Webは現状 `main` 監視、Auto Deploy OFF。候補・GitHub`production`更新と、実際のRender Live反映は別の操作・別の所有者承認である。
+5. GitHub Ruleset [Canovia Production Protection](https://github.com/1kz-ma1/Canovia-web/rules/24954459) は2026-10-18のread-only API観測で `enforcement=active`、`production` 限定、force-push/削除禁止、merge-only PR、bypass actorsなし。必須チェックは `Production promotion contract`、`workspace-resume`、`migration-recovery`、`P0 schema integrity (MySQL 8.0)`、`P0 schema integrity (MySQL 8.4)`。**AP用のSource-Only CI/JWT/MySQL CIとは別の名前**であり、これらの成功は本番rulesetの必須チェックを満たした証拠ではない。古いproductionには当該 promotion workflow 定義がないため、候補配備前のbootstrap方針をownerが承認しない限り、必須チェックを一方的に取り除いたり代理のステータスを作らない。GitHub branch-protection REST endpointは接続権限不足で403だが、Ruleset GETは成功した。
 
 ## 狭い先行公開へ進む場合の別審査（まだ実装しない）
 
