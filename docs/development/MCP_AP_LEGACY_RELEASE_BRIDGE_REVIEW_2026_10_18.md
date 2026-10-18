@@ -9,7 +9,7 @@
 |---|---|
 | GitHub `main` | `4e3a6e97949602409ea337290c4d4f2052fda998`。通常の `release/*` 昇格規則が実装されている |
 | `production` / Render Live | `15abdc9de6f24b5250fb255c579d1aa55facaf1a`。別途 read-only Render確認。起動は `php artisan migrate --force` を実行 |
-| AP限定 `feature/ap-mcp-live94-auth0-20261018` | `389533459dc2d45d9c1318ebea27506e8ebfdb6a`。旧Live94から派生。合成JWT/OAuth、旧94 MySQL 8.0/8.4、ソース限定CI合格。本番実データには未接続 |
+| AP限定 `feature/ap-mcp-live94-auth0-20261018` | `7bc025f48e5146813223b290ee32d08803a27558`。旧Live94から派生。合成JWT/OAuth、旧94 MySQL 8.0/8.4、ソース限定CI合格。本番実データには未接続 |
 | GitHub Ruleset | [Canovia Production Protection](https://github.com/1kz-ma1/Canovia-web/rules/24954459) active、merge-only、force push / 削除不可、bypass actorなし。次の5件必須 |
 
 GitHub `production` Rulesetで要求するcheck context:
@@ -46,9 +46,14 @@ GitHub `production` Rulesetで要求するcheck context:
 
 ### 後続のセキュリティテストに伴う固定SHA更新
 
-元のAP候補PR #785に、別コミットで非owner紐付け拒否、OAuth issuer不一致時のstate再利用拒否、Plan共同化後の同意拒否、subject解除直後のbearer拒否テストが追加されたため、固定調査対象を `389533459dc2d45d9c1318ebea27506e8ebfdb6a` に更新した。CI実行中に同PRがさらに動いた場合はwarningを表示するが、**現在のブランチ最新HEADの受入とは見なさない**。レビュー結果は明示した固定SHAについてのみ成立し、今後の変更は再審査する。
+元のAP候補PR #785に、別コミットで非owner紐付け拒否、OAuth issuer不一致時のstate再利用拒否、Plan共同化後の同意拒否、subject解除直後のbearer拒否テストが追加されたため、固定調査対象を `7bc025f48e5146813223b290ee32d08803a27558` に更新した。CI実行中に同PRがさらに動いた場合はwarningを表示するが、**現在のブランチ最新HEADの受入とは見なさない**。レビュー結果は明示した固定SHAについてのみ成立し、今後の変更は再審査する。
 
 
 ### 本番用Auth0設定の事前診断（固定候補更新）
 
-AP実装候補の固定SHAを `389533459dc2d45d9c1318ebea27506e8ebfdb6a` に更新。旧94件スキーマを維持して、環境変数の型・OAuth発行者・正規MCP URL・別OAuth client・owner制限・OFF初期状態を秘密値非表示で診断するスクリプトを追加した。これは**operatorが実環境で実行した証拠ではなく、合成テスト成功**。実Auth0 token、実Canovia Plan、Aiven ledger/restoreは未検証。ブリッジの`production_release_authorized`は引き続き`false`固定。
+AP実装候補の固定SHAを `7bc025f48e5146813223b290ee32d08803a27558` に更新。旧94件スキーマを維持して、環境変数の型・OAuth発行者・正規MCP URL・別OAuth client・owner制限・OFF初期状態を秘密値非表示で診断するスクリプトを追加した。これは**operatorが実環境で実行した証拠ではなく、合成テスト成功**。実Auth0 token、実Canovia Plan、Aiven ledger/restoreは未検証。ブリッジの`production_release_authorized`は引き続き`false`固定。
+
+
+### 2026-10-18 旧94件・未適用0件ゲート追加
+
+APの固定候補を `7bc025f48e5146813223b290ee32d08803a27558` に更新。以前の環境構成診断に `DB_URL` / `DATABASE_URL` 優先順位によるターゲット混同を検出するSTOP条件を追加。さらに既存SELECT-only Aiven台帳チェックのparserを再利用する `scripts/ci/mcp_ap_live94_ledger_zero_pending.py` を追加した。94件がすべて適用済みでない場合（既知pendingが1件以上、未知migration名、破損など）はBLOCKとなる。**これは合成CIでの検査であり、実Aiven照合・物理schema・復元・release owner GOが完了したという意味ではない。**
