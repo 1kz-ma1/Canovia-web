@@ -14,7 +14,7 @@ final class McpOAuthAccountLinkProvider
 {
     public function __construct(
         private readonly McpOAuthAccountLinkConfiguration $configuration,
-        private readonly McpAccessTokenIntrospector $introspector,
+        private readonly McpExternalTokenVerifier $verifier,
     ) {}
 
     public function isProviderVerified(): bool
@@ -50,8 +50,11 @@ final class McpOAuthAccountLinkProvider
             && in_array('S256', $meta['code_challenge_methods_supported'], true)
             && is_array($meta['token_endpoint_auth_methods_supported'] ?? null)
             && in_array('client_secret_basic', $meta['token_endpoint_auth_methods_supported'], true)
-            && is_array($meta['scopes_supported'] ?? null)
-            && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $meta['scopes_supported'], true);
+            // Auth0 discovery lists OIDC scopes, not our custom API permission.
+            // Signed JWT validation still requires exact API scope and audience.
+            && ($this->verifier->mode() === 'auth0_jwt'
+                || (is_array($meta['scopes_supported'] ?? null)
+                    && in_array(McpProtectedResourceConfiguration::READ_SCOPE, $meta['scopes_supported'], true)));
     }
 
     public function authorizationUrl(string $state, string $challenge): ?string
@@ -63,7 +66,7 @@ final class McpOAuthAccountLinkProvider
             return null;
         }
 
-        return $settings['authorize'].'?'.http_build_query([
+        $params = [
             'response_type' => 'code',
             'client_id' => $settings['client_id'],
             'redirect_uri' => $settings['redirect'],
@@ -72,7 +75,16 @@ final class McpOAuthAccountLinkProvider
             'state' => $state,
             'code_challenge' => $challenge,
             'code_challenge_method' => 'S256',
-        ], '', '&', PHP_QUERY_RFC3986);
+        ];
+        if ($this->verifier->mode() === 'auth0_jwt') {
+            // Auth0 custom API token audience. Also retain the pinned resource.
+            $params['audience'] = $settings['resource'];
+        }
+        if ($this->configuration->githubOnlyEnabled()) {
+            $params['connection'] = 'github';
+            $params['prompt'] = 'login';
+        }
+        return $settings['authorize'].'?'.http_build_query($params, '', '&', PHP_QUERY_RFC3986);
     }
 
     public function exchangeAndVerify(string $code, string $verifier): ?McpVerifiedTokenPrincipal
@@ -116,9 +128,14 @@ final class McpOAuthAccountLinkProvider
             return null;
         }
 
-        // The introspection endpoint independently checks active, issuer,
-        // subject, exact resource audience, linking-client ID and read scope.
-        // The token is never stored or returned to a browser.
-        return $this->introspector->verifyAccountLink($body['access_token']);
+        // Only a cryptographically verified first-party token may bind the
+        // Canovia session; GitHub selection in the URL is not subject proof.
+        $principal = $this->verifier->verifyAccountLink($body['access_token']);
+        if ($principal === null
+            || ($this->configuration->githubOnlyEnabled()
+                && preg_match('/\\Agithub\\|[0-9]{1,20}\\z/D', $principal->subject) !== 1)) {
+            return null;
+        }
+        return $principal;
     }
 }

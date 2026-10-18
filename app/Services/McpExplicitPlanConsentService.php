@@ -22,6 +22,7 @@ final class McpExplicitPlanConsentService
         private readonly McpOAuthAccountLinkConfiguration $linkConfiguration,
         private readonly McpDelegatedIdentityFingerprintService $fingerprints,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly McpStudyPilotAccessPolicy $pilot,
     ) {}
 
     public function isEnabled(): bool
@@ -30,6 +31,11 @@ final class McpExplicitPlanConsentService
         $resource = config('canovia_mcp.resource_url');
 
         return config('canovia_mcp.plan_consent_enabled') === true
+            && (config('canovia_mcp.ap_pilot_enabled') !== true
+                || (config('canovia_mcp.study_read_enabled') === true
+                    && config('app.env') !== 'staging'
+                    && $this->pilot->configured()
+                    && $this->linkConfiguration->githubOnlyEnabled()))
             && $this->linkConfiguration->settings() !== null
             && is_string($client) && $client !== ''
             && is_string($resource) && $resource !== ''
@@ -42,6 +48,20 @@ final class McpExplicitPlanConsentService
             && (int) $plan->user_id === (int) $actor->id
             && ! (bool) $plan->is_collaborative
             && $this->profiles->forPlan($plan)->key === 'development';
+    }
+
+    public function isEligibleMcpPlanOwner(User $actor, Plan $plan): bool
+    {
+        if (config('canovia_mcp.ap_pilot_enabled') === true) {
+            return config('canovia_mcp.study_read_enabled') === true
+                && config('app.env') !== 'staging'
+                && (int) $plan->user_id === (int) $actor->id
+                && ! (bool) $plan->is_collaborative
+                && $this->profiles->forPlan($plan)->key === 'study'
+                && $this->pilot->allowsPlan($plan);
+        }
+
+        return $this->isPersonalDevelopmentOwner($actor, $plan);
     }
 
     public function hasActiveLinkedIdentity(User $actor): bool
@@ -71,6 +91,10 @@ final class McpExplicitPlanConsentService
 
     public function isScopeAndDurationAllowed(string $scope, int $days): bool
     {
+        if (config('canovia_mcp.ap_pilot_enabled') === true) {
+            return $scope === 'overview' && $days === 1;
+        }
+
         return in_array($scope, self::SCOPES, true)
             && in_array($days, self::DURATIONS_DAYS, true);
     }
@@ -97,7 +121,7 @@ final class McpExplicitPlanConsentService
             $owner = User::query()->whereKey($actor->id)->lockForUpdate()->first();
             $plan = Plan::query()->whereKey($planId)->lockForUpdate()->first();
             if ($owner === null || $plan === null
-                || ! $this->isPersonalDevelopmentOwner($owner, $plan)) {
+                || ! $this->isEligibleMcpPlanOwner($owner, $plan)) {
                 return false;
             }
 
@@ -120,6 +144,22 @@ final class McpExplicitPlanConsentService
                 (string) config('canovia_mcp.resource_url'),
             );
             if ($clientFingerprint === null) {
+                return false;
+            }
+
+            // The one-owner pilot authorizes ONE study Plan at a time.
+            // The locked owner row serializes simultaneous consent requests.
+            // Existing active grants on other Plans MUST be revoked or expire
+            // before a different AP Plan can be consented.
+            if (config('canovia_mcp.ap_pilot_enabled') === true
+                && McpDelegatedGrant::query()
+                    ->where('user_id', $owner->id)
+                    ->where('client_resource_fingerprint', $clientFingerprint)
+                    ->where('plan_id', '!=', $plan->id)
+                    ->where('status', McpDelegatedGrant::STATUS_ACTIVE)
+                    ->whereNull('revoked_at')
+                    ->where('expires_at', '>', now())
+                    ->exists()) {
                 return false;
             }
 

@@ -18,8 +18,10 @@ final class McpDelegatedPlanAccessPolicy
 {
     public function __construct(
         private readonly McpProtectedResourceConfiguration $resource,
+        private readonly McpExternalTokenVerifier $verifier,
         private readonly McpDelegatedIdentityFingerprintService $fingerprints,
         private readonly PlanCategoryProfileService $profiles,
+        private readonly McpStudyPilotAccessPolicy $pilot,
     ) {}
 
     public function allows(
@@ -42,16 +44,30 @@ final class McpDelegatedPlanAccessPolicy
         Plan $plan,
         string $requestedScope = 'overview',
         bool $lockForRead = false,
+        string $requiredDomain = 'development',
     ): ?McpDelegatedGrant {
+        $isApPilot = config('canovia_mcp.ap_pilot_enabled') === true;
         if (config('canovia_mcp.delegated_policy_enabled') !== true
-            || config('canovia_mcp.token_introspection_enabled') !== true
             || ! $this->resource->isReady()
-            || ! in_array($requestedScope, ['overview', 'tasks'], true)) {
+            || ! in_array($requestedScope, ['overview', 'tasks'], true)
+            || ($isApPilot && (
+                $requiredDomain !== 'study'
+                || $requestedScope !== 'overview'
+                || config('canovia_mcp.study_read_enabled') !== true
+                || config('app.env') === 'staging'
+                || $this->verifier->mode() !== 'auth0_jwt'
+                || ! $this->pilot->configured()
+            ))
+            || (! $isApPilot && (
+                $requiredDomain !== 'development'
+                || $this->verifier->mode() !== 'introspection'
+            ))) {
             return null;
         }
 
         $now = now();
-        if ($principal->issuer !== config('canovia_mcp.oauth_issuer')
+        if (($isApPilot && preg_match('/\\Agithub\\|[0-9]{1,20}\\z/D', $principal->subject) !== 1)
+            || $principal->issuer !== config('canovia_mcp.oauth_issuer')
             || $principal->audience !== config('canovia_mcp.resource_url')
             || $principal->clientId !== config('canovia_mcp.allowed_client_id')
             || $principal->expiresAt <= $now->getTimestamp()
@@ -85,7 +101,8 @@ final class McpDelegatedPlanAccessPolicy
             || $plan->user_id === null
             || (int) $plan->user_id !== (int) $link->user_id
             || (bool) $plan->is_collaborative
-            || $this->profiles->forPlan($plan)->key !== 'development') {
+            || $this->profiles->forPlan($plan)->key !== $requiredDomain
+            || ($isApPilot && ! $this->pilot->allowsPlan($plan))) {
             return null;
         }
 
@@ -102,7 +119,8 @@ final class McpDelegatedPlanAccessPolicy
             ->when($lockForRead, fn ($query) => $query->lockForUpdate())
             ->first(['id', 'user_id', 'subject_link_id', 'scope']);
 
-        if ($grant === null || ! in_array($grant->scope, ['overview', 'tasks'], true)) {
+        if ($grant === null || ! in_array($grant->scope, ['overview', 'tasks'], true)
+            || ($isApPilot && $grant->scope !== 'overview')) {
             return null;
         }
 
