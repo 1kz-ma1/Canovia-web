@@ -1,0 +1,42 @@
+name: AP MCP owner-first source preflight
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/ci/mcp_ap_owner_first_inventory.py'
+      - 'tests/ci/test_mcp_ap_owner_first_inventory.py'
+      - '.github/workflows/mcp-ap-owner-first-preflight.yml'
+      - 'docs/development/MCP_AP_OWNER_FIRST_LEAN_RELEASE_2026_10_18.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-source-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Unit-test negative release-authorization controls
+        run: python3 -m unittest discover -s tests/ci -p 'test_mcp_ap_owner_first_inventory.py' -v
+      - name: Compare immutable old-Live and reviewed-main source snapshots
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/mcp_ap_owner_first_inventory.py \
+            --live 15abdc9de6f24b5250fb255c579d1aa55facaf1a \
+            --main 4e3a6e97949602409ea337290c4d4f2052fda998 \
+            > "$RUNNER_TEMP/mcp-ap-owner-first-source.json"
+          python3 - "$RUNNER_TEMP/mcp-ap-owner-first-source.json" <<'PY'
+          import json, sys
+          with open(sys.argv[1], encoding='utf-8') as f:
+              result = json.load(f)
+          assert result['status'] == 'BACKPORT_FEASIBILITY_REQUIRES_IMPLEMENTATION'
+          assert result['aiven_queried'] is False
+          assert result['candidate_zero_ddl_verified'] is False
+          assert result['production_release_authorized'] is False
+          print('SOURCE_INVENTORY_VALIDATED_RELEASE_NOT_AUTHORIZED')
+          PY
