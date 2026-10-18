@@ -36,6 +36,14 @@
             <p class="break-words text-sm font-semibold text-slate-100">
                 {{ $stillOwnsPlan ? $grant->plan->title : '以前のPlan（現在の所有者の情報は非表示）' }}
             </p>
+            @if ($stillOwnsPlan && $grant->revoked_at === null
+                && ($grant->expires_at === null || $grant->expires_at->isFuture())
+                && app(\App\Services\McpExplicitPlanConsentService::class)->isEligibleMcpPlanOwner($user, $grant->plan))
+                <p class="mt-1 text-xs text-slate-300" data-mcp-owner-plan-id>
+                    ChatGPTへ指定するPlan ID：<code>{{ $grant->plan_id }}</code>
+                    （この許可記録の対象です。接続成功の確認とは別です）
+                </p>
+            @endif
             <p class="mt-1 text-xs leading-5 text-slate-400">
                 対象：ChatGPT用の共有許可
                 ・範囲：{{ $grant->scope === 'learning_context' ? '学習Snapshot＋弱点傾向＋暫定提案' : ($grant->scope === 'study_progress' ? '学習概要＋Task＋演習集計' : ($grant->scope === 'tasks' ? '概要＋Task' : '概要のみ')) }}

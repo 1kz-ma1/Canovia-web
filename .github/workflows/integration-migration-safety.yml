@@ -9,6 +9,15 @@ on:
       - 'app/Console/Commands/CheckReleaseSchemaLedger.php'
       - 'scripts/ci/integration_mysql_upgrade.py'
       - 'scripts/ci/integration_upgrade_fixture.php'
+      - 'scripts/ci/integration_disposable_restore.py'
+      - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
+      - 'scripts/ci/integrated_release20_audit.py'
+      - 'scripts/ci/integrated_release20_reference/**'
+      - 'scripts/ops/integrated_release20_collect.py'
+      - 'scripts/sql/integrated_release20_metadata.sql'
+      - 'tests/ci/test_integrated_release20*'
+      - 'tests/Feature/IntegratedRelease20MigrationSafetyTest.php'
+      - 'database/migrations/**'
       - 'tests/Feature/ReleaseSchemaLedgerFenceTest.php'
       - 'tests/Feature/RenderStartupMigrationRetryV569Test.php'
       - '.github/workflows/integration-migration-safety.yml'
@@ -25,6 +34,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.4'
@@ -36,6 +47,8 @@ jobs:
           php artisan test tests/Feature/ReleaseSchemaLedgerFenceTest.php
           tests/Feature/RenderStartupMigrationRetryV569Test.php
           tests/Feature/McpIsolatedStagingBootstrapTest.php --colors=never
+      - run: php artisan test tests/Feature/IntegratedRelease20MigrationSafetyTest.php --colors=never
+      - run: python3 -m unittest discover -s tests/ci -p 'test_integrated_release20*.py' -v
   upgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -46,6 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - uses: shivammathur/setup-php@v2
@@ -74,6 +88,12 @@ jobs:
           SERIES: ${{ matrix.series }}
         run: >-
           python3 scripts/ci/integration_mysql_upgrade.py --series "$SERIES"
+          --artifacts "$RUNNER_TEMP/integration-upgrade"
+      - name: Restore synthetic data into an isolated schema and compare all structural constraints
+        env:
+          SERIES: ${{ matrix.series }}
+        run: >-
+          python3 scripts/ci/integration_disposable_restore.py --series "$SERIES"
           --artifacts "$RUNNER_TEMP/integration-upgrade"
       - uses: actions/upload-artifact@v4
         if: always()

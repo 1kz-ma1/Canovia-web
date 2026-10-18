@@ -10,6 +10,13 @@ SPEC.loader.exec_module(freeze)
 
 
 class FreezeManifestTest(unittest.TestCase):
+    def test_risk_queues_overlap_and_cover_shared_paths(self):
+        self.assertIn('database_migration_trigger', freeze.risk_areas('database/migrations/epoch.php'))
+        self.assertIn('authentication_oauth_session_csrf', freeze.risk_areas('app/Http/Controllers/McpOAuthPlanConsentController.php'))
+        self.assertIn('mcp_personal_plan_authorization', freeze.risk_areas('app/Http/Controllers/McpOAuthPlanConsentController.php'))
+        self.assertIn('actions_production_protection', freeze.risk_areas('.github/workflows/production-promotion-policy.yml'))
+        self.assertEqual(['shared_manual_review'], freeze.risk_areas('README.md'))
+
     def test_complete_delta_and_migration_identity_without_approval(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

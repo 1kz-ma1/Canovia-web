@@ -1,0 +1,370 @@
+{
+  "schema_version": 1,
+  "base_sha": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+  "candidate_sha": "4e3a6e97949602409ea337290c4d4f2052fda998",
+  "ahead_commits": 292,
+  "changed_path_count": 979,
+  "baseline_migration_count": 94,
+  "candidate_migration_count": 114,
+  "migration_changes": [
+    {
+      "path": "database/migrations/2026_10_12_010000_add_source_revision_to_development_activity_observations.php",
+      "change": "A",
+      "candidate_blob": "94850f1a6444c1f1addbf1edf7bbd138e7772360",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php",
+      "change": "A",
+      "candidate_blob": "9910fdf1cfbbcf24992cc1f889091f309f61c5b5",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_13_110000_add_authorization_epochs_to_collaborative_plans.php",
+      "change": "A",
+      "candidate_blob": "1b58f9a7be1a98529e3b8f2a17a3aea65e0bc37a",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "authentication_oauth_session_csrf"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_13_120000_enforce_authorization_epochs_in_database.php",
+      "change": "A",
+      "candidate_blob": "be18094f0e4db2dd1342c39465cfab31865e8ef3",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "authentication_oauth_session_csrf"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_13_130000_immutable_plan_member_binding.php",
+      "change": "A",
+      "candidate_blob": "c29ae11ce3c6113c1f0b7ef9e51f0178c1988b85",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_13_200000_add_recall_candidate_review_provenance.php",
+      "change": "A",
+      "candidate_blob": "452d165fe87b7fc26372fc2e4179428472c463c3",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_000100_allow_nonexpiring_mcp_grants.php",
+      "change": "A",
+      "candidate_blob": "9f951414b3387db27eb6050fb010a9a59bdd7daf",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "mcp_personal_plan_authorization"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_000200_preserve_historical_mcp_identity_links.php",
+      "change": "A",
+      "candidate_blob": "aa9443baeb8bd7b29f76fe7fedf2e26d200b8a3d",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "mcp_personal_plan_authorization"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_100000_create_private_file_cleanup_entries.php",
+      "change": "A",
+      "candidate_blob": "4328d639456f965fbd982fb8f205816721b94e4e",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "private_file_external_provider"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_120000_create_private_file_path_fences.php",
+      "change": "A",
+      "candidate_blob": "2a345798bf8878f30806d642c1a2d1987dd2cdf6",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "private_file_external_provider"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_130000_create_private_file_upload_intents.php",
+      "change": "A",
+      "candidate_blob": "8146dd91d98111803a5a88d246f55d4f5fc34ff5",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "private_file_external_provider"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_140000_create_private_file_generation_evidence.php",
+      "change": "A",
+      "candidate_blob": "cbea2199174b9ebc3e59839d0145f96c9cf28a04",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "private_file_external_provider"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_150000_create_private_file_write_attempts.php",
+      "change": "A",
+      "candidate_blob": "7dfc609c62445d19f581cd1a87ebff74c73dbad3",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "private_file_external_provider"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_154500_create_development_operational_profiles_table.php",
+      "change": "A",
+      "candidate_blob": "d99dd00bf467b19f42ef375a18b2e219a5144598",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_164000_create_development_operational_targets_table.php",
+      "change": "A",
+      "candidate_blob": "495442a9d936787d2ce1a9105e72f4317b96f595",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_185000_add_manual_service_check_to_development_operational_targets_table.php",
+      "change": "A",
+      "candidate_blob": "7312fbbb528c234e292be24a1625049d40983110",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_14_201000_add_storage_revision_fence_to_development_operational_records.php",
+      "change": "A",
+      "candidate_blob": "74ee778720276cef5848b898bd7ba469812c29e3",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence",
+        "private_file_external_provider"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_15_070000_create_mcp_study_result_proposals_table.php",
+      "change": "A",
+      "candidate_blob": "2be1be33d8e9cc20b385840f622ac768725ad4ae",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "mcp_personal_plan_authorization",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_15_110000_create_learning_context_watch_persistence.php",
+      "change": "A",
+      "candidate_blob": "43aca8eb958bcabae94fa3980857490f5cb72f0c",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    },
+    {
+      "path": "database/migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php",
+      "change": "A",
+      "candidate_blob": "1669b77798b8e76549d8333b920617e0ea7df839",
+      "baseline_blob": null,
+      "risk_areas": [
+        "database_migration_trigger",
+        "learning_development_intelligence"
+      ],
+      "dependency": "review against shared auth/session/publication contracts",
+      "owner_assignment": "PATH_CLASSIFICATION_REQUIRES_REVIEW",
+      "area": "Platform/DB",
+      "state": "SOURCE_ONLY",
+      "test": "exact-SHA MySQL 8.0/8.4 upgrade, retry and preservation",
+      "rollback": "forward recovery; never infer migration down safety",
+      "exposure": "OWNER_GATE"
+    }
+  ],
+  "risk_area_counts": {
+    "actions_production_protection": 111,
+    "authentication_oauth_session_csrf": 67,
+    "composer_docker_render_worker": 20,
+    "database_migration_trigger": 58,
+    "learning_development_intelligence": 495,
+    "mcp_personal_plan_authorization": 106,
+    "private_file_external_provider": 210,
+    "release_feature_entitlement": 56,
+    "shared_manual_review": 179,
+    "web_wkwebview_ui": 139
+  },
+  "production_pending_migrations": "UNKNOWN_REQUIRES_SEPARATE_OPERATOR_AUDIT",
+  "live_sha_verified": false,
+  "ci_verified": false,
+  "device_verified": false,
+  "release_authorized": false,
+  "verdict": "SOURCE_INVENTORY_ONLY_PRODUCTION_NO_GO",
+  "complete_manifest": "main-source-manifest.tsv"
+}
