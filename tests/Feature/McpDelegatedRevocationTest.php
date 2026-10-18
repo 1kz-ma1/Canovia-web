@@ -221,6 +221,47 @@ final class McpDelegatedRevocationTest extends TestCase
         $this->assertDatabaseCount('mcp_delegated_grants', 2);
     }
 
+    public function test_study_owner_guide_and_plan_id_are_scoped_to_the_eligible_owner(): void
+    {
+        $owner = User::factory()->create(['first_run_completed_at' => now()]);
+        $other = User::factory()->create(['first_run_completed_at' => now()]);
+        config([
+            'canovia_mcp.account_link_enabled' => true,
+            'canovia_mcp.account_link_client_id' => 'disposable-owner-link-client',
+            'canovia_mcp.account_link_client_secret' => str_repeat('s', 32),
+            'canovia_mcp.account_link_metadata_url' => 'https://auth.example.test/.well-known/oauth-authorization-server',
+            'canovia_mcp.account_link_authorization_endpoint' => 'https://auth.example.test/oauth/authorize',
+            'canovia_mcp.account_link_token_endpoint' => 'https://auth.example.test/oauth/token',
+            'canovia_mcp.account_link_redirect_uri' => 'https://canovia.example.test/account/mcp/link/callback',
+            'canovia_mcp.plan_consent_enabled' => true,
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.ap_pilot_owner_id' => (string) $owner->id,
+        ]);
+        $link = $this->link($owner);
+        $plan = $this->plan($owner, 'SYNTHETIC_OWNER_PRIVATE_AP');
+        $plan->update(['category' => '資格学習']);
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('次へ：Studyで共有する計画を選ぶ')
+            ->assertSee(route('workspace.study.index'), false)
+            ->assertDontSee('data-mcp-owner-plan-id', false);
+        $grant = $this->grant($owner, $link, $plan, 'overview');
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertSee('data-mcp-owner-plan-id', false)
+            ->assertSee('接続状態は未確認')
+            ->assertDontSee($link->identity_fingerprint);
+        $this->actingAs($other)->get(route('auth.account'))->assertOk()
+            ->assertDontSee('SYNTHETIC_OWNER_PRIVATE_AP')
+            ->assertDontSee('data-mcp-owner-plan-id', false)
+            ->assertDontSee('次へ：Studyで共有する計画を選ぶ');
+        $plan->update(['is_public' => true]);
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertDontSee('data-mcp-owner-plan-id', false);
+        $plan->update(['is_public' => false]);
+        $grant->update(['expires_at' => now()->subMinute()]);
+        $this->actingAs($owner)->get(route('auth.account'))->assertOk()
+            ->assertDontSee('data-mcp-owner-plan-id', false);
+    }
+
     public function test_unlink_revokes_all_grants_and_immediately_denies_future_delegated_reads(): void
     {
         $owner = User::factory()->create();

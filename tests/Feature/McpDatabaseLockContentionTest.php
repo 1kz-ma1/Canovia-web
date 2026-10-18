@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\McpDelegatedIdentityFingerprintService;
 use App\Services\McpDelegatedRevocationService;
 use App\Services\McpReadOnlyContextTool;
+use App\Services\McpReadOnlyStudyContextTool;
 use App\Services\McpVerifiedTokenPrincipal;
 use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\QueryException;
@@ -136,6 +137,42 @@ final class McpDatabaseLockContentionTest extends TestCase
         $this->assertNull($tool->read($principal, $plan->id, 'tasks', 1));
         $this->assertSame(1, DB::table('mcp_delegated_access_events')
             ->where('event_kind', 'context_read')->where('grant_id', $grant->id)->count());
+    }
+
+    public function test_study_read_locks_current_permission_and_denies_a_committed_visibility_change(): void
+    {
+        [$owner, $plan, $link, $grant, $principal] = $this->fixture();
+        $plan->update(['category' => '資格学習']);
+        config(['canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $tool = app(McpReadOnlyStudyContextTool::class);
+        $contender = DB::connection('mcp_lock_contender');
+
+        DB::beginTransaction();
+        try {
+            $this->assertIsArray($tool->read($principal, $plan->id, 'overview', 1));
+            $this->assertNowaitBlocked($contender, 'plans', $plan->id);
+            $this->assertNowaitBlocked($contender, 'mcp_linked_subjects', $link->id);
+            $this->assertNowaitBlocked($contender, 'mcp_delegated_grants', $grant->id);
+            DB::commit();
+        } finally {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+        }
+
+        $contender->table('plans')->where('id', $plan->id)->update(['is_public' => true]);
+        $this->assertNull($tool->read($principal, $plan->id, 'overview', 1));
+        $this->assertNull($tool->read($principal, $plan->id, 'tasks', 1));
+        $contender->table('plans')->where('id', $plan->id)->update(['is_public' => false, 'is_collaborative' => true]);
+        $this->assertNull($tool->read($principal, $plan->id, 'overview', 1));
+        $other = User::factory()->create();
+        $contender->table('plans')->where('id', $plan->id)->update(['is_collaborative' => false, 'user_id' => $other->id]);
+        $this->assertNull($tool->read($principal, $plan->id, 'overview', 1));
+        $this->assertSame(1, DB::table('mcp_delegated_access_events')
+            ->where('event_kind', 'context_read')->where('grant_id', $grant->id)->count());
+        $this->assertTrue(app(McpDelegatedRevocationService::class)->revokeGrant($owner, $grant->id));
+        $this->assertNull($tool->read($principal, $plan->id, 'overview', 1));
     }
 
     public function test_uncommitted_identity_reservation_blocks_racing_second_owner(): void

@@ -1078,6 +1078,65 @@ final class McpReadOnlyResourceTest extends TestCase
             ->assertJsonPath('result.structuredContent.plan.title', 'PRIVATE_AP_PILOT_ONLY');
     }
 
+    public function test_private_study_pilot_refuses_public_visibility_even_with_an_existing_grant(): void
+    {
+        $this->idp();
+        $owner = User::factory()->create();
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習', 'title' => 'SYNTHETIC_PRIVATE_ONLY']);
+        $this->linkAndGrant($owner, $study, 'learning_context');
+        config([
+            'canovia_mcp.ap_pilot_owner_id' => (string) $owner->id,
+            'canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.study_summary_read_enabled' => true,
+            'canovia_mcp.learning_context_snapshot_enabled' => true,
+        ]);
+        $this->rpc('tools/call', ['name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $study->id]])->assertOk()->assertJsonPath('result.isError', false);
+        $before = \Illuminate\Support\Facades\DB::table('mcp_delegated_access_events')->count();
+        $this->assertFalse(app(\App\Services\McpStudyPilotAccessPolicy::class)->allowsPlan(
+            Plan::query()->select(['id', 'user_id'])->findOrFail($study->id),
+        ));
+
+        $study->update(['is_public' => true]);
+        $consent = app(\App\Services\McpExplicitPlanConsentService::class);
+        $this->assertFalse($consent->isEligibleMcpPlanOwner($owner, $study->fresh()));
+        foreach ([
+            [McpReadOnlyStudyContextTool::NAME, ['plan_id' => $study->id, 'scope' => 'overview']],
+            [McpReadOnlyStudyContextTool::NAME, ['plan_id' => $study->id, 'scope' => 'tasks']],
+            [McpReadOnlyStudyPracticeSummaryTool::NAME, ['plan_id' => $study->id]],
+            [McpReadOnlyLearningContextSnapshotTool::NAME, ['plan_id' => $study->id]],
+        ] as [$tool, $arguments]) {
+            $this->rpc('tools/call', ['name' => $tool, 'arguments' => $arguments])
+                ->assertOk()->assertJsonPath('result.isError', true)->assertDontSee('SYNTHETIC_PRIVATE_ONLY');
+        }
+        $this->assertSame($before, \Illuminate\Support\Facades\DB::table('mcp_delegated_access_events')->count());
+    }
+
+    public function test_emergency_off_denies_and_reenable_never_revives_a_revoked_study_grant(): void
+    {
+        $this->idp();
+        $owner = User::factory()->create();
+        $study = $this->plan($owner);
+        $study->update(['category' => '資格学習']);
+        $this->linkAndGrant($owner, $study, 'overview');
+        config(['canovia_mcp.study_read_enabled' => true,
+            'canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $call = ['name' => McpReadOnlyStudyContextTool::NAME, 'arguments' => ['plan_id' => $study->id]];
+        $this->rpc('tools/call', $call)->assertOk()->assertJsonPath('result.isError', false);
+        config(['canovia_mcp.tools_enabled' => false]);
+        $this->rpc('tools/call', $call)->assertUnauthorized()->assertDontSee($study->title);
+        $grant = McpDelegatedGrant::query()->sole();
+        $this->assertTrue(app(McpDelegatedRevocationService::class)->revokeGrant($owner, $grant->id));
+        config(['canovia_mcp.tools_enabled' => true]);
+        $this->rpc('tools/call', $call)->assertOk()->assertJsonPath('result.isError', true)
+            ->assertDontSee($study->title);
+        $this->assertSame(1, \Illuminate\Support\Facades\DB::table('mcp_delegated_access_events')
+            ->where('event_kind', 'context_read')->count());
+        $this->assertDatabaseCount('study_practice_attempts', 0);
+        $this->assertDatabaseCount('mcp_study_result_proposals', 0);
+    }
+
     public function test_transport_is_read_only_without_sse_sessions_or_mutation(): void
     {
         $this->idp();

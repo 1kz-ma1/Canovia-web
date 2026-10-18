@@ -36,6 +36,7 @@ final class McpStudyPilotAccessPolicy
     {
         return $plan->user_id !== null
             && $this->allowsOwnerId((int) $plan->user_id)
-            && ! (bool) $plan->is_collaborative;
+            && $plan->is_collaborative === false
+            && $plan->is_public === false;
     }
 }

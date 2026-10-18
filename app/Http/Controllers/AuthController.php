@@ -219,7 +219,7 @@ class AuthController extends Controller
             'mcpActiveGrants' => McpDelegatedGrant::query()
                 ->where('user_id', $user->id)
                 ->where('status', McpDelegatedGrant::STATUS_ACTIVE)
-                ->with(['plan:id,user_id,title'])
+                ->with(['plan:id,user_id,title,category,workspace_domain_override,is_public,is_collaborative'])
                 ->orderByDesc('updated_at')
                 ->paginate(6, ['*'], 'mcp_grants_page'),
             'mcpHasCurrentConsentRecord' => McpDelegatedGrant::query()
