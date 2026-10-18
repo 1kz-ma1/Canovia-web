@@ -6,6 +6,8 @@ on:
     paths:
       - '.github/workflows/ap-mcp-live94-source-gate.yml'
       - 'scripts/ci/mcp_ap_live94_source_gate.py'
+      - 'scripts/ops/mcp_ap_live94_auth0_preflight.py'
+      - 'tests/ci/test_mcp_ap_live94_auth0_preflight.py'
       - 'tests/ci/test_mcp_ap_live94_source_gate.py'
       - 'docs/development/MCP_AP_LIVE94_SOURCE_GATE_2026_10_18.md'
       - 'database/migrations/**'
@@ -30,6 +32,8 @@ jobs:
           persist-credentials: false
       - name: Run fail-closed negative cases
         run: python3 -m unittest discover -s tests/ci -p 'test_mcp_ap_live94_source_gate.py' -v
+      - name: Verify redacted production Auth0 configuration contract with synthetic environments
+        run: python3 -m unittest discover -s tests/ci -p 'test_mcp_ap_live94_auth0_preflight.py' -v
       - name: Verify source delta against immutable actual-live baseline
         env:
           CANDIDATE_SHA: ${{ github.event.pull_request.head.sha }}
