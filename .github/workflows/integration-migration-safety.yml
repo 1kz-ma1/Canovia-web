@@ -9,6 +9,8 @@ on:
       - 'app/Console/Commands/CheckReleaseSchemaLedger.php'
       - 'scripts/ci/integration_mysql_upgrade.py'
       - 'scripts/ci/integration_upgrade_fixture.php'
+      - 'scripts/ci/integration_disposable_restore.py'
+      - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
       - 'scripts/ci/integrated_release20_audit.py'
       - 'scripts/ci/integrated_release20_reference/**'
       - 'scripts/ops/integrated_release20_collect.py'
@@ -86,6 +88,12 @@ jobs:
           SERIES: ${{ matrix.series }}
         run: >-
           python3 scripts/ci/integration_mysql_upgrade.py --series "$SERIES"
+          --artifacts "$RUNNER_TEMP/integration-upgrade"
+      - name: Restore synthetic data into an isolated schema and compare all structural constraints
+        env:
+          SERIES: ${{ matrix.series }}
+        run: >-
+          python3 scripts/ci/integration_disposable_restore.py --series "$SERIES"
           --artifacts "$RUNNER_TEMP/integration-upgrade"
       - uses: actions/upload-artifact@v4
         if: always()

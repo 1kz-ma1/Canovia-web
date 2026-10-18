@@ -45,6 +45,7 @@
 2. 新20件を順序適用。20件目のCREATE TABLEがcommitした直後、FK/uniqueの前に実際の例外を注入。ledger113＋物理残骸を専用gateがBLOCKし、起動checkもpendingで停止。再実行は拒否し、ledger/schemaを変更しない。
 3. **その合成状態に限定した明示forward-repair**で欠けたunique/FKを追加→20件目を完了。部分tableのepoch行と全旧tableのdigest保持、114整合・再実行を確認。down/データ削除/自動retryを使わない。
 4. DBを別シナリオ用に初期化し、旧94＋同じseed→通常の20件一括適用→旧行保持・再実行を確認。通常経路と修復経路の全schema hashが完全一致することを確認してreference化。
+5. その114件の合成DBを別schemaへlogical restoreし、全データ・全列/index/FK・trigger定義・114 ledgerを比較する。新しいPlan unique/FKも復元で保持されることを検証するが、Aiven実バックアップ/復元・RPO/RTOは未達のまま。
 
 特定の例外注入は、全20件の**任意のSQL停止点**を網羅した証明ではない。unknown/途中ledger/物理差分は常にBLOCKし、本番の部分DDLはその状態を確認した個別forward fixまたは整合したbackup＋code復元を選ぶ。CIの修復コードを本番用DDL手順として使わない。
 
