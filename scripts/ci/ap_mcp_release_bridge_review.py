@@ -44,7 +44,7 @@ def triggers_production(workflow: str, event: str) -> bool:
         choices = [item.strip() for item in branches.group(1)[1:-1].split(",")]
         return "production" in choices
     rest = body[branches.end():]
-    return any(line == "      - production" for line in rest.splitlines()
+    return any(line == "      - production" for line in rest.splitlines())
 
 
 def git(*args: str) -> str:
