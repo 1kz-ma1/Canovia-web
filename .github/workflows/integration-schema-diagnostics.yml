@@ -1,0 +1,67 @@
+name: Integration Schema Diagnostics
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/integrated_release20*'
+      - 'scripts/ci/integrated_release20_diagnostic_reference/**'
+      - 'scripts/ci/integrated_release20_reference/**'
+      - 'scripts/ops/integrated_release20*'
+      - 'scripts/sql/integrated_release20_metadata.sql'
+      - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
+      - 'tests/ci/test_integrated_release20*'
+      - 'database/migrations/**'
+      - '.github/workflows/integration-schema-diagnostics.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnosis:
+    name: Schema diagnosis (MySQL ${{ matrix.series }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        series: ['8.0', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Offline, redaction and unchanged verdict tests
+        run: python3 -B -m unittest discover -s tests/ci -p 'test_integrated_release20*.py' -v
+      - name: Create identified synthetic-only server
+        env:
+          SERIES: ${{ matrix.series }}
+        run: |
+          set -euo pipefail
+          if [ "$SERIES" = '8.0' ]; then name=canovia-integration-80; port=13380; else name=canovia-integration-84; port=13384; fi
+          docker run -d --name "$name" --label canovia.integration=2026-10-16 \
+            -p "127.0.0.1:$port:3306" -e MYSQL_ROOT_PASSWORD=ci-only-root-password \
+            -e MYSQL_DATABASE=canovia_p0_ci -e MYSQL_USER=canovia_ci \
+            -e MYSQL_PASSWORD=ci-only-ephemeral-password "mysql:$SERIES" --log-bin-trust-function-creators=1
+          for attempt in $(seq 1 60); do
+            if docker exec -e MYSQL_PWD=ci-only-ephemeral-password "$name" mysql -u canovia_ci -Nse 'SELECT 1' >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Normal, collation, definition, missing constraint, hidden trigger and partial DDL
+        env:
+          SERIES: ${{ matrix.series }}
+        run: python3 -B scripts/ci/integrated_release20_diagnostic_mysql.py --series "$SERIES"
+      - name: Offline separate tooling and immutable release pins
+        run: >-
+          python3 -B scripts/ops/integrated_release20_diagnostic_collect.py
+          --tooling-sha "$(git rev-parse HEAD)"
+          --candidate-sha c09a8fc718c338f98a4045a4b5f2260c7571fdaa
