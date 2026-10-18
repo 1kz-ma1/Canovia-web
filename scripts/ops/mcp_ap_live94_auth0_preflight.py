@@ -56,7 +56,9 @@ def safe_host(url: str, *, auth0: bool = False, trailing_slash: bool = False) ->
         ):
             return False
         expected_path = "/" if trailing_slash else ""
-        return p.path == expected_path and not p.netloc.endswith(":")
+        # Runtime JWT verifier pins an exact canonical lower-case issuer
+        # and disallows even explicit :443. Enforce the same form offline.
+        return p.path == expected_path and url == "https://" + host + expected_path
     except (ValueError, TypeError):
         return False
 
