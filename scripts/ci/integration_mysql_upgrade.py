@@ -124,6 +124,21 @@ def run(series, artifacts, write_reference=False):
                                         (partial_ledger, partial_shape, 'BLOCK')]:
             if compare(src, ledger, shape, reference)['result'] != expected:
                 raise RuntimeError('Dedicated20 audit misclassified actual disposable state')
+        # Exercise the managed-service privilege boundary on this owned CI
+        # instance only. A metadata/app principal without TRIGGER must not be
+        # able to run trigger DDL even when function-creator policy is trusted.
+        command(['docker', 'exec', '-e', 'MYSQL_PWD=ci-only-root-password', name,
+                 'mysql', '-uroot', '-e',
+                 "DROP USER IF EXISTS 'canovia_no_trigger'@'%'; "
+                 "CREATE USER 'canovia_no_trigger'@'%' IDENTIFIED BY 'ci-only-no-trigger-password'; "
+                 "GRANT SELECT,CREATE,ALTER,INDEX,REFERENCES ON canovia_p0_ci.* TO 'canovia_no_trigger'@'%';"])
+        denied = subprocess.run(['docker', 'exec', '-e', 'MYSQL_PWD=ci-only-no-trigger-password', name,
+            'mysql', '-ucanovia_no_trigger', '--database=canovia_p0_ci', '-e',
+            'CREATE TRIGGER integration20_forbidden BEFORE UPDATE ON plans FOR EACH ROW SET NEW.title=OLD.title'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=30)
+        if denied.returncode == 0 or b'1142' not in denied.stderr:
+            raise RuntimeError('Expected explicit trigger privilege denial was not established')
+        log.write('integration20_missing_trigger_privilege_denied: pass\n')
     image = target['Image']
     result = dict(series=series, version=version, image_id=image, base_sha=BASE, candidate_sha=candidate,
                   baseline_migrations=94, candidate_migrations=114, result='passed',
@@ -131,6 +146,7 @@ def run(series, artifacts, write_reference=False):
                   committed_partial_ddl_detected=True, partial_replay_refused=True,
                   explicit_disposable_forward_recovery_passed=True,
                   normal_and_recovered_schema_identical=True,
+                  trigger_ddl_without_privilege_denied=True,
                   audit_reference_verified=not write_reference,
                   real_aiven_verified=False, physical_device_verified=False, release_authorized=False)
     (artifacts / f'mysql-{series}.json').write_text(json.dumps(result, indent=2) + '\n')

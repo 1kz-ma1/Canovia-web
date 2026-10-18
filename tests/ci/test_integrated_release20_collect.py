@@ -31,6 +31,14 @@ class Release20CollectorTest(unittest.TestCase):
             preflight.assert_called_once()
             collect.assert_not_called()
 
+    def test_draft_or_missing_release_ref_cannot_be_used_for_real_collection(self):
+        for ref in ('', 'feature/draft', 'release/../main'):
+            with patch.dict(os.environ, {'CANOVIA_RELEASE20_RELEASE_REF': ref}, clear=True), \
+                 patch.object(collector.subprocess, 'run') as run:
+                with self.assertRaises(ValueError):
+                    collector.release_boundary('a' * 40)
+                run.assert_not_called()
+
     def test_private_exception_is_redacted(self):
         with patch.object(sys, 'argv', ['collector', '--source-sha', 'a' * 40]), \
              patch.object(collector, 'preflight', side_effect=ValueError('PRIVATE_HOST_AND_SECRET')), \
@@ -50,6 +58,7 @@ class Release20CollectorTest(unittest.TestCase):
                 kwargs['stdout'].write(b'GRANT ALL PRIVILEGES ON *.* TO `ci`@`localhost`\n')
                 return SimpleNamespace(returncode=0)
             with patch.dict(os.environ, env, clear=True), patch.object(collector, 'preflight', return_value={}), \
+                 patch.object(collector, 'release_boundary'), \
                  patch.object(collector.subprocess, 'run', side_effect=query) as run:
                 with self.assertRaisesRegex(ValueError, 'NARROW_METADATA_GRANTS_REQUIRED'):
                     collector.collect('a' * 40)

@@ -74,6 +74,7 @@
 
 ## MCP staging and public-release readiness (2026-10-09)
 
+- [B案 main統合リリースの実装・20 migration専用監査](development/integration/2026-10-18-b/README.md): 完全979パスmanifest、部分DDL拒否/明示復旧、MySQL両版の物理reference、Macのoffline-first手順。Draft/NO-GO、本番94件の既存受入とは別。
 - [Historic MCP Staging identity-link incident triage](development/MCP_STAGING_IDENTITY_LINK_MISMATCH_RUNBOOK_2026_10_14.md): fixed-code rejection vs different Auth0 subject/fingerprint hypotheses, updated with current Staging Live checkpoint; no real-account data or OAuth configuration changes.
 - [Future Identity & Connection UX (candidate)](future/CANOVIA_IDENTITY_CONNECTION_UX.md): passkey/step-up/relink/optional connection-code concept only, never an OAuth/Plan permission bypass or current backlog.
 

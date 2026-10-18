@@ -63,6 +63,7 @@ def collect(sha):
     if os.environ.get('CANOVIA_RELEASE20_OPERATOR_APPROVED') != 'YES' or os.environ.get('CANOVIA_P0_TARGET_VERIFIED') != 'YES':
         raise ValueError('SEPARATE_OPERATOR_APPROVAL_AND_TARGET_REQUIRED')
     src = preflight(sha)
+    release_boundary(sha)
     login = os.environ.get('CANOVIA_P0_LOGIN_PATH', '')
     database = os.environ.get('CANOVIA_P0_DATABASE', '')
     ca = Path(os.environ.get('CANOVIA_P0_CA_FILE', ''))
@@ -91,6 +92,21 @@ def collect(sha):
     physical = snapshot(query((ROOT / 'scripts/sql/integrated_release20_metadata.sql').read_text()))
     ref = json.loads((ROOT / 'scripts/ci/integrated_release20_reference' / (physical['engine'] + '.json')).read_text())
     return compare(src, ledger, physical, ref)
+
+
+def release_boundary(sha):
+    """A draft tooling pin is not an adopted, main-derived release pin."""
+    release = os.environ.get('CANOVIA_RELEASE20_RELEASE_REF', '')
+    if not re.fullmatch(r'release/[A-Za-z0-9._/-]+', release) or '..' in release:
+        raise ValueError('ADOPTED_RELEASE_REF_REQUIRED')
+    exact = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', '--verify',
+                                    'refs/remotes/origin/' + release],
+                                   text=True, stderr=subprocess.DEVNULL, timeout=20).strip()
+    if exact != sha:
+        raise ValueError('RELEASE_REF_DRIFT')
+    subprocess.run(['git', '-C', str(ROOT), 'merge-base', '--is-ancestor', sha,
+                    'refs/remotes/origin/main'], stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL, timeout=20, check=True)
 
 
 def main():
