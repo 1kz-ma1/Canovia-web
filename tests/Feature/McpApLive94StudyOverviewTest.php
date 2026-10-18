@@ -272,4 +272,29 @@ final class McpApLive94StudyOverviewTest extends TestCase
             'arguments' => ['plan_id' => $study->id],
         ], $this->token())->assertNotFound();
     }
+
+    public function test_unlink_revokes_active_owner_plan_and_denies_same_token(): void
+    {
+        $owner = User::factory()->create();
+        config(['canovia_mcp.ap_pilot_owner_id' => (string) $owner->id]);
+        $plan = $this->plan($owner);
+        $link = $this->link($owner);
+        $grant = $this->grant($owner, $plan, $link);
+        $token = $this->token();
+        $params = [
+            'name' => McpReadOnlyStudyContextTool::NAME,
+            'arguments' => ['plan_id' => $plan->id],
+        ];
+
+        $this->rpc('tools/call', $params, $token)->assertOk()
+            ->assertJsonPath('result.isError', false);
+        $this->assertTrue(app(McpDelegatedRevocationService::class)
+            ->revokeSubject($owner, $link->id));
+        $this->assertNotNull($link->fresh()->revoked_at);
+        $this->assertNotNull($grant->fresh()->revoked_at);
+        $this->rpc('tools/call', $params, $token)->assertOk()
+            ->assertJsonPath('result.isError', true);
+        $this->assertDatabaseCount('mcp_delegated_grants', 1);
+    }
+
 }
