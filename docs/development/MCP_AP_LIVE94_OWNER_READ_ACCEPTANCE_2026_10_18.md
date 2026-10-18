@@ -117,3 +117,29 @@ full environment into a PR, CI artifact or ChatGPT.
 **Current result:** synthetic contract test only. Real production env check,
 actual Auth0 access token, 94-migration Aiven ledger, independent restore,
 GitHub Ruleset bootstrap, owner GO, deploy and Plan read remain NOT_RUN.
+
+## 9. 実Aiven台帳を旧94件・未適用0件で判定する手順（準備済み／NOT_RUN）
+
+`scripts/ci/mcp_ap_live94_ledger_zero_pending.py` は**旧本番94個のmigration filenameを正本**とする、無通信の厳格な照合器。既存の `scripts/ci/p0_mysql_full_ledger_offline_check.py` の入力検証を再利用する。既知の未適用migrationが1件でもある、未知の適用記録、重複、破損、候補のmigration件数が94ではない場合は `BLOCK`（exit 2）。一致する94件全件適用済みの場合だけ `REVIEW_REQUIRED`（exit 0）。この結果はDBの物理スキーマ・接続先の本人確認・復旧の実証・公開承認を意味しない。
+
+**前提：オーナーから実DBメタデータのread-only監査を別途明示承認されるまで絶対に接続しない。** 実行する場合は、Macなどのoperator-local、固定された旧94件ブランチのソースを使い、既存の `scripts/ops/p0_mysql_operator_select_only_collect.sh` の制限付きTLS・login-path・grant検査を先に満たすこと。CI、Render shell、アプリ用の広いDB権限、プライベートPlanの行取得、ログアップロードは禁止。
+
+制限付きoperator接続先をAivenコンソールで独立検証し、既存のP0 grant検査が正常完了した**あとだけ**、同一login-path/TLS/DBを使用して台帳SELECTを入力できる。以下は変数名を示す**手順例**であり、値はオペレーターのローカル環境だけに保持する。
+
+```bash
+set -o pipefail
+mysql --no-defaults \
+  "--login-path=${CANOVIA_P0_LOGIN_PATH}" \
+  --ssl-mode=VERIFY_IDENTITY \
+  "--ssl-ca=${CANOVIA_P0_CA_FILE}" \
+  "--database=${CANOVIA_P0_DATABASE}" \
+  --batch --raw --skip-column-names --skip-auto-rehash \
+  < scripts/sql/p0_mysql_readonly_full_migration_ledger.sql \
+  | python3 scripts/ci/mcp_ap_live94_ledger_zero_pending.py --input -
+```
+
+生のTSV・接続先名・認証情報・生のPlan IDはGitHub/ChatGPTに貼らない。出力は固定コードと真偽値のみ。`REVIEW_REQUIRED` は**次の人間による確認が必要**という意味で、デプロイOKではない。
+
+同時に `scripts/ops/mcp_ap_live94_auth0_preflight.py` は `DB_CONNECTION=mysql` のみでなく、`DB_URL` または `DATABASE_URL` に値があれば、Laravelの接続先優先順位をこのスクリプトだけでは検証できないため `BLOCK` とする。実運用でURL型接続設定を使っている場合、値を削除して迂回せず、別途オーナー承認済みの実効DBターゲット監査手順により確認すること。
+
+**現状：旧94件の合成テストのみ実施。実Aiven ledgerチェック、復元検証、Auth0実トークン確認、Ruleset準拠のproduction昇格はNOT_RUN。**
