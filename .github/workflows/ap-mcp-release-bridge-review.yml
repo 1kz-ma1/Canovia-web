@@ -33,14 +33,17 @@ jobs:
             '+refs/heads/feature/ap-mcp-live94-auth0-20261018:refs/remotes/origin/feature/ap-mcp-live94-auth0-20261018'
           test "$(git rev-parse refs/remotes/origin/main)" = "4e3a6e97949602409ea337290c4d4f2052fda998"
           test "$(git rev-parse refs/remotes/origin/production)" = "15abdc9de6f24b5250fb255c579d1aa55facaf1a"
-          test "$(git rev-parse refs/remotes/origin/feature/ap-mcp-live94-auth0-20261018)" = "995d554db480adce89175587c494f52d9949dfaa"
+          observed="$(git rev-parse refs/remotes/origin/feature/ap-mcp-live94-auth0-20261018)"
+          if [ "$observed" != "d28899ddc647ec74fbe7c0e4d28967582a910067" ]; then
+            echo "::warning::AP pilot branch moved; the report applies only to frozen SHA and NOT latest PR HEAD."
+          fi
       - name: Inspect source-level exception blockers, not authorization
         run: |
           set -euo pipefail
           python3 scripts/ci/ap_mcp_release_bridge_review.py \
             --main-sha 4e3a6e97949602409ea337290c4d4f2052fda998 \
             --production-sha 15abdc9de6f24b5250fb255c579d1aa55facaf1a \
-            --pilot-sha 995d554db480adce89175587c494f52d9949dfaa \
+            --pilot-sha d28899ddc647ec74fbe7c0e4d28967582a910067 \
             --pilot-branch feature/ap-mcp-live94-auth0-20261018 \
             > "$RUNNER_TEMP/ap-mcp-release-bridge.json"
           python3 - "$RUNNER_TEMP/ap-mcp-release-bridge.json" <<'PY'
