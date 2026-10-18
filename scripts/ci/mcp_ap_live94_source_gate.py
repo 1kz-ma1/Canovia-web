@@ -39,6 +39,8 @@ ALLOWLIST = frozenset({
     "resources/views/auth/partials/mcp-plan-consent-confirmation.blade.php",
     "scripts/ci/mcp_ap_live94_source_gate.py",
     "scripts/ops/mcp_ap_live94_auth0_preflight.py",
+    "scripts/ci/mcp_ap_live94_ledger_zero_pending.py",
+    "tests/ci/test_mcp_ap_live94_ledger_zero_pending.py",
     "tests/ci/test_mcp_ap_live94_auth0_preflight.py",
     "tests/ci/test_mcp_ap_live94_source_gate.py",
     "tests/Feature/McpApLive94OAuthLifecycleTest.php",
