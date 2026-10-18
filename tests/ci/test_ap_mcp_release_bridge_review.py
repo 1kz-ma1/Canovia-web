@@ -20,7 +20,11 @@ class FakeRepository:
         self.files = {
             (audit.MAIN, path)
             for path in set(audit.REQUIRED_CHECK_WORKFLOWS.values())
-        } | {(audit.PILOT, audit.SOURCE_GATE_PATH)}
+        } | {(audit.PILOT, audit.SOURCE_GATE_PATH)} | {
+            (audit.PILOT, path)
+            for name, path in audit.REQUIRED_CHECK_WORKFLOWS.items()
+            if name != "Production promotion contract"
+        }
         self.main_policy = """production_release_branch_required
 git merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
 production_release_parent_not_in_main"""
