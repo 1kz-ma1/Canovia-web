@@ -31,13 +31,13 @@ SOURCE_GATE_PATH = "scripts/ci/mcp_ap_live94_source_gate.py"
 def triggers_production(workflow: str, event: str) -> bool:
     """Parse just the top-level event branch selector; never match comments or paths."""
     event_section = re.search(
-        rf"(?ms)^  {re.escape(event)}:\\s*\\n(?P<body>.*?)(?=^  [a-z_]+:|^\\S|\\Z)",
+        rf"(?ms)^  {re.escape(event)}:\s*\n(?P<body>.*?)(?=^  [a-z_]+:|^\S|\Z)",
         workflow,
     )
     if not event_section:
         return False
     body = event_section.group("body")
-    branches = re.search(r"(?m)^    branches:\\s*(\\[[^\\n]*\\])?\\s*$", body)
+    branches = re.search(r"(?m)^    branches:\s*(\[[^\n]*\])?\s*$", body)
     if not branches:
         return False
     if branches.group(1):
