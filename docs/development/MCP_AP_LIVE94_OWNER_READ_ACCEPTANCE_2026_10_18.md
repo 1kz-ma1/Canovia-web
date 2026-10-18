@@ -74,3 +74,46 @@ The Live94 branch now includes additional Laravel HTTP/DB tests. These are **syn
 **Evidence format:** record only the tested release SHA, test category, `PASS / FAIL / NOT_RUN`, coarse timestamp and sanitized response code / predeclared event identifier. The operator must never paste OAuth code, callback URL query, `state`, access token, cookies, GitHub subject, account IDs, Plan titles or private Aiven records into ChatGPT/GitHub/CI artifacts.
 
 **Current outcome:** all live acceptance items remain `NOT_RUN`; Draft #785 and production remain on HOLD. Synthetic CI is not release approval.
+
+
+## 8. AP owner Auth0/operator secretless pre-deploy shape check (2026-10-18)
+
+**Implemented, but NOT proof of production readiness or deployment authorization.**
+The old-94 candidate includes `scripts/ops/mcp_ap_live94_auth0_preflight.py` and
+synthetic regression tests `tests/ci/test_mcp_ap_live94_auth0_preflight.py`.
+
+A private operator may run:
+
+```bash
+python3 scripts/ops/mcp_ap_live94_auth0_preflight.py
+```
+
+Run only with the *already approved, effective exported production environment*
+in a private operator process; the script does **not** load `.env`, query Laravel,
+contact Auth0, read Aiven, open network connections or print any configured
+client/issuer/owner ID/fingerprint/secret values. Do not paste secrets or the
+full environment into a PR, CI artifact or ChatGPT.
+
+- Requires `APP_ENV=production`, `APP_DEBUG=false`, `DB_CONNECTION=mysql`,
+  HTTPS canonical `APP_URL`, matching exact MCP resource + first-party
+  PKCE OAuth metadata/authorization/token/callback URLs.
+- Requires exact production-style Auth0 issuer, distinct `tpc_...` internally
+  registered ChatGPT CIMD client vs first-party account-link client, nonempty
+  owner allowlist, separate link secret and identity HMAC key, and explicit
+  `auth0_jwt` verifier selection.
+- **All MCP/Study/link/consent/JWT flags must be OFF for first-code-deploy phase.**
+  A preflight run with any enabled flag is intentionally `BLOCK`. This
+  command does not attempt to authorize later owner-only activation.
+- Output is a small fixed-code JSON verdict `BLOCK` (exit 2) or
+  `REVIEW_REQUIRED` (exit 0), never `GO`. All return cases include
+  `production_release_authorized=false`, `auth0_real_token_verified=false`,
+  `real_aiven_ledger_verified=false`, and
+  `restorable_backup_verified=false`.
+- This is a *shape* check only; empty, unset or differing actual operator
+  config must be fixed privately through separately authorized procedures.
+  A successful synthetic CI run is **not** proof the operator executed it
+  against production.
+
+**Current result:** synthetic contract test only. Real production env check,
+actual Auth0 access token, 94-migration Aiven ledger, independent restore,
+GitHub Ruleset bootstrap, owner GO, deploy and Plan read remain NOT_RUN.
