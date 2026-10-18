@@ -38,6 +38,24 @@ def classification(path: str) -> dict:
                 rollback='retain data; lower exposure or revert compatible code', exposure='REVIEW_REQUIRED')
 
 
+def risk_areas(path: str) -> list[str]:
+    """Overlapping review queues, never an automated security approval."""
+    value = path.lower()
+    rules = {
+        'database_migration_trigger': ('database/', 'migration', 'mysql', 'trigger'),
+        'authentication_oauth_session_csrf': ('auth', 'oauth', 'session', 'csrf', 'middleware'),
+        'mcp_personal_plan_authorization': ('mcp', 'planpolicy', 'planownership', 'delegated'),
+        'learning_development_intelligence': ('study', 'learning', 'practice', 'development', 'intelligence'),
+        'release_feature_entitlement': ('release', 'featureflag', 'feature_flag', 'entitlement'),
+        'private_file_external_provider': ('private_file', 'privatefile', 'storage', 'provider', 'github'),
+        'web_wkwebview_ui': ('resources/', 'routes/', 'http/', 'browser', 'vite', 'package'),
+        'composer_docker_render_worker': ('composer', 'docker/', 'render', 'worker', 'queue', 'jobs/'),
+        'actions_production_protection': ('.github/', 'promotion', 'workflow', 'ruleset'),
+    }
+    matches = [area for area, terms in rules.items() if any(term in value for term in terms)]
+    return matches or ['shared_manual_review']
+
+
 def manifest(root: Path, base: str, candidate: str) -> dict:
     if not all(re.fullmatch('[0-9a-f]{40}', value) for value in (base, candidate)):
         raise ValueError('Use full immutable commit SHAs, not moving refs')
@@ -54,6 +72,8 @@ def manifest(root: Path, base: str, candidate: str) -> dict:
         status, path = line.split('\t', 1)
         blob = None if status == 'D' else git(root, 'rev-parse', candidate + ':' + path)
         rows.append(dict(path=path, change=status, candidate_blob=blob,
+                         baseline_blob=None if status == 'A' else git(root, 'rev-parse', base + ':' + path),
+                         risk_areas=risk_areas(path),
                          dependency='review against shared auth/session/publication contracts',
                          owner_assignment='PATH_CLASSIFICATION_REQUIRES_REVIEW', **classification(path)))
     migration_rows = [row for row in rows if row['path'].startswith('database/migrations/')]
@@ -66,6 +86,8 @@ def manifest(root: Path, base: str, candidate: str) -> dict:
                 baseline_migration_count=len(migrations(base)),
                 candidate_migration_count=len(migrations(candidate)),
                 migration_changes=migration_rows,
+                risk_area_counts={area: sum(area in row['risk_areas'] for row in rows)
+                                  for area in sorted({a for row in rows for a in row['risk_areas']})},
                 production_pending_migrations='UNKNOWN_REQUIRES_SEPARATE_OPERATOR_AUDIT',
                 live_sha_verified=False, ci_verified=False, device_verified=False,
                 release_authorized=False, verdict='SOURCE_INVENTORY_ONLY_PRODUCTION_NO_GO')

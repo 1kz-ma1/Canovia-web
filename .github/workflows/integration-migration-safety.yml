@@ -9,6 +9,13 @@ on:
       - 'app/Console/Commands/CheckReleaseSchemaLedger.php'
       - 'scripts/ci/integration_mysql_upgrade.py'
       - 'scripts/ci/integration_upgrade_fixture.php'
+      - 'scripts/ci/integrated_release20_audit.py'
+      - 'scripts/ci/integrated_release20_reference/**'
+      - 'scripts/ops/integrated_release20_collect.py'
+      - 'scripts/sql/integrated_release20_metadata.sql'
+      - 'tests/ci/test_integrated_release20*'
+      - 'tests/Feature/IntegratedRelease20MigrationSafetyTest.php'
+      - 'database/migrations/**'
       - 'tests/Feature/ReleaseSchemaLedgerFenceTest.php'
       - 'tests/Feature/RenderStartupMigrationRetryV569Test.php'
       - '.github/workflows/integration-migration-safety.yml'
@@ -36,6 +43,8 @@ jobs:
           php artisan test tests/Feature/ReleaseSchemaLedgerFenceTest.php
           tests/Feature/RenderStartupMigrationRetryV569Test.php
           tests/Feature/McpIsolatedStagingBootstrapTest.php --colors=never
+      - run: php artisan test tests/Feature/IntegratedRelease20MigrationSafetyTest.php --colors=never
+      - run: python3 -m unittest discover -s tests/ci -p 'test_integrated_release20*.py' -v
   upgrade:
     runs-on: ubuntu-latest
     timeout-minutes: 20
