@@ -226,6 +226,11 @@ class ContractTests(unittest.TestCase):
         record=self.review();self.value['nonce']='b'*32
         self.proofs=self.authority.endorsements(c.canonical(self.value))
         with self.assertRaisesRegex(c.Block,'TARGET_OR_BINDING_CHANGED'):self.consume(record)
+        self.value['nonce']='a'*32;self.proofs=self.authority.endorsements(c.canonical(self.value))
+        self.authority.rotate()
+        with self.assertRaisesRegex(c.Block,'STALE_SIGNER'):self.consume(record)
+        self.proofs=self.authority.endorsements(c.canonical(self.value))
+        with self.assertRaisesRegex(c.Block,'TARGET_OR_BINDING_CHANGED'):self.consume(record)
 
     def test_jit_changed_observation_or_revocation_and_mono_rollback(self):
         record=self.review()
@@ -239,11 +244,6 @@ class ContractTests(unittest.TestCase):
         with self.assertRaisesRegex(c.Block,'CLOCK_UNVERIFIED'):self.consume(record)
         self.clock=c.FakeClock(monotonic=2);self.clock.observe();self.clock.monotonic=1
         with self.assertRaisesRegex(c.Block,'CLOCK_ROLLBACK'):self.clock.observe()
-        self.value['nonce']='a'*32;self.proofs=self.authority.endorsements(c.canonical(self.value))
-        self.authority.rotate()
-        with self.assertRaisesRegex(c.Block,'STALE_SIGNER'):self.consume(record)
-        self.proofs=self.authority.endorsements(c.canonical(self.value))
-        with self.assertRaisesRegex(c.Block,'TARGET_OR_BINDING_CHANGED'):self.consume(record)
 
     def test_descriptor_has_no_connector_command_or_live_state(self):
         out=c.plan_descriptor();self.assertEqual('NOT_EXECUTABLE',out['kind'])
