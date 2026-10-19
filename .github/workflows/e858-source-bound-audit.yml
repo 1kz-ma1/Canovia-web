@@ -1,0 +1,96 @@
+name: E858 Source-bound Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/e858_audit*'
+      - 'scripts/ci/e858_audit/**'
+      - 'scripts/ci/e858_audit_reference/**'
+      - 'scripts/ops/e858_audit_packet.py'
+      - 'tests/ci/test_e858_audit.py'
+      - 'docs/development/integration/2026-10-18-b/e858-source-bound-audit.md'
+      - '.github/workflows/e858-source-bound-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-regression:
+    uses: ./.github/workflows/integration-migration-safety.yml
+  fixed-diagnostic-regression:
+    uses: ./.github/workflows/integration-schema-diagnostics.yml
+  offline:
+    name: E858 offline safety
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, sqlite3, pdo_sqlite
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Synthetic environment only
+        run: |
+          if [ ! -f .env ]; then printf '%s\n' '# Synthetic CI only.' > .env; fi
+      - run: python3 -B -m unittest discover -s tests/ci -p test_e858_audit.py -v
+      - run: >-
+          php artisan test tests/Feature/Release20TransitionPreflightTest.php
+          tests/Feature/IntegratedRelease20MigrationSafetyTest.php
+          tests/Feature/ReleaseSchemaLedgerFenceTest.php
+          tests/Feature/LearningContextWatchPersistenceTest.php
+          tests/Feature/McpOAuthAccountLinkTest.php
+          tests/Feature/McpMigrationRollbackSafetyTest.php --colors=never
+  mysql:
+    name: E858 reference (MySQL ${{ matrix.series }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        series: ['8.0', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql
+          coverage: none
+      - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Synthetic environment only
+        run: |
+          if [ ! -f .env ]; then printf '%s\n' '# Synthetic CI only.' > .env; fi
+      - name: Own disposable loopback MySQL only
+        env:
+          SERIES: ${{ matrix.series }}
+        run: |
+          set -euo pipefail
+          if [ "$SERIES" = '8.0' ]; then name=canovia-integration-80; port=13380; else name=canovia-integration-84; port=13384; fi
+          docker run -d --name "$name" --label canovia.integration=2026-10-16 \
+            -p "127.0.0.1:$port:3306" -e MYSQL_ROOT_PASSWORD=ci-only-root-password \
+            -e MYSQL_DATABASE=canovia_p0_ci -e MYSQL_USER=canovia_ci \
+            -e MYSQL_PASSWORD=ci-only-ephemeral-password "mysql:$SERIES" --log-bin-trust-function-creators=1
+          for attempt in $(seq 1 60); do
+            if docker exec -e MYSQL_PWD=ci-only-ephemeral-password "$name" mysql --protocol=TCP -h127.0.0.1 -u canovia_ci -Nse 'SELECT 1' >/dev/null 2>&1; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - name: Rebuild both boundaries twice and verify all pinned references
+        env:
+          SERIES: ${{ matrix.series }}
+        run: python3 -B scripts/ci/e858_audit_mysql.py --series "$SERIES"
+      - name: Retain existing All20 negative and interrupted-DDL coverage
+        env:
+          SERIES: ${{ matrix.series }}
+        run: python3 -B scripts/ci/release20_transition_mysql.py --series "$SERIES"
