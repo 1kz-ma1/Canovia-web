@@ -414,9 +414,10 @@ class CleanupTests(unittest.TestCase):
         process = MagicMock(); process.poll.return_value = 0; process.wait.return_value = 0
         with patch.object(adapter.os, 'killpg', side_effect=ProcessLookupError()):
             self.assertIsNone(adapter._cleanup(process, 'UNPROVEN_PROCESS_TREE', True))
-        with patch.object(adapter.os, 'killpg'), patch.object(adapter.time, 'monotonic', side_effect=[0, 1]):
+        with patch.object(adapter.os, 'killpg') as group, patch.object(adapter.time, 'monotonic', side_effect=[0, 1]):
             self.assertEqual('PROCESS_GROUP_TERMINATION_UNVERIFIED',
                              adapter._cleanup(process, 'UNPROVEN_PROCESS_TREE', True))
+            self.assertTrue(all(call.args[1] == 0 for call in group.call_args_list))
         with patch.object(adapter.os, 'killpg', side_effect=[None, None, ProcessLookupError()]):
             self.assertEqual('UNEXPECTED_DESCENDANT_DETECTED',
                              adapter._cleanup(process, 'UNPROVEN_PROCESS_TREE', True))

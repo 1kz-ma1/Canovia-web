@@ -139,7 +139,7 @@ owner実測：元34件のうち3件がerrno=1。#795 `transport.py` のfinally�
 | 固定childless fake正常終了 | 正確なisolated Python argv・定数program・再構築envが一致し、直接childをwait済み。既に終了していればkillpg不要 |
 | 固定fake上限/timeout/中断 | 生存中はgroup kill、EPERMなら同じPopen childを直接killして0.5秒以内にwait。終了が証明できた場合だけ元の固定Blockを保持する。全体を再実行するfallbackではない |
 | kill/wait権限エラー・wait timeout | PROCESS_TERMINATION_UNVERIFIED。PermissionErrorを無条件に無視しない |
-| 不明process tree / Docker local group | 親の終了だけを木全体の証明にしない。group不存在を確認、残存ならkillして最大0.25秒確認。権限不足/残存はPROCESS_GROUP_TERMINATION_UNVERIFIED。残存を除去できてもUNEXPECTED_DESCENDANT_DETECTEDでSTOP |
+| 不明process tree / Docker local group | 親の終了だけを木全体の証明にしない。生存中に限りgroup killを行い、親のwait後はgroup不存在を最大0.25秒確認。reap済み親のPGIDには破壊signalを送らず、PID再利用による別processへの誤killを防ぐ。権限不足/残存はPROCESS_GROUP_TERMINATION_UNVERIFIED。残存を除去できてもUNEXPECTED_DESCENDANT_DETECTEDでSTOP |
 | Docker正常完了 | 固定foreground docker execのexit0＋完全な出力＋local group不存在を要する。これだけが当該remote mysql正常完了の証拠 |
 | Docker異常終了・上限・timeout | local clientをkillしてもコンテナ内mysql終了は証明できない。DISPOSABLE_REMOTE_TERMINATION_UNVERIFIEDでSTOP。local groupも未確認ならそのBLOCKを優先する。次query/retryなし。試験runnerが所有する使い捨てcontainerの廃棄・停止が必要 |
 | signal終了 | 正常完了にはしない。終了確認できればPRIVATE_CLIENT_FAILURE、確認不能ならcleanupの固定BLOCK |

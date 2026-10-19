@@ -78,7 +78,8 @@ def _cleanup(process, contract, completed):
             remaining = True
             if time.monotonic() >= until:
                 return 'PROCESS_GROUP_TERMINATION_UNVERIFIED'
-            os.killpg(process.pid, signal.SIGKILL)
+            # The leader is reaped now: a recycled PID/PGID must never be killed.
+            # Only observe disappearance; live-tree SIGKILL was attempted above.
             time.sleep(0.01)
     except (Exception, KeyboardInterrupt):
         return 'PROCESS_GROUP_TERMINATION_UNVERIFIED'
