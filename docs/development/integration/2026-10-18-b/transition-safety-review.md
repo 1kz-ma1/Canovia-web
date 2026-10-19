@@ -14,7 +14,7 @@
 | 候補の扱い | 本DraftのSHAは修正提案で、固定候補とは別物。採用するならownerによるmain統合・新release pin・新source sealの審査が必要。**自動採用しない**。 |
 | 検証の限界 | 実Aivenの名前一覧は取得していない。合成的な別名であり、本番命名の完全再現ではない。実backup/restore・権限/binlog・実機は未検証。 |
 
-元のaudit/SQL/参照hash/意味診断/metadata grants guardを変更しない。旧referenceのmigration sealを新ソースに書き替えて通さない。CIでは新ソースに対して元auditがBLOCKを返すことも確認する。構造の一致検査は**合成テストの独立assertion**であり、監査判定の置換ではない。
+元のaudit/SQL/参照hash/意味診断/metadata grants guardを変更しない。旧reference自体のseal/hashは書き替えない。提案専用referenceは別ディレクトリに新source sealで固定し、全物理hashが元と同一であることをテストする。これはCI用の未採用ソース参照であり、実監査の既定参照先は変更しない。CIでは新ソースに対して元auditがBLOCKを返すことも確認する。構造の一致検査は**合成テストの独立assertion**であり、監査判定の置換ではない。
 
 ## A：固定20件の監査
 

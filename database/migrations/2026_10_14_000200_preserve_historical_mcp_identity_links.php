@@ -42,6 +42,7 @@ return new class extends Migration
             });
         }
         if ($this->hasIndex(self::OLD_UNIQUE)) {
+            \App\Support\Release20IdentityMigrationGuard::assertCompatible();
             Schema::table('mcp_linked_subjects', function (Blueprint $table): void {
                 $table->dropUnique(self::OLD_UNIQUE);
             });
