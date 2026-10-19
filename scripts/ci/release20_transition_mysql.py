@@ -224,10 +224,20 @@ def rehearse(series, write_contract=False):
             sql('ALTER TABLE mcp_linked_subjects DROP INDEX mcp_linked_subjects_identity_fingerprint_unique, ADD UNIQUE INDEX mcp_linked_subjects_identity_fingerprint_unique(identity_fingerprint(16))')
             blocked('M08_same_name_prefix_difference')
             restore()
+            sql('ALTER TABLE mcp_linked_subjects ALTER INDEX mcp_linked_subjects_identity_fingerprint_unique INVISIBLE')
+            blocked('M08_invisible_unique')
+            restore()
             alias_fk(expected['absent_foreign_key_names'][0]); blocked('new_foreign_name_database_collision')
             restore()
             sql('CREATE TRIGGER canovia_member_authorization_epoch BEFORE UPDATE ON users FOR EACH ROW SET NEW.name=OLD.name')
             blocked('new_trigger_database_collision')
+
+            restore()
+            additions = sorted(set(fixed['candidate']) - set(fixed['baseline']))
+            for migration in additions[:4]:
+                php('artisan', 'migrate', '--path=database/migrations/' + migration + '.php', '--force', '--no-interaction')
+            sql('DROP TRIGGER canovia_member_authorization_epoch')
+            blocked('M05_missing_trigger_predecessor')
 
             for label in ('M03', 'M04', 'M08_COLUMN', 'M08_UNIQUE', 'M18', 'M19', 'M20'):
                 restore()
