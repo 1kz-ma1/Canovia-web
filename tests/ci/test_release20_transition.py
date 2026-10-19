@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'scripts/ci'))
 import release20_transition_mysql as transition
+import release20_proposal_packet as proposal
 
 
 class TransitionPrivacyTest(unittest.TestCase):
@@ -31,6 +32,23 @@ class TransitionPrivacyTest(unittest.TestCase):
         self.assertEqual(['new_foreign'], result['absent_foreign_key_names'])
         self.assertEqual(['new_table'], result['absent_tables'])
         self.assertEqual({'legacy': ['b']}, result['absent_columns'])
+
+    def test_proposed_reference_preserves_every_original_physical_hash(self):
+        for engine in ('8.0', '8.4'):
+            original = json.loads((transition.ROOT / 'scripts/ci/integrated_release20_reference' / (engine + '.json')).read_text())
+            proposed = json.loads((transition.ROOT / 'scripts/ci/release20_proposed_reference' / (engine + '.json')).read_text())
+            self.assertNotEqual(original['migration_seal'], proposed['migration_seal'])
+            for key in original.keys() - {'migration_seal'}:
+                self.assertEqual(original[key], proposed[key])
+
+    def test_offline_packet_failure_never_echoes_secrets_or_authorizes_release(self):
+        with patch.object(sys, 'argv', ['packet', '--proposal-sha', 'a' * 40]), \
+                patch.object(proposal, 'packet', side_effect=RuntimeError('PRIVATE_HOST_DATA')), \
+                patch('sys.stdout', new_callable=io.StringIO) as out:
+            self.assertEqual(2, proposal.main())
+            result = json.loads(out.getvalue())
+            self.assertFalse(result['release_authorized'])
+            self.assertNotIn('PRIVATE', out.getvalue())
 
 
 if __name__ == '__main__':

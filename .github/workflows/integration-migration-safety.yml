@@ -13,6 +13,7 @@ on:
       - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
       - 'scripts/ci/integrated_release20_audit.py'
       - 'scripts/ci/integrated_release20_reference/**'
+      - 'scripts/ci/release20_proposed_reference/**'
       - 'scripts/ops/integrated_release20_collect.py'
       - 'scripts/sql/integrated_release20_metadata.sql'
       - 'tests/ci/test_integrated_release20*'
@@ -88,9 +89,13 @@ jobs:
       - name: Rehearse exact historical upgrade, retained rows, retry and legacy-writer fences
         env:
           SERIES: ${{ matrix.series }}
-        run: >-
-          python3 scripts/ci/integration_mysql_upgrade.py --series "$SERIES"
-          --artifacts "$RUNNER_TEMP/integration-upgrade"
+        run: |
+          if [ -f app/Support/Release20PendingSchemaGuard.php ]; then
+            python3 -B scripts/ci/release20_proposal_packet.py --proposal-sha "$(git rev-parse HEAD)"
+            python3 -B scripts/ci/integration_mysql_upgrade.py --series "$SERIES" --proposal-reference --artifacts "$RUNNER_TEMP/integration-upgrade"
+          else
+            python3 -B scripts/ci/integration_mysql_upgrade.py --series "$SERIES" --artifacts "$RUNNER_TEMP/integration-upgrade"
+          fi
       - name: Restore synthetic data into an isolated schema and compare all structural constraints
         env:
           SERIES: ${{ matrix.series }}
@@ -101,4 +106,4 @@ jobs:
         if: always()
         with:
           name: integration-mysql-${{ matrix.series }}
-          path: ${{ runner.temp }}/integration-upgrade/
+          path: ${{ runner.temp }}/integration-upgrade/*.json

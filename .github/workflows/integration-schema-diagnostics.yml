@@ -16,6 +16,7 @@ on:
       - 'database/migrations/**'
       - '.github/workflows/integration-schema-diagnostics.yml'
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
@@ -62,9 +63,16 @@ jobs:
       - name: Strict and semantic negatives, names, composites and all20 alias upgrade
         env:
           SERIES: ${{ matrix.series }}
-        run: python3 -B scripts/ci/integrated_release20_diagnostic_mysql.py --series "$SERIES"
+        run: |
+          if [ -f app/Support/Release20PendingSchemaGuard.php ]; then
+            python3 -B scripts/ci/integrated_release20_diagnostic_mysql.py --series "$SERIES" --fixed-source-only
+          else
+            python3 -B scripts/ci/integrated_release20_diagnostic_mysql.py --series "$SERIES"
+          fi
       - name: Offline separate tooling and immutable release pins
-        run: >-
-          python3 -B scripts/ops/integrated_release20_diagnostic_collect.py
-          --tooling-sha "$(git rev-parse HEAD)"
-          --candidate-sha c09a8fc718c338f98a4045a4b5f2260c7571fdaa
+        run: |
+          if [ -f app/Support/Release20PendingSchemaGuard.php ]; then
+            python3 -B scripts/ci/release20_proposal_packet.py --proposal-sha "$(git rev-parse HEAD)"
+          else
+            python3 -B scripts/ops/integrated_release20_diagnostic_collect.py --tooling-sha "$(git rev-parse HEAD)" --candidate-sha c09a8fc718c338f98a4045a4b5f2260c7571fdaa
+          fi

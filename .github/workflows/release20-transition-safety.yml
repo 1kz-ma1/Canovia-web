@@ -17,6 +17,10 @@ permissions:
   contents: read
 
 jobs:
+  migration-regression:
+    uses: ./.github/workflows/integration-migration-safety.yml
+  fixed-diagnostic-regression:
+    uses: ./.github/workflows/integration-schema-diagnostics.yml
   preflight:
     name: Transition PHP and offline safety
     runs-on: ubuntu-latest

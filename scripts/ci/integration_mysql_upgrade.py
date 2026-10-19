@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[2]
 BASE = '15abdc9de6f24b5250fb255c579d1aa55facaf1a'
 
 
-def run(series, artifacts, write_reference=False):
+def run(series, artifacts, write_reference=False, proposal_reference=False):
     name, port = {'8.0': ('canovia-integration-80', '13380'),
                   '8.4': ('canovia-integration-84', '13384')}[series]
     target = json.loads(subprocess.check_output(['docker', 'inspect', name], text=True))[0]
@@ -110,7 +110,8 @@ def run(series, artifacts, write_reference=False):
         reference = dict(kind='DISPOSABLE_SOURCE_REFERENCE_ONLY', baseline_sha=BASE,
                          migration_seal=src['migration_seal'], engine=series,
                          baseline94=baseline, candidate114=upgraded)
-        reference_path = ROOT / 'scripts/ci/integrated_release20_reference' / (series + '.json')
+        reference_path = ROOT / ('scripts/ci/release20_proposed_reference' if proposal_reference
+                                 else 'scripts/ci/integrated_release20_reference') / (series + '.json')
         if write_reference:
             if os.environ.get('GITHUB_ACTIONS') == 'true':
                 raise RuntimeError('CI cannot replace reviewed reference contracts')
@@ -158,5 +159,6 @@ if __name__ == '__main__':
     parser.add_argument('--series', choices=['8.0', '8.4'], required=True)
     parser.add_argument('--artifacts', type=Path, required=True)
     parser.add_argument('--write-reference', action='store_true', help='Local disposable-only reference generation; forbidden in Actions')
+    parser.add_argument('--proposal-reference', action='store_true', help='Separate reviewed proposed-source reference; never changes fixed-candidate references')
     args = parser.parse_args()
-    run(args.series, args.artifacts, args.write_reference)
+    run(args.series, args.artifacts, args.write_reference, args.proposal_reference)
