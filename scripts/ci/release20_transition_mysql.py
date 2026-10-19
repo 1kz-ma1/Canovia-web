@@ -259,11 +259,13 @@ def rehearse(series, write_contract=False):
             epoch_table = 'learning_context_source_epochs'
             epoch_fk = 'learning_context_source_epochs_plan_id_foreign'
             epoch_unique = 'learning_context_source_epochs_plan_id_unique'
-            def epoch_update_cascade():
+            def epoch_update(action='CASCADE'):
+                if action not in ('CASCADE', 'RESTRICT'):
+                    raise ValueError()
                 sql(f'ALTER TABLE {epoch_table} DROP FOREIGN KEY {epoch_fk}; '
                     f'ALTER TABLE {epoch_table} ADD CONSTRAINT {epoch_fk} FOREIGN KEY(plan_id) '
-                    'REFERENCES plans(id) ON DELETE CASCADE ON UPDATE CASCADE')
-            for label in ('aliases', 'foreign_update', 'extra_unique', 'invisible_unique', 'epoch_default'):
+                    f'REFERENCES plans(id) ON DELETE CASCADE ON UPDATE {action}')
+            for label in ('aliases', 'foreign_update', 'foreign_restrict', 'extra_unique', 'invisible_unique', 'epoch_default'):
                 restore()
                 php('scripts/ci/release20_transition_fixture.php', 'interrupt', 'M20_UNIQUE')
                 if len(ledger()) != 113 or not equivalent(capture()[1], canonical):
@@ -272,10 +274,11 @@ def rehearse(series, write_contract=False):
                     sql(f'ALTER TABLE {epoch_table} RENAME INDEX {epoch_unique} TO transition_epoch_unique; '
                         f'ALTER TABLE {epoch_table} DROP FOREIGN KEY {epoch_fk}; '
                         f'ALTER TABLE {epoch_table} ADD CONSTRAINT transition_epoch_foreign FOREIGN KEY(plan_id) '
-                        'REFERENCES plans(id) ON DELETE CASCADE ON UPDATE RESTRICT')
+                        'REFERENCES plans(id) ON DELETE CASCADE ON UPDATE NO ACTION')
                     complete('M20_complete_aliases_verified_resume')
                     continue
-                if label == 'foreign_update': epoch_update_cascade()
+                if label == 'foreign_update': epoch_update()
+                elif label == 'foreign_restrict': epoch_update('RESTRICT')
                 elif label == 'extra_unique':
                     sql(f'ALTER TABLE {epoch_table} ADD UNIQUE INDEX transition_epoch_extra_unique(last_mutation_kind)')
                 elif label == 'invisible_unique':
@@ -286,7 +289,7 @@ def rehearse(series, write_contract=False):
 
             restore()
             php('scripts/ci/release20_transition_fixture.php', 'interrupt', 'M20_UNIQUE', str(fixed_dir))
-            epoch_update_cascade()
+            epoch_update()
             migrate(fixed_dir)
             raw, shape = capture()
             if set(ledger()) != set(fixed['candidate']) or equivalent(shape, canonical):

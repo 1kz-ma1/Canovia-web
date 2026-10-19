@@ -27,7 +27,7 @@ return new class extends Migration
                 ->contains(fn (array $key): bool => $key['columns'] === ['plan_id']
                     && $key['foreign_table'] === 'plans' && $key['foreign_columns'] === ['id']
                     && strtolower($key['on_delete']) === 'cascade'
-                    && in_array(strtolower($key['on_update']), ['restrict', 'no action'], true)
+                    && strtolower($key['on_update']) === 'no action'
                     && (Schema::getConnection()->getDriverName() !== 'mysql'
                         || $key['foreign_schema'] === Schema::getConnection()->getDatabaseName()));
             if (! $uniquePlan || ! $primary || ! $foreignPlan

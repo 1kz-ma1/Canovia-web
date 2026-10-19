@@ -30,7 +30,7 @@ productionは有効rulesetに削除/force-push禁止、PR・merge方式限定、
 | M18 | 既存tableはpending upで常に拒否。旧「safe to retry」コメントを停止・operator審査という現在動作へ訂正。正常migrateは台帳skipであり、既存tableの自動採用ではない。 |
 | M19 | 最初に両tableを検査。片方だけ存在してもDDL前拒否。競合CREATEはDBが拒否し、列だけの代替採用なし。 |
 | M04→M05 | M04のmember trigger名をFOLLOWSで参照。順序変更禁止。欠損前提は失敗する。完全可視性/定義・実DDL権限/binlogは別の本番ゲート。 |
-| **M20：追加の必須修正** | 旧コードはFK DELETEとrequired keyの存在だけを検査し、UPDATE変更・余分なUNIQUEを採用し得た。追加PHP負例2件が修正前に失敗。正しいUPDATE/同一schema参照、FK1個・Index2個を要求。MySQLでは列順序/全6列の型・nullable/default/extra・生成式、文字列charset/collation、table engine/collation、Index全partのunique/prefix/式/方向/可視性/種別、観測可能なCHECK/trigger不在も確認。別名でも完全定義一致は許可し、名前を選んでDROP/修復しない。不可視triggerの不存在を証明する検査ではない。 |
+| **M20：追加の必須修正** | 旧コードはFK DELETEとrequired keyの存在だけを検査し、UPDATE変更・余分なUNIQUEを採用し得た。追加PHP負例2件が修正前に失敗。source通りのUPDATE NO ACTION/同一schema参照、FK1個・Index2個を要求。MySQLでは列順序/全6列の型・nullable/default/extra・生成式、文字列charset/collation、table engine/collation、Index全partのunique/prefix/式/方向/可視性/種別、観測可能なCHECK/trigger不在も確認。別名でも完全定義一致は許可し、名前を選んでDROP/修復しない。不可視triggerの不存在を証明する検査ではない。 |
 | 再開/復旧 | M18/M19残骸・M03/M04/M20不完全状態は無変更で停止。M20の完成した整合状態のみ、定義確認後に再開。台帳手動編集なし。down/fresh/無条件rollbackを本番手順へ追加しない。 |
 | 起動 | 累積差分でDocker/Render entrypointやstartup policy/認証routeは変更なし。既定checkは台帳の読取だけでpending/unknownを拒否、物理整合性やrelease承認の証明ではない。applyは実行SHAと40桁承認SHA一致で1回、失敗は自動retryなし。隔離staging専用の別retry分岐を本番許可へ流用しない。 |
 
@@ -38,9 +38,9 @@ productionは有効rulesetに削除/force-push禁止、PR・merge方式限定、
 
 ## C：新しいソースと検証範囲
 
-本追加Draftでは未適用 **M20も変更**するため、累積変更migrationはM01/M08/M18/M19/M20の5件。旧94件と総数114は不変。M18コメントだけでもmigration blobが変わる。提案用CI参照の新sealは `c5a359a65c4f6fa3f3715d00d8dffb6224c9d86d091506489dd40eed68903085`。原strict/診断/意味参照は一切変更せず、提案参照の全物理hashは原版と同一。packetはこの5件だけを変更許可集合に固定する。旧4件の#792 Mac受入を新版へ流用しない。
+本追加Draftでは未適用 **M20も変更**するため、累積変更migrationはM01/M08/M18/M19/M20の5件。旧94件と総数114は不変。M18コメントだけでもmigration blobが変わる。提案用CI参照の新sealは `a3494c1d1cf60546a86312f249f7d44b2ac52e44669752a65e1c70011ec9f91b`。最初の追加CIでは別名正例のfixtureがUPDATEをRESTRICTへ変更しており、既存の厳密な意味比較が拒否した。元のNO ACTIONを保持する正例へ修正し、RESTRICT自体も負例へ分離する。比較条件は緩めない。原strict/診断/意味参照は一切変更せず、提案参照の全物理hashは原版と同一。packetはこの5件だけを変更許可集合に固定する。旧4件の#792 Mac受入を新版へ流用しない。
 
-新HEADでMySQL8.0/8.4の既存31ケースを再実行し、M20の完成DDL後・台帳前で停止させ、別名正例とUPDATE/余分UNIQUE/不可視UNIQUE/default差の負例、固定c09が誤UPDATEを採用する修正前controlを追加する（**各37ケース**）。台帳の手動改変で停止状態を作らない。既存94→114・全旧行保持・constraints/trigger/構造・二度目DDL0・合成隔離restore、固定c09診断29ケース/engine、関連PHP/Python、起動ポリシーも新HEADのCI対象。
+新HEADでMySQL8.0/8.4の既存31ケースを再実行し、M20の完成DDL後・台帳前で停止させ、別名正例とUPDATE CASCADE/RESTRICT/余分UNIQUE/不可視UNIQUE/default差の負例、固定c09が誤UPDATEを採用する修正前controlを追加する（**各38ケース**）。台帳の手動改変で停止状態を作らない。既存94→114・全旧行保持・constraints/trigger/構造・二度目DDL0・合成隔離restore、固定c09診断29ケース/engine、関連PHP/Python、起動ポリシーも新HEADのCI対象。
 
 新しいtest caseが必要なのは上記M20の実証された検査不足。M01/M08/M18/M19/M04→M05には既存の実DDL注入・負例があり、同じ内容のテストを重ねない。ブラウザ/UI/実OAuthには変更がなく、この変更の追加E2Eは不要。実機/実認証のリリース受入は別の未達ゲートのまま。最終実行件数・PASS/FAIL・run URL・新HEADはPRと#488の固定証跡を正本とする。
 
