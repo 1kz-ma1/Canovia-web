@@ -439,6 +439,16 @@ class CleanupTests(unittest.TestCase):
         self.assertEqual('DISPOSABLE_DOCKER',
                          adapter._contract(adapter._disposable_command('8.0'), adapter.child_env()))
 
+    def test_unproven_command_or_environment_never_starts_a_process(self):
+        cmd, env = self.fake()
+        for command, environment in [(cmd + ['SYNTHETIC_SECRET'], env),
+                (cmd, dict(env, PYTHONPATH='/synthetic')),
+                ([sys.executable, '-I', '-c', 'import os;os.fork()'], adapter.child_env())]:
+            with patch('subprocess.Popen') as start:
+                with self.assertRaisesRegex(core.Block, 'CLIENT_CONTRACT_REJECTED'):
+                    bounded_query(command, 'engine', Budget(), env=environment)
+                start.assert_not_called()
+
     def test_cleanup_block_retains_fixed_primary_code_without_raw_error(self):
         cmd, env = self.fake(b'x' * 100 + b'\n')
         cleanup = adapter._cleanup

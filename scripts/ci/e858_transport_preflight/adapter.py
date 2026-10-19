@@ -102,6 +102,8 @@ def bounded_query(command, query_id, budget, *, seconds=10, max_bytes=8*1024*102
     if time.monotonic() >= budget.until:
         raise Block('QUERY_TIMEOUT')
     contract = _contract(command, env)
+    if contract == 'UNPROVEN_PROCESS_TREE':
+        raise Block('CLIENT_CONTRACT_REJECTED')
     process = None; problem = None; cleanup = None; result = None; completed = False
     selector = selectors.DefaultSelector()
     raw = bytearray(); line = bytearray(); rows = 0

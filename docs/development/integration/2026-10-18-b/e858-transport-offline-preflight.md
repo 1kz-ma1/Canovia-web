@@ -145,6 +145,6 @@ owner実測：元34件のうち3件がerrno=1。#795 `transport.py` のfinally�
 | signal終了 | 正常完了にはしない。終了確認できればPRIVATE_CLIENT_FAILURE、確認不能ならcleanupの固定BLOCK |
 
 cleanup追加graceは直接wait最大0.5秒＋group確認最大0.25秒で、元stream deadlineを延長しない。raw例外は表示しない。cleanup未確認時は元の原因をprivateな固定primary_codeへ保持し、成功にはしない。
-childless証明を任意Python・shell・Dockerへ転用しない。固定fault fixture（sleep/stderr/self-signal）も子を作らない定数のみ。未知のprogram/envは証明不成立。
+childless証明を任意Python・shell・Dockerへ転用しない。固定fault fixture（sleep/stderr/self-signal）も子を作らない定数のみ。未知のprogram/envはCLIENT_CONTRACT_REJECTEDでprocess起動前に拒否する。
 
 新テストは元34件を保持し、3種類の上限BlockへEPERMを注入、実blocked writerの直接kill/wait、正常終了・signal・timeout・kill/wait拒否・group残存/不可視・Docker local/remoteの証明差を追加する。skipや上限の緩和はしない。offline CIはLinux/Python3.9を明示し、手元Linux/Python3.12とも比較する。Darwin/Python3.9.6自体はownerの新HEAD実行まで **MAC_ACCEPTANCE_PENDING**。
