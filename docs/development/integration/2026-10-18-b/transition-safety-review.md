@@ -62,7 +62,7 @@ M番号は固定候補の追加migration名昇順。ファイルとblobの一覧
 
 テストはlabel/loopbackを検査した使い捨てMySQL8.0/8.4のみ。旧94から合成user/Plan/Task/Attempt/session/link/grant/audit/resourceをseedし、**migrations以外の全旧table・全旧列・全行をPK順digest**で封印する。正例は114全構造・Index/FK多重集合・全triggerを期待canonicalと照合、旧行保持、DBのFK/UNIQUE/旧writer fenceを確認し、2回目のmigrate成功DDL数0を確認。負例は全行/構造/ledgerの前後一致を検査し、実DDL commit直後の例外を注入する。生metadata/dump/errorはprivate一時領域のみ、artifactにしない。
 
-名前だけの正例は、Indexのみ/FKのみ/両方、別tableのIndex同名を含む。負例は複合順序、同列の異なるUNIQUE、同名異定義Index/FK、新Index/FK/trigger名衝突、M08旧名alias/重複/prefix、M03/M04/M08列/M08新UNIQUE/M18/M19/M20停止を含む。合成名は本番の実名と対応付けない。
+名前だけの正例は、Indexのみ/FKのみ/両方、別tableのIndex同名を含む。負例は複合順序、同列の異なるUNIQUE、同名異定義Index/FK、新Index/FK/trigger名衝突、M08旧名alias/重複/prefix/不可視、M05前提trigger欠損を含む。停止点はM03/M04/M08列/M08新UNIQUE/M08旧UNIQUE削除/M08history Index/M18/M19/M20の9箇所。合成名は本番の実名と対応付けない。
 
 ## D：名前差の例外審査案（未実装・承認なし）
 

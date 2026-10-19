@@ -45,6 +45,8 @@ DB::listen(function ($event) use (&$injected, &$ddl, $mode, $target): void {
         'M04' => str_starts_with($sql, 'create trigger canovia_plan_authorization_epoch'),
         'M08_COLUMN' => str_starts_with($sql, 'alter table `mcp_linked_subjects` add `active_identity_fingerprint`'),
         'M08_UNIQUE' => str_starts_with($sql, 'alter table `mcp_linked_subjects` add unique') && str_contains($sql, 'mcp_active_subject_identity_unique'),
+        'M08_DROP' => str_starts_with($sql, 'alter table `mcp_linked_subjects` drop index') && str_contains($sql, 'mcp_linked_subjects_identity_fingerprint_unique'),
+        'M08_HISTORY' => str_starts_with($sql, 'alter table `mcp_linked_subjects` add index') && str_contains($sql, 'mcp_subject_identity_history_idx'),
         'M18' => str_starts_with($sql, 'create table `mcp_study_result_proposals`'),
         'M19' => str_starts_with($sql, 'create table `learning_context_watch_states`'),
         'M20' => str_starts_with($sql, 'create table `learning_context_source_epochs`'),

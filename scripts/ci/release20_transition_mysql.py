@@ -241,7 +241,7 @@ def rehearse(series, write_contract=False):
             sql('DROP TRIGGER canovia_member_authorization_epoch')
             blocked('M05_missing_trigger_predecessor')
 
-            for label in ('M03', 'M04', 'M08_COLUMN', 'M08_UNIQUE', 'M18', 'M19', 'M20'):
+            for label in ('M03', 'M04', 'M08_COLUMN', 'M08_UNIQUE', 'M08_DROP', 'M08_HISTORY', 'M18', 'M19', 'M20'):
                 restore()
                 php('scripts/ci/release20_transition_fixture.php', 'interrupt', label)
                 if len(ledger()) not in range(94, 114):
