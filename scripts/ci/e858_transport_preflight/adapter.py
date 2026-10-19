@@ -24,7 +24,8 @@ TARGETS = {'8.0': ('canovia-integration-80', '13380'),
 # Closed, childless fault fixtures. No arbitrary source receives this certificate.
 FAULT_PROGRAMS = ('import time;time.sleep(2)',
                   'import sys;sys.stderr.write("SYNTHETIC_SECRET")',
-                  'import os,signal;os.kill(os.getpid(),signal.SIGTERM)')
+                  'import os,signal;os.kill(os.getpid(),signal.SIGTERM)',
+                  'import sys;sys.exit(2)')
 
 
 def _contract(command, env):
@@ -140,7 +141,10 @@ def bounded_query(command, query_id, budget, *, seconds=10, max_bytes=8*1024*102
                         if rows > original.CAPS[query_id]:
                             raise Block('QUERY_ROWS_EXCEEDED')
                         line.clear()
-        if process.wait(timeout=max(0.01, until-time.monotonic())) != 0:
+        status = process.wait(timeout=max(0.01, until-time.monotonic()))
+        if status < 0:
+            raise Block('CLIENT_SIGNALLED')
+        if status != 0:
             raise Block('PRIVATE_CLIENT_FAILURE')
         if line or (not raw and query_id not in ('check', 'trigger', 'foreign_key', 'semantic_foreign_key')):
             raise Block('PRIVATE_OUTPUT_REJECTED')
@@ -149,7 +153,9 @@ def bounded_query(command, query_id, budget, *, seconds=10, max_bytes=8*1024*102
         problem = error
     except subprocess.TimeoutExpired:
         problem = Block('QUERY_TIMEOUT')
-    except (Exception, KeyboardInterrupt):
+    except KeyboardInterrupt:
+        problem = Block('CLIENT_INTERRUPTED')
+    except Exception:
         problem = Block('PRIVATE_CLIENT_FAILURE')
     finally:
         try:

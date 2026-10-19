@@ -309,14 +309,15 @@ class StreamTests(unittest.TestCase):
     def test_timeout_stderr_signal_and_interrupt_cleanup(self):
         programs = [('import time;time.sleep(2)', 'QUERY_TIMEOUT'),
                     ('import sys;sys.stderr.write("SYNTHETIC_SECRET")', 'PRIVATE_CLIENT_FAILURE'),
-                    ('import os,signal;os.kill(os.getpid(),signal.SIGTERM)', 'PRIVATE_CLIENT_FAILURE')]
+                    ('import os,signal;os.kill(os.getpid(),signal.SIGTERM)', 'CLIENT_SIGNALLED'),
+                    ('import sys;sys.exit(2)', 'PRIVATE_CLIENT_FAILURE')]
         for program, code in programs:
             with self.assertRaisesRegex(core.Block, code):
                 bounded_query([sys.executable, '-I', '-c', program], 'engine', Budget(), seconds=.1,
                               env=adapter.child_env())
         with patch('e858_transport_preflight.adapter.selectors.DefaultSelector') as selector:
             selector.return_value.select.side_effect = KeyboardInterrupt()
-            with self.assertRaisesRegex(core.Block, 'PRIVATE_CLIENT_FAILURE'):
+            with self.assertRaisesRegex(core.Block, 'CLIENT_INTERRUPTED'):
                 bounded_query([sys.executable, '-I', '-c', 'import time;time.sleep(2)'],
                               'engine', Budget(), env=adapter.child_env())
 

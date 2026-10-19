@@ -142,9 +142,9 @@ owner実測：元34件のうち3件がerrno=1。#795 `transport.py` のfinally�
 | 不明process tree / Docker local group | 親の終了だけを木全体の証明にしない。生存中に限りgroup killを行い、親のwait後はgroup不存在を最大0.25秒確認。reap済み親のPGIDには破壊signalを送らず、PID再利用による別processへの誤killを防ぐ。権限不足/残存はPROCESS_GROUP_TERMINATION_UNVERIFIED。残存を除去できてもUNEXPECTED_DESCENDANT_DETECTEDでSTOP |
 | Docker正常完了 | 固定foreground docker execのexit0＋完全な出力＋local group不存在を要する。これだけが当該remote mysql正常完了の証拠 |
 | Docker異常終了・上限・timeout | local clientをkillしてもコンテナ内mysql終了は証明できない。DISPOSABLE_REMOTE_TERMINATION_UNVERIFIEDでSTOP。local groupも未確認ならそのBLOCKを優先する。次query/retryなし。試験runnerが所有する使い捨てcontainerの廃棄・停止が必要 |
-| signal終了 | 正常完了にはしない。終了確認できればPRIVATE_CLIENT_FAILURE、確認不能ならcleanupの固定BLOCK |
+| signal終了 | 正常完了にはしない。終了確認できればCLIENT_SIGNALLED、確認不能ならcleanupの固定BLOCK。利用者中断はCLIENT_INTERRUPTEDで別分類 |
 
 cleanup追加graceは直接wait最大0.5秒＋group確認最大0.25秒で、元stream deadlineを延長しない。raw例外は表示しない。cleanup未確認時は元の原因をprivateな固定primary_codeへ保持し、成功にはしない。
-childless証明を任意Python・shell・Dockerへ転用しない。固定fault fixture（sleep/stderr/self-signal）も子を作らない定数のみ。未知のprogram/envはCLIENT_CONTRACT_REJECTEDでprocess起動前に拒否する。
+childless証明を任意Python・shell・Dockerへ転用しない。固定fault fixture（sleep/stderr/self-signal/nonzero exit）も子を作らない定数のみ。未知のprogram/envはCLIENT_CONTRACT_REJECTEDでprocess起動前に拒否する。
 
 新テストは元34件を保持し、3種類の上限BlockへEPERMを注入、実blocked writerの直接kill/wait、正常終了・signal・timeout・kill/wait拒否・group残存/不可視・Docker local/remoteの証明差を追加する。skipや上限の緩和はしない。offline CIはLinux/Python3.9を明示し、手元Linux/Python3.12とも比較する。Darwin/Python3.9.6自体はownerの新HEAD実行まで **MAC_ACCEPTANCE_PENDING**。
