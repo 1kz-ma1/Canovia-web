@@ -107,6 +107,10 @@ class TransportTests(unittest.TestCase):
         command=self.client("import sys; q=sys.stdin.buffer.read(); assert q==b'SHOW GRANTS FOR CURRENT_USER();\\n'; print('synthetic')")
         self.assertEqual('synthetic\n',bounded_query(command,'grants',Budget()))
 
+    def test_empty_trigger_is_observation_only_not_visibility_proof(self):
+        self.assertEqual('',bounded_query(self.client('pass'),'trigger',Budget()))
+        self.assertEqual('UNVERIFIED',MetadataTests().evaluate()['trigger_visibility'])
+
     def test_unknown_sql_ddl_multi_statement_never_starts_a_client(self):
         for key,sql in [('not-a-query',None),('engine',b'DROP TABLE synthetic;'),('engine',b'SELECT 1; SELECT 2;')]:
             with patch('subprocess.Popen') as start:

@@ -32,10 +32,11 @@ def unique_object(pairs):
 def private_json(path, maximum):
     path=Path(path).absolute()
     # User-owned input is never deleted; this tool creates NO raw temp files.
-    if path.is_symlink() or path.parent.is_symlink() or path.parent.stat().st_mode & 0o077:
+    if (path.is_symlink() or any(parent.is_symlink() for parent in path.parents)
+            or path.parent.stat().st_mode & 0o077):
         raise Block('PRIVATE_INPUT_REJECTED')
     if path.is_relative_to(ROOT):raise Block('PRIVATE_INPUT_REJECTED')
-    fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0))
+    fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
     try:
         info=os.fstat(fd)
         if not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode & 0o077 or info.st_size>maximum:

@@ -58,7 +58,8 @@ def bounded_query(command, query_id, budget, *, seconds=10, max_bytes=8*1024*102
                         line.clear()
         if process.wait(timeout=max(0.01,until-time.monotonic()))!=0:
             raise Block('PRIVATE_CLIENT_FAILURE')
-        if line or not raw:raise Block('PRIVATE_OUTPUT_REJECTED')
+        if line or (not raw and query_id not in ('check','trigger','foreign_key','semantic_foreign_key')):
+            raise Block('PRIVATE_OUTPUT_REJECTED')
         return raw.decode('ascii')
     except Block:
         raise
