@@ -50,6 +50,7 @@ DB::listen(function ($event) use (&$injected, &$ddl, $mode, $target): void {
         'M18' => str_starts_with($sql, 'create table `mcp_study_result_proposals`'),
         'M19' => str_starts_with($sql, 'create table `learning_context_watch_states`'),
         'M20' => str_starts_with($sql, 'create table `learning_context_source_epochs`'),
+        'M20_UNIQUE' => str_starts_with($sql, 'alter table `learning_context_source_epochs` add unique'),
         default => false,
     };
     if ($mode === 'interrupt' && ! $injected && $match) {
