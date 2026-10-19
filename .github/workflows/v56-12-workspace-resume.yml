@@ -1,6 +1,7 @@
 name: V56.12 Workspace Resume Validation
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - fix/v56-12-workspace-resume-and-session-scope

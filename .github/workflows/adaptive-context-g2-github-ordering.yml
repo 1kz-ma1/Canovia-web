@@ -1,6 +1,7 @@
 name: Adaptive Context G2 GitHub Ordering
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:

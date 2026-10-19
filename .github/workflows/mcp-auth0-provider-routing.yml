@@ -1,6 +1,7 @@
 name: MCP Auth0 JWT Provider Routing
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
     paths:
