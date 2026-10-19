@@ -96,6 +96,15 @@ class MetadataTests(unittest.TestCase):
         f,l,r,s,e,ref,c=fixture();c['absent_tables']=[core.DEPENDENCY_KEY[0]]
         out=core.audit(f,l,l,r,s,e,ref,c);self.assertEqual(1,out['pending_collision_count']);self.assertEqual('BLOCK',out['strict_result'])
 
+    def test_partial_pending_tables_are_not_resume_authority(self):
+        f,l,r,s,e,ref,c=fixture()
+        r+='table\tlearning_context_watch_states\tBASE TABLE\tInnoDB\tutf8mb4_unicode_ci\n'
+        out=core.audit(f,l,l,r,s,e,ref,c)
+        self.assertEqual('PARTIAL_PENDING_TABLES_BLOCK',out['migration_boundaries']['M19'])
+        self.assertEqual('ABSENT_IN_OBSERVED_METADATA_ONLY',out['migration_boundaries']['M18'])
+        self.assertEqual('COUNT_DIFFERENCE',out['sections'][0]['classification'])
+        self.assertEqual('BLOCK',out['strict_result'])
+
     def test_no_private_identifiers_in_diagnostic_output(self):
         out=json.dumps(self.evaluate())
         for secret in core.DEPENDENCY_KEY:self.assertNotIn(secret,out)

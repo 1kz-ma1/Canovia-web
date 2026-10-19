@@ -203,10 +203,38 @@ def audit(facts, ledger_before, ledger_after, raw, supplemental, extra, referenc
     aliases=list(definitions['index'].values()).count(expected_dependency)
     dependency=('EXPECTED_NAME_AND_DEFINITION' if actual==expected_dependency and aliases==1 else 'MISSING_INCOMPATIBLE_OR_AMBIGUOUS_BLOCK') if stage=='baseline94' else 'NOT_PREMIGRATION94'
     if stage=='baseline94' and (count or dependency!='EXPECTED_NAME_AND_DEFINITION'):strict='BLOCK'
+    physical_sections=[]
+    if stage:
+        expected=reference[stage]
+        for section in WIDTHS:
+            before,after=expected['physical']['sections'][section],observed['physical']['sections'][section]
+            left,right=expected['projections'][section],observed['projections'][section]
+            classification=('MATCH' if before==after else 'COUNT_DIFFERENCE' if before['count']!=after['count']
+                            else 'OBJECT_IDENTITY_DIFFERENCE' if left['identity']!=right['identity']
+                            else 'COLLATION_ONLY_DIFFERENCE' if section in ('table','column')
+                            and left['without_collation']==right['without_collation'] else 'DEFINITION_DIFFERENCE')
+            physical_sections.append(dict(section=section,classification=classification,
+                                          expected_count=before['count'],observed_count=after['count']))
+    tables={row.split('\t')[1] for row in raw.splitlines() if row.startswith('table\t')}
+    boundaries=dict(M01='NOT_INITIAL94_BOUNDARY',M08=dependency,
+                    M04_M05='COMPLETE_TRIGGER_VISIBILITY_AND_DDL_UNVERIFIED')
+    pending_tables={'M18':{'mcp_study_result_proposals'},
+                    'M19':{'learning_context_watch_states','learning_context_change_records'},
+                    'M20':{'learning_context_source_epochs'}}
+    for migration,expected_tables in pending_tables.items():
+        present=len(tables & expected_tables)
+        boundaries[migration]=('PARTIAL_LEDGER_BLOCK' if stage is None else
+            'FINAL_TARGET_SHAPE_ONLY_NO_RETRY_AUTHORIZATION' if stage=='candidate114' and strict!='BLOCK' else
+            'FINAL_TARGET_DEFINITION_BLOCK' if stage=='candidate114' else
+            'PARTIAL_PENDING_TABLES_BLOCK' if 0<present<len(expected_tables) else
+            'EXISTING_PENDING_TABLE_BLOCK' if present else 'ABSENT_IN_OBSERVED_METADATA_ONLY')
+    if stage=='baseline94':
+        boundaries['M01']='OBSERVED_NAME_COLLISION_BLOCK' if count else 'NO_VISIBLE_COLLISION_NOT_AUTHORIZATION'
     return dict(result='BLOCK_REAL_GATES_UNVERIFIED',stage=stage or 'UNKNOWN_OR_PARTIAL',
                 original_strict_result=original['result'],original_strict_code=original['code'],strict_result=strict,
                 strict_code=('EXTENDED_METADATA_OR_DEPENDENCY_BLOCK' if strict=='BLOCK' and original['result']!='BLOCK' else original['code']),
-                applied_count=len(ledger_before),semantic_sections=sections,
+                applied_count=len(ledger_before),semantic_sections=sections,sections=physical_sections,
+                migration_boundaries=boundaries,
                 pending_collision_count=count,m08_name_dependency=dependency,
                 identity_data_collision='UNVERIFIED_METADATA_ONLY',trigger_visibility='UNVERIFIED',
                 runtime_ddl_binlog='UNVERIFIED',backup_restore='UNVERIFIED',writer_quiescence='UNVERIFIED',
