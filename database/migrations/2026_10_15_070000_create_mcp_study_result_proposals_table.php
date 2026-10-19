@@ -11,17 +11,10 @@ return new class extends Migration
         // Safe to retry after a partial MySQL DDL deployment. Never drop
         // user-approved results merely because the deployment was retried.
         if (Schema::hasTable('mcp_study_result_proposals')) {
-            $expected = [
-                'id', 'user_id', 'plan_id', 'task_id', 'grant_id',
-                'idempotency_key', 'payload_hash', 'question_count',
-                'correct_count', 'weakness_topics', 'status',
-                'expires_at', 'decided_at', 'created_at', 'updated_at',
-            ];
-            if (array_diff($expected, Schema::getColumnListing('mcp_study_result_proposals')) !== []) {
-                throw new RuntimeException('MCP study result proposals table is incomplete.');
-            }
-
-            return;
+            // migrate skips an applied ledger entry. Reaching up() with an
+            // existing table is an unrecorded/partial state: columns alone
+            // cannot attest FK/unique/index completeness. Never auto-adopt it.
+            throw new RuntimeException('RELEASE20_PROPOSALS_EXISTING_TABLE_BLOCK');
         }
 
         Schema::create('mcp_study_result_proposals', function (Blueprint $table): void {

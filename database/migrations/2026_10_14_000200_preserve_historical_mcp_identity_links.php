@@ -13,6 +13,10 @@ return new class extends Migration
 
     public function up(): void
     {
+        // No DDL/backfill until names AND complete MySQL index definitions
+        // agree. Alternate names require separate operator review, not DROP.
+        \App\Support\Release20IdentityMigrationGuard::assertCompatible();
+
         // Preserve immutable original records and grant/audit foreign keys.
         // A NULL active fingerprint releases exclusivity only after explicit
         // subject unlink; DB uniqueness still forbids two active owners.

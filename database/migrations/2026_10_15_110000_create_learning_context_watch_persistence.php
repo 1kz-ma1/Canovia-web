@@ -8,6 +8,12 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Preflight BOTH tables before the first DDL. A prior committed CREATE
+        // without its constraints must not be accepted as an applied migration.
+        if (Schema::hasTable('learning_context_watch_states') || Schema::hasTable('learning_context_change_records')) {
+            throw new RuntimeException('RELEASE20_WATCH_EXISTING_TABLE_BLOCK');
+        }
+
         // MySQL DDL is not atomic across tables. Replays must never drop
         // existing personal data, and partial schemas are rejected.
         if (! Schema::hasTable('learning_context_watch_states')) {

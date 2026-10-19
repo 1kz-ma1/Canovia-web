@@ -1,0 +1,65 @@
+{
+  "absent_columns": {
+    "development_activity_observations": [
+      "source_updated_at",
+      "source_revision_id",
+      "source_epoch"
+    ],
+    "mcp_linked_subjects": [
+      "active_identity_fingerprint"
+    ],
+    "plan_members": [
+      "authorization_epoch"
+    ],
+    "plans": [
+      "authorization_epoch"
+    ],
+    "study_recall_candidates": [
+      "review_provenance"
+    ]
+  },
+  "absent_foreign_key_names": [
+    "development_operational_profiles_plan_id_foreign",
+    "development_operational_targets_plan_id_foreign",
+    "learning_context_change_records_plan_id_foreign",
+    "learning_context_change_records_user_id_foreign",
+    "learning_context_source_epochs_plan_id_foreign",
+    "learning_context_watch_states_plan_id_foreign",
+    "learning_context_watch_states_user_id_foreign",
+    "mcp_study_result_proposals_grant_id_foreign",
+    "mcp_study_result_proposals_plan_id_foreign",
+    "mcp_study_result_proposals_task_id_foreign",
+    "mcp_study_result_proposals_user_id_foreign",
+    "private_file_generation_evidence_upload_intent_id_foreign",
+    "private_file_write_attempts_upload_intent_id_foreign"
+  ],
+  "absent_index_names": {
+    "development_activity_observations": [
+      "development_activity_observations_source_epoch_index"
+    ],
+    "mcp_linked_subjects": [
+      "mcp_active_subject_identity_unique",
+      "mcp_subject_identity_history_idx"
+    ]
+  },
+  "absent_tables": [
+    "development_operational_profiles",
+    "development_operational_targets",
+    "learning_context_change_records",
+    "learning_context_source_epochs",
+    "learning_context_watch_states",
+    "mcp_study_result_proposals",
+    "private_file_cleanup_entries",
+    "private_file_generation_evidence",
+    "private_file_path_fences",
+    "private_file_upload_intents",
+    "private_file_write_attempts"
+  ],
+  "absent_trigger_names": [
+    "canovia_member_authorization_epoch",
+    "canovia_member_binding_immutable",
+    "canovia_plan_authorization_epoch"
+  ],
+  "fixed_candidate": "c09a8fc718c338f98a4045a4b5f2260c7571fdaa",
+  "kind": "SOURCE_DERIVED_PENDING20_ABSENCE_CONTRACT"
+}
