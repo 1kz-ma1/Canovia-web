@@ -57,7 +57,8 @@ packetは実行済み：REVIEW_REQUIRED、old94/original audit unchanged、候�
 | --- | --- |
 | Source：Codex、固定e858、JSON記載UTC | PASS：上記Git/manifest/seal、guardと元strict監査の保持。実DBへの適合は別 |
 | Synthetic CI：Actions、固定e858、上記時刻/URL | PASS：両MySQL、各38ケース。正常形、合成別名、衝突、部分DDL、旧行保持、二度目DDL0。実Aivenの実名再現ではない |
-| Existing Real：owner、旧c09＋tooling e612、2026-10-19 00:25:05Z記録 | [元証拠](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6257050070)：94 ledger、91 table/1154 column、INDEX450制約/604行・FK181/181は名前差。M08旧名/定義観測あり。strictはBLOCK。観測実行の正確な時刻/現在性は未確定 |
+| Existing Real：owner、旧c09＋tooling dbe3、2026-10-18 22:19:37Z記録 | [物理診断の元証拠](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6255859198)：94 ledger、91 table/1154 column、check/triggerは観測0/0。Index604/FK181行でidentity不一致。strict BLOCK。同一JSONの二重貼付を独立2回の証拠に数えない |
+| Existing Real：owner、旧c09＋tooling e612、2026-10-19 00:25:05Z記録 | [意味診断の元証拠](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6257050070)：INDEX450制約/604行・FK181/181は名前差、M08期待名/定義観測あり。strict BLOCK。完全trigger可視性未確認。両記録とも実行の正確な時刻/現在性は未確定で、新mainへ再認定しない |
 | Missing Real：新候補/e858、未実行 | UNVERIFIED：新設名衝突、完全TRIGGER、実DDL/binlog、data重複、backup/restore/RPO/RTO、writer停止、Web/iOS/Auth0/本人Plan。source/CIで補わない |
 
 | 変更 | 固定e858にある契約 / 正負の証拠 | 本番の未確認前提 |

@@ -19,7 +19,7 @@
 | Q0 対象識別 | `SELECT DATABASE(), CURRENT_USER(), VERSION(), @@server_uuid;`。各接続のpreambleで私的対象binding/engineを照合。server UUID等の実値は出力しない | 各1行、16KiB。期待bindingを私的確定できなければSTOP |
 | Q1 権限 | `SHOW GRANTS FOR CURRENT_USER()` → 既存 `p0_mysql_metadata_grants_guard.py` | 少数行、16KiB。許可の2種＋任意USAGE以外はBLOCK |
 | Q2 ledger（前後2回） | `SELECT 'migration_ledger', migration, batch FROM migrations ORDER BY migration LIMIT 115;` | 旧観測94行。上限115行、94以外・前後差・未知/重複名/batch不正はBLOCK。個人行を読まない |
-| Q3 strict物理 | 下記元SQLの6区分＋engine。取得列は次表のとおり。scopeは全て `*_SCHEMA=DATABASE()` | 旧観測table91/column1154/index604/FK181、check/trigger実数は不確定。8MiB合計上限 |
+| Q3 strict物理 | 下記元SQLの6区分＋engine。取得列は次表のとおり。scopeは全て `*_SCHEMA=DATABASE()` | 旧観測table91/column1154/index604/FK181、check/trigger観測0/0（trigger完全可視性は未証明）。8MiB合計上限 |
 | Q4 semantic補助 | 下記元補助SQLのversion＋Index/FK。strictと同じ対象・同じ行をグループ化 | Index604/FK181構成行が旧観測の参考、8MiB合計上限。strictとの重複/欠損はBLOCK |
 
 Q3の正本SQL：固定e858の [`integrated_release20_metadata.sql`](https://github.com/1kz-ma1/Canovia-web/blob/e858b9c855970fbe73f37a2d60c9db6525b132d6/scripts/sql/integrated_release20_metadata.sql)、blob `e0e3f9eb11b34e4524323e1b52ef069c79ea7713`。
