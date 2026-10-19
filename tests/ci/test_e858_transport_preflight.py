@@ -11,12 +11,16 @@ import tempfile
 import time
 import unittest
 from unittest.mock import patch
+from unittest.mock import MagicMock
+import errno
+import signal
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/ci'))
 from e858_audit import core as original
-from e858_audit.transport import Budget, bounded_query
+from e858_audit.transport import Budget
 from e858_transport_preflight import core, adapter
+from e858_transport_preflight.adapter import bounded_query
 
 
 def load_packet():
@@ -310,7 +314,7 @@ class StreamTests(unittest.TestCase):
             with self.assertRaisesRegex(core.Block, code):
                 bounded_query([sys.executable, '-I', '-c', program], 'engine', Budget(), seconds=.1,
                               env=adapter.child_env())
-        with patch('e858_audit.transport.selectors.DefaultSelector') as selector:
+        with patch('e858_transport_preflight.adapter.selectors.DefaultSelector') as selector:
             selector.return_value.select.side_effect = KeyboardInterrupt()
             with self.assertRaisesRegex(core.Block, 'PRIVATE_CLIENT_FAILURE'):
                 bounded_query([sys.executable, '-I', '-c', 'import time;time.sleep(2)'],
@@ -318,6 +322,141 @@ class StreamTests(unittest.TestCase):
 
     def test_empty_trigger_never_proves_absence(self):
         self.assertEqual('', self.run_fake(b'', 'trigger'))
+
+
+class CleanupTests(unittest.TestCase):
+    def fake(self, payload=b'engine\t8.0\n'):
+        return adapter.FakeAdapter({'engine': payload})._command('engine')
+
+    def test_old_reader_deterministically_masks_a_block_before_fix(self):
+        from e858_audit import transport as old
+        cmd, env = self.fake(b'x' * 100 + b'\n')
+        real_start = subprocess.Popen; processes = []
+        def start(*args, **kwargs):
+            process = real_start(*args, **kwargs); processes.append(process); return process
+        try:
+            with patch('subprocess.Popen', side_effect=start), \
+                    patch.object(old.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')):
+                with self.assertRaises(PermissionError):
+                    old.bounded_query(cmd, 'engine', Budget(), env=env, max_bytes=1)
+        finally:
+            # The unchanged old finally aborted: this test owns its exact child.
+            for process in processes:
+                if process.poll() is None:process.kill()
+                process.wait(timeout=1)
+                for pipe in (process.stdin, process.stdout, process.stderr):
+                    if pipe and not pipe.closed:pipe.close()
+
+    def test_macos_permission_failure_preserves_all_three_cap_blocks(self):
+        cases = [(b'x\nx\n', {}, 'QUERY_ROWS_EXCEEDED'),
+                 (b'x' * 100 + b'\n', {'max_bytes': 1}, 'QUERY_BYTES_EXCEEDED'),
+                 (b'x' * 100 + b'\n', {'cell_bytes': 1}, 'QUERY_FIELD_EXCEEDED')]
+        for payload, limits, code in cases:
+            cmd, env = self.fake(payload)
+            with patch.object(adapter.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')):
+                with self.assertRaisesRegex(core.Block, code) as caught:
+                    bounded_query(cmd, 'engine', Budget(), env=env, **limits)
+                self.assertNotIn('SYNTHETIC_SECRET', str(caught.exception))
+
+    def test_normal_childless_exit_needs_no_group_signal(self):
+        cmd, env = self.fake()
+        with patch.object(adapter.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')) as kill:
+            self.assertEqual('engine\t8.0\n', bounded_query(cmd, 'engine', Budget(), env=env))
+            kill.assert_not_called()
+
+    def test_live_childless_eperm_uses_direct_kill_then_bounded_wait(self):
+        process = MagicMock(); process.poll.return_value = None; process.wait.return_value = -9
+        with patch.object(adapter.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')):
+            self.assertIsNone(adapter._cleanup(process, 'CHILDLESS_FAKE', False))
+        process.kill.assert_called_once_with(); process.wait.assert_called_once_with(timeout=0.5)
+
+    def test_real_blocked_writer_eperm_is_reaped_without_losing_cap_error(self):
+        cmd, env = self.fake(b'x' * (2*1024*1024) + b'\n')
+        real_start = subprocess.Popen; processes = []
+        def start(*args, **kwargs):
+            process = real_start(*args, **kwargs); processes.append(process); return process
+        with patch('subprocess.Popen', side_effect=start), \
+                patch.object(adapter.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')) as group:
+            with self.assertRaisesRegex(core.Block, 'QUERY_BYTES_EXCEEDED'):
+                bounded_query(cmd, 'engine', Budget(), env=env, max_bytes=1)
+            self.assertGreaterEqual(group.call_count, 1)
+        self.assertIsNotNone(processes[0].returncode)
+        self.assertTrue(all(p.closed for p in (processes[0].stdin, processes[0].stdout, processes[0].stderr)))
+
+    def test_failed_direct_kill_or_wait_cannot_be_ignored(self):
+        for method in ('kill', 'wait'):
+            process = MagicMock(); process.poll.return_value = None
+            getattr(process, method).side_effect = PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')
+            with patch.object(adapter.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')):
+                self.assertEqual('PROCESS_TERMINATION_UNVERIFIED',
+                                 adapter._cleanup(process, 'CHILDLESS_FAKE', False))
+        process = MagicMock(); process.poll.return_value = None
+        process.wait.side_effect = subprocess.TimeoutExpired('SYNTHETIC_SECRET', .5)
+        with patch.object(adapter.os, 'killpg'):
+            self.assertEqual('PROCESS_TERMINATION_UNVERIFIED',
+                             adapter._cleanup(process, 'CHILDLESS_FAKE', False))
+
+    def test_unproven_or_docker_eperm_cannot_use_childless_certificate(self):
+        for contract in ('UNPROVEN_PROCESS_TREE', 'DISPOSABLE_DOCKER'):
+            process = MagicMock(); process.poll.return_value = None; process.wait.return_value = -9
+            with patch.object(adapter.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')):
+                self.assertEqual('PROCESS_GROUP_TERMINATION_UNVERIFIED',
+                                 adapter._cleanup(process, contract, False))
+            process.kill.assert_called_once_with()
+
+    def test_group_probe_permission_error_blocks_even_after_parent_exit(self):
+        process = MagicMock(); process.poll.return_value = 0; process.wait.return_value = 0
+        with patch.object(adapter.os, 'killpg', side_effect=PermissionError(errno.EPERM, 'SYNTHETIC_SECRET')):
+            self.assertEqual('PROCESS_GROUP_TERMINATION_UNVERIFIED',
+                             adapter._cleanup(process, 'DISPOSABLE_DOCKER', True))
+
+    def test_missing_group_is_verified_but_surviving_descendant_blocks(self):
+        process = MagicMock(); process.poll.return_value = 0; process.wait.return_value = 0
+        with patch.object(adapter.os, 'killpg', side_effect=ProcessLookupError()):
+            self.assertIsNone(adapter._cleanup(process, 'UNPROVEN_PROCESS_TREE', True))
+        with patch.object(adapter.os, 'killpg'), patch.object(adapter.time, 'monotonic', side_effect=[0, 1]):
+            self.assertEqual('PROCESS_GROUP_TERMINATION_UNVERIFIED',
+                             adapter._cleanup(process, 'UNPROVEN_PROCESS_TREE', True))
+        with patch.object(adapter.os, 'killpg', side_effect=[None, None, ProcessLookupError()]):
+            self.assertEqual('UNEXPECTED_DESCENDANT_DETECTED',
+                             adapter._cleanup(process, 'UNPROVEN_PROCESS_TREE', True))
+
+    def test_docker_normal_exit_and_abort_have_different_remote_proofs(self):
+        process = MagicMock(); process.poll.return_value = 0; process.wait.return_value = 0
+        with patch.object(adapter.os, 'killpg', side_effect=ProcessLookupError()):
+            self.assertIsNone(adapter._cleanup(process, 'DISPOSABLE_DOCKER', True))
+            self.assertEqual('DISPOSABLE_REMOTE_TERMINATION_UNVERIFIED',
+                             adapter._cleanup(process, 'DISPOSABLE_DOCKER', False))
+
+    def test_certificate_requires_exact_program_and_clean_environment(self):
+        cmd, env = self.fake()
+        self.assertEqual('CHILDLESS_FAKE', adapter._contract(cmd, env))
+        for command, environment in [(cmd + ['SYNTHETIC_SECRET'], env),
+                (cmd, dict(env, PYTHONPATH='/synthetic')), ([sys.executable, '-c', adapter.FAKE], env),
+                ([sys.executable, '-I', '-c', 'import os;os.fork()'], adapter.child_env())]:
+            self.assertEqual('UNPROVEN_PROCESS_TREE', adapter._contract(command, environment))
+        self.assertEqual('DISPOSABLE_DOCKER',
+                         adapter._contract(adapter._disposable_command('8.0'), adapter.child_env()))
+
+    def test_cleanup_block_retains_fixed_primary_code_without_raw_error(self):
+        cmd, env = self.fake(b'x' * 100 + b'\n')
+        cleanup = adapter._cleanup
+        def injected(*args):
+            cleanup(*args)
+            return 'PROCESS_TERMINATION_UNVERIFIED'
+        with patch.object(adapter, '_cleanup', side_effect=injected):
+            with self.assertRaisesRegex(core.Block, 'PROCESS_TERMINATION_UNVERIFIED') as caught:
+                bounded_query(cmd, 'engine', Budget(), env=env, max_bytes=1)
+            self.assertEqual('QUERY_BYTES_EXCEEDED', caught.exception.primary_code)
+
+    def test_limits_cannot_be_increased_even_by_direct_internal_call(self):
+        cmd, env = self.fake()
+        for kwargs in ({'seconds': 11}, {'max_bytes': 8*1024*1024+1},
+                       {'row_bytes': 256*1024+1}, {'cell_bytes': 128*1024+1}):
+            with patch('subprocess.Popen') as start:
+                with self.assertRaisesRegex(core.Block, 'STREAM_LIMIT_OVERRIDE_REJECTED'):
+                    bounded_query(cmd, 'engine', Budget(), env=env, **kwargs)
+                start.assert_not_called()
 
 
 class BindingAndPacketTests(unittest.TestCase):
