@@ -40,6 +40,9 @@ jobs:
           extensions: mbstring, sqlite3, pdo_sqlite
           coverage: none
       - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Secret-free synthetic test environment file
+        run: |
+          if [ ! -f .env ]; then printf '%s\n' '# Synthetic CI only; test variables are supplied explicitly.' > .env; fi
       - run: >-
           php artisan test tests/Feature/Release20TransitionPreflightTest.php
           tests/Feature/IntegratedRelease20MigrationSafetyTest.php
@@ -69,6 +72,9 @@ jobs:
           extensions: mbstring, pdo_mysql
           coverage: none
       - run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Secret-free synthetic test environment file
+        run: |
+          if [ ! -f .env ]; then printf '%s\n' '# Synthetic CI only; test variables are supplied explicitly.' > .env; fi
       - name: Own disposable loopback MySQL only
         env:
           SERIES: ${{ matrix.series }}
