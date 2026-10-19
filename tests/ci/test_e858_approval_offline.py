@@ -191,7 +191,9 @@ class ContractTests(unittest.TestCase):
     def test_semantic_names_equal_never_waive_strict_block_or_trigger_visibility(self):
         self.tls['strict_result']='BLOCK';self.tls['semantic_names_only']=True
         with self.assertRaisesRegex(c.Block,'STRICT_SCHEMA_BLOCK'):self.review()
-        self.tls['strict_result']='REVIEW_REQUIRED';self.tls['trigger_visibility']='COMPLETE'
+        self.tls['strict_result']='REVIEW_REQUIRED'
+        with self.assertRaisesRegex(c.Block,'STRICT_SCHEMA_BLOCK'):self.review()
+        self.tls['semantic_names_only']=False;self.tls['trigger_visibility']='COMPLETE'
         with self.assertRaisesRegex(c.Block,'SNAPSHOT_UNVERIFIED'):self.review()
 
     def test_nonce_replay_revocation_and_memory_reset_limit(self):

@@ -165,7 +165,7 @@ def validate_tls(value, target):
             or value['ledger_count'] not in (94,114) or value['writer_epoch'] != expected['writer_epoch']
             or value['trigger_visibility'] != 'UNVERIFIED' or type(value['semantic_names_only']) is not bool):
         raise Block('SNAPSHOT_UNVERIFIED')
-    if value['strict_result'] != 'REVIEW_REQUIRED':
+    if value['strict_result'] != 'REVIEW_REQUIRED' or value['semantic_names_only']:
         raise Block('STRICT_SCHEMA_BLOCK')
 
 
