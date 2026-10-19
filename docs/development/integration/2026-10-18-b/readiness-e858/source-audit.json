@@ -1,0 +1,110 @@
+{
+  "source_sha": "e858b9c855970fbe73f37a2d60c9db6525b132d6",
+  "source_tree": "f6990e8bcf7904be2fdc2706d6a525a29ccef9ee",
+  "baseline_sha": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+  "old_candidate": "c09a8fc718c338f98a4045a4b5f2260c7571fdaa",
+  "full_history": true,
+  "clean_checkout": true,
+  "baseline_count": 94,
+  "total_count": 114,
+  "pending_count": 20,
+  "migration_seal": "a3494c1d1cf60546a86312f249f7d44b2ac52e44669752a65e1c70011ec9f91b",
+  "changed_pending_ids": [
+    "M01",
+    "M08",
+    "M18",
+    "M19",
+    "M20"
+  ],
+  "old94_blobs_unchanged": true,
+  "strict_audit_and_original_reference_unchanged": true,
+  "merges": [
+    {
+      "pr": 791,
+      "merge": "d417b2593d3f54939f4c96b52481296533635ac5",
+      "parents": [
+        "c09a8fc718c338f98a4045a4b5f2260c7571fdaa",
+        "e6124170e4ab8f92709d7683544d999822a96581"
+      ],
+      "head": "e6124170e4ab8f92709d7683544d999822a96581",
+      "tree": "30a64861aced6e28b07c0490b14a0304a95cadf2",
+      "tree_matches_head": true
+    },
+    {
+      "pr": 792,
+      "merge": "361598714b5a5004a1827a12f6083ee6d740988e",
+      "parents": [
+        "d417b2593d3f54939f4c96b52481296533635ac5",
+        "5099ed014e98f1e955bb987b59a7a53d5698d32a"
+      ],
+      "head": "5099ed014e98f1e955bb987b59a7a53d5698d32a",
+      "tree": "7edab826946482d7461e9889462f90113b31cafa",
+      "tree_matches_head": true
+    },
+    {
+      "pr": 793,
+      "merge": "e858b9c855970fbe73f37a2d60c9db6525b132d6",
+      "parents": [
+        "361598714b5a5004a1827a12f6083ee6d740988e",
+        "8a64d05d1f0247a16988f1c762792ddaf2742d34"
+      ],
+      "head": "8a64d05d1f0247a16988f1c762792ddaf2742d34",
+      "tree": "f6990e8bcf7904be2fdc2706d6a525a29ccef9ee",
+      "tree_matches_head": true
+    }
+  ],
+  "references": {
+    "8.0": {
+      "original_seal": "821e10e942cdd225bf12767ea8a1411105570c4fd755d274c0411a91f52fbcec",
+      "proposal_seal": "a3494c1d1cf60546a86312f249f7d44b2ac52e44669752a65e1c70011ec9f91b",
+      "physical_hashes_unchanged": true
+    },
+    "8.4": {
+      "original_seal": "821e10e942cdd225bf12767ea8a1411105570c4fd755d274c0411a91f52fbcec",
+      "proposal_seal": "a3494c1d1cf60546a86312f249f7d44b2ac52e44669752a65e1c70011ec9f91b",
+      "physical_hashes_unchanged": true
+    }
+  },
+  "protected_blob_ids": {
+    "scripts/ci/integrated_release20_audit.py": "48fd5d9cc7b3971414f32d5ff075e4e057d33b46",
+    "scripts/ci/p0_mysql_full_ledger_offline_check.py": "bbe6b8456727c3aac7992ecd88c0380b7a7a7f85",
+    "scripts/ci/p0_mysql_metadata_grants_guard.py": "06876fa6bf1ddb749027f296a33fb11dd8fee0ae",
+    "scripts/ops/integrated_release20_collect.py": "b9cc6bd3d62fd1db6891ee6796ccf10f493eb421",
+    "scripts/sql/integrated_release20_metadata.sql": "e0e3f9eb11b34e4524323e1b52ef069c79ea7713",
+    "scripts/sql/p0_mysql_readonly_full_migration_ledger.sql": "6d186f87075e6aec6fbceecac3c1e4eef9d47bda",
+    "scripts/ci/integrated_release20_reference/8.0.json": "60ac1441213563c3b708f505dbdd56f115bde332",
+    "scripts/ci/integrated_release20_reference/8.4.json": "9f42661c14d3a5b91563d4388cabf251b3ebbde1"
+  },
+  "release_authorized": false,
+  "new_candidate_adopted": false,
+  "strict_block_waived": false,
+  "real_aiven_connected": false,
+  "production_database_modified": false,
+  "audited_at_utc": "2026-10-19T05:27:21+00:00",
+  "auditor": "Codex offline Git inspection",
+  "evidence_kind": "SOURCE_ONLY_NOT_DATABASE_OBSERVATION",
+  "source_inventory": {
+    "base_sha": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+    "candidate_sha": "e858b9c855970fbe73f37a2d60c9db6525b132d6",
+    "ahead_commits": 313,
+    "changed_path_count": 1020,
+    "baseline_migration_count": 94,
+    "candidate_migration_count": 114,
+    "risk_area_counts": {
+      "actions_production_protection": 113,
+      "authentication_oauth_session_csrf": 67,
+      "composer_docker_render_worker": 20,
+      "database_migration_trigger": 62,
+      "learning_development_intelligence": 504,
+      "mcp_personal_plan_authorization": 107,
+      "private_file_external_provider": 212,
+      "release_feature_entitlement": 87,
+      "shared_manual_review": 179,
+      "web_wkwebview_ui": 140
+    },
+    "status_counts": {
+      "A": 793,
+      "M": 227
+    }
+  }
+}
