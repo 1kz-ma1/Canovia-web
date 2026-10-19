@@ -6,7 +6,6 @@ use App\Models\McpDelegatedGrant;
 use App\Models\McpLinkedSubject;
 use App\Models\Plan;
 use App\Models\User;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -139,19 +138,70 @@ final class McpMigrationRollbackSafetyTest extends TestCase
             ->where('identity_fingerprint', $fingerprint)
             ->where('status', McpLinkedSubject::STATUS_LINKED)->count());
 
+        $plan = $this->plan($first);
+        $grant = McpDelegatedGrant::query()->create([
+            'user_id' => $first->id,
+            'subject_link_id' => $live->id,
+            'plan_id' => $plan->id,
+            'client_resource_fingerprint' => hash('sha256', (string) Str::uuid()),
+            'scope' => 'overview',
+            'status' => McpDelegatedGrant::STATUS_ACTIVE,
+            'consented_at' => now(),
+            'expires_at' => null,
+        ]);
+        DB::table('mcp_delegated_access_events')->insert([
+            'actor_user_id' => $first->id,
+            'subject_link_id' => $live->id,
+            'grant_id' => $grant->id,
+            'event_kind' => 'context_read',
+            'scope' => 'overview',
+            'created_at' => now(),
+        ]);
+
+        // Seal all existing rows, not only the two synthetic subjects. Keep
+        // row contents and metadata private even if an assertion fails.
+        $digest = static fn (string $table): string => hash('sha256', json_encode(
+            DB::table($table)->orderBy('id')->get(), JSON_THROW_ON_ERROR));
+        $tables = ['mcp_linked_subjects', 'mcp_delegated_grants', 'mcp_delegated_access_events', 'migrations'];
+        $before = array_combine($tables, array_map($digest, $tables));
+        $schema = static fn (): string => hash('sha256', json_encode([
+            Schema::getColumns('mcp_linked_subjects'),
+            Schema::getIndexes('mcp_linked_subjects'),
+            Schema::getForeignKeys('mcp_linked_subjects'),
+        ], JSON_THROW_ON_ERROR));
+        $beforeSchema = $schema();
+        $nonReadStatements = 0;
+        // Observe attempts before execution, including failed writes. Counting
+        // only QueryExecuted events would miss an attempted UNIQUE violation.
+        DB::connection()->beforeExecuting(static function (string $sql) use (&$nonReadStatements): void {
+            if (! preg_match('/^\s*(select|show|pragma|explain)\b/i', $sql)) {
+                $nonReadStatements++;
+            }
+        });
+
         $migration = require base_path('database/migrations/2026_10_14_000200_preserve_historical_mcp_identity_links.php');
         try {
-            // The unique active reservation must cause replay to FAIL,
-            // not silently declare both accounts valid or delete history.
+            // The preflight must reject BEFORE DDL/backfill. A later UNIQUE
+            // violation or another unexpected exception is not this contract.
             $migration->up();
             $this->fail('Migration accepted two live owners for the same immutable subject.');
-        } catch (QueryException $e) {
-            $this->assertTrue(in_array((string) ($e->errorInfo[0] ?? ''), ['23505', '23000'], true));
+        } catch (RuntimeException $e) {
+            $this->assertSame(RuntimeException::class, $e::class);
+            $this->assertSame('RELEASE20_IDENTITY_PREFLIGHT_BLOCK', $e->getMessage());
         }
 
+        $this->assertSame(0, $nonReadStatements);
+        $this->assertSame($before, array_combine($tables, array_map($digest, $tables)));
+        $this->assertSame($beforeSchema, $schema());
         $this->assertContains('mcp_active_subject_identity_unique',
             array_column(Schema::getIndexes('mcp_linked_subjects'), 'name'));
         $this->assertSame($fingerprint, $live->fresh()->active_identity_fingerprint);
+        $this->assertSame($first->id, $live->fresh()->user_id);
+        $this->assertSame($first->id, $grant->fresh()->user_id);
+        $this->assertSame($live->id, $grant->fresh()->subject_link_id);
+        $this->assertSame(1, McpLinkedSubject::query()->where('active_identity_fingerprint', $fingerprint)->count());
+        $this->assertNull(McpLinkedSubject::query()->where('user_id', $second->id)
+            ->where('identity_fingerprint', $fingerprint)->sole()->active_identity_fingerprint);
         $this->assertSame(2, McpLinkedSubject::query()
             ->where('identity_fingerprint', $fingerprint)
             ->where('status', McpLinkedSubject::STATUS_LINKED)->count());
