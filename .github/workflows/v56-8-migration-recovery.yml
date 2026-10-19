@@ -1,6 +1,7 @@
 name: Production Migration Recovery Validation
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - fix/v56-8-migration-recovery

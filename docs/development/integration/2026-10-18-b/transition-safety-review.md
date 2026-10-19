@@ -1,5 +1,7 @@
 # B案：全20 migrationの別名互換性・移行安全性 / Draft・NO-GO
 
+> この票の変更範囲・件数は#792固定HEAD `c3ecddacebab499ea6f9c1c454542edea6c3810e` の証拠。後続の[統合前最終レビュー](preintegration-final-review.md)はM18コメントとM20の追加検査を別Draftで扱う。旧Mac受入・旧CIを新HEADへ流用しない。
+
 2026-10-19 JST。正本[#488](https://github.com/1kz-ma1/Canovia-web/issues/488)、統合[#790](https://github.com/1kz-ma1/Canovia-web/pull/790)、診断[#791](https://github.com/1kz-ma1/Canovia-web/pull/791)。
 この変更は **#791の固定HEAD `e6124170e4ab8f92709d7683544d999822a96581` をbaseとする独立した積み上げDraft**。#791のHEADを更新しない。main向け差分には#791の未統合部分も入るため、今回の修正差分はそのbaseから比較する。
 固定release候補 **`c09a8fc718c338f98a4045a4b5f2260c7571fdaa`** / `release/2026-10-19-c09a8fc7` は一切変更しない。

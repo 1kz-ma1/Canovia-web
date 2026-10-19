@@ -71,4 +71,24 @@ class IntegratedRelease20MigrationSafetyTest extends TestCase
         $this->expectException(\Illuminate\Database\QueryException::class);
         DB::table('learning_context_source_epochs')->insert($row);
     }
+
+    public function test_epoch_replay_refuses_changed_foreign_update_action(): void
+    {
+        Schema::table('learning_context_source_epochs', function (Blueprint $table): void {
+            $table->dropForeign(['plan_id']);
+            $table->foreign('plan_id')->references('id')->on('plans')->cascadeOnUpdate()->cascadeOnDelete();
+        });
+        $this->expectExceptionMessage('manual forward recovery');
+        $migration = require database_path('migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php');
+        $migration->up();
+    }
+
+    public function test_epoch_replay_refuses_additional_unique_constraint(): void
+    {
+        Schema::table('learning_context_source_epochs', fn (Blueprint $table) =>
+            $table->unique('last_mutation_kind', 'synthetic_extra_epoch_unique'));
+        $this->expectExceptionMessage('manual forward recovery');
+        $migration = require database_path('migrations/2026_10_15_120000_create_learning_context_source_epochs_table.php');
+        $migration->up();
+    }
 }

@@ -8,8 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Safe to retry after a partial MySQL DDL deployment. Never drop
-        // user-approved results merely because the deployment was retried.
+        // Stop for operator review after an unrecorded/partial MySQL CREATE.
+        // A retry must neither adopt incomplete constraints nor erase rows.
         if (Schema::hasTable('mcp_study_result_proposals')) {
             // migrate skips an applied ledger entry. Reaching up() with an
             // existing table is an unrecorded/partial state: columns alone

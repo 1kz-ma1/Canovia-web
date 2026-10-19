@@ -14,7 +14,7 @@ from integrated_release20_audit import ROOT, git, source
 from integrated_release20_diagnose import CANDIDATE
 
 PARENT = 'e6124170e4ab8f92709d7683544d999822a96581'
-CHANGED_IDS = (0, 7, 17, 18)
+CHANGED_IDS = (0, 7, 17, 18, 19)
 
 
 def packet(sha):
@@ -46,7 +46,7 @@ def packet(sha):
             raise ValueError()
     return dict(result='REVIEW_REQUIRED', code='OFFLINE_PROPOSAL_PACKET_ONLY', proposal_sha=sha,
                 diagnostic_base_sha=PARENT, fixed_candidate=CANDIDATE, baseline_migration_count=94,
-                total_migration_count=114, changed_pending_migration_ids=['M01', 'M08', 'M18', 'M19'],
+                total_migration_count=114, changed_pending_migration_ids=['M01', 'M08', 'M18', 'M19', 'M20'],
                 migration_seal=proposal['migration_seal'], original_audit_unchanged=True,
                 old94_unchanged=True, new_candidate_adopted=False, real_aiven_connected=False,
                 production_database_modified=False, strict_block_waived=False, release_authorized=False)
