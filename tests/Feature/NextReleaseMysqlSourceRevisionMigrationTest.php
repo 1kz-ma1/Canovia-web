@@ -34,7 +34,7 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         }
     }
 
-    public function test_two_nullable_source_observation_upgrades_preserve_legacy_identity(): void
+    public function test_completed_source_observation_replay_preserves_identity_without_ddl(): void
     {
         $migrationName = '2026_10_12_010000_add_source_revision_to_development_activity_observations';
         $this->assertDatabaseHas('migrations', ['migration' => $migrationName]);
@@ -43,13 +43,8 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         $this->assertDatabaseHas('migrations', ['migration' => '2026_10_13_021000_add_source_epoch_to_development_activity_observations']);
         $this->assertTrue(Schema::hasColumn('development_activity_observations', 'source_epoch'));
 
-        // Recreate the pre-release column shape ONLY in the CI database;
-        // the existing live database is never queried or modified.
-        Schema::table('development_activity_observations', function (Blueprint $table): void {
-            $table->dropIndex(['source_epoch']);
-            $table->dropColumn('source_epoch');
-            $table->dropColumn(['source_updated_at', 'source_revision_id']);
-        });
+        // Full94->114 is covered by the new rehearsal. Do not manufacture a
+        // ledger114 database with the initial-release columns removed here.
 
         $user = User::factory()->create();
         $plan = Plan::query()->create([
@@ -74,12 +69,14 @@ final class NextReleaseMysqlSourceRevisionMigrationTest extends TestCase
         ]);
         $before = DB::table('development_activity_observations')->find($id);
 
-        // Explicitly apply ONLY the newly-pending additive migration on
-        // the synthetic, pre-release table. Never run down() on user data.
-        $migration = require database_path('migrations/'.$migrationName.'.php');
-        $migration->up();
-        $epochMigration = require database_path('migrations/2026_10_13_021000_add_source_epoch_to_development_activity_observations.php');
-        $epochMigration->up();
+        $ddl = 0;
+        DB::listen(function ($query) use (&$ddl): void {
+            if (preg_match('/^(create|alter|drop|rename)\b/i', $query->sql)) {
+                $ddl++;
+            }
+        });
+        $this->artisan('migrate', ['--force' => true])->assertSuccessful();
+        $this->assertSame(0, $ddl);
 
         $after = DB::table('development_activity_observations')->find($id);
         $this->assertNotNull($after);

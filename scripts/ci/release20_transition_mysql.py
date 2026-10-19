@@ -157,6 +157,8 @@ def rehearse(series, write_contract=False):
                 if compare(src, ledger(), snapshot(raw), ref)['result'] != 'BLOCK':
                     raise ValueError()
                 retained()
+                if label == 'clean':
+                    php('artisan', 'test', 'tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php', '--colors=never')
                 reports[label] = dict(result='SYNTHETIC_COMPATIBLE_ONLY', applied_count=114,
                                      legacy_rows_retained=True, repeated_ddl_count=0, strict_audit='BLOCK')
             def blocked(label, diagnostic=False):

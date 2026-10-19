@@ -10,6 +10,9 @@ on:
       - 'scripts/ci/release20*'
       - 'tests/ci/test_release20*'
       - 'tests/Feature/Release20TransitionPreflightTest.php'
+      - 'tests/Feature/NextReleaseMysqlSourceRevisionMigrationTest.php'
+      - 'tests/Feature/LearningContextWatchPersistenceTest.php'
+      - 'tests/Feature/McpOAuthAccountLinkTest.php'
       - '.github/workflows/release20-transition-safety.yml'
   workflow_dispatch:
 
@@ -40,7 +43,9 @@ jobs:
       - run: >-
           php artisan test tests/Feature/Release20TransitionPreflightTest.php
           tests/Feature/IntegratedRelease20MigrationSafetyTest.php
-          tests/Feature/ReleaseSchemaLedgerFenceTest.php --colors=never
+          tests/Feature/ReleaseSchemaLedgerFenceTest.php
+          tests/Feature/LearningContextWatchPersistenceTest.php
+          tests/Feature/McpOAuthAccountLinkTest.php --colors=never
       - run: python3 -B -m unittest discover -s tests/ci -p 'test_integrated_release20*.py' -v
       - run: python3 -B -m unittest discover -s tests/ci -p 'test_release20*.py' -v
       - run: python3 -B scripts/ci/release20_proposal_packet.py --proposal-sha "$(git rev-parse HEAD)"
