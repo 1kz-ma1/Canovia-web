@@ -21,6 +21,10 @@ final class Release20IdentityMigrationGuard
         $present = [];
         foreach ($expected as $name => [$column, $unique]) {
             $named = array_values(array_filter($indexes, fn ($index) => $index['name'] === $name));
+            if ($named === [] && in_array(DB::getDriverName(), ['mysql', 'sqlite'], true)
+                && array_filter($indexes, fn ($index) => strcasecmp($index['name'], $name) === 0)) {
+                self::block(); // Case variants collide in these namespaces.
+            }
             $sameColumns = array_values(array_filter($indexes, fn ($index) => $index['columns'] === [$column]
                 && (bool) $index['unique'] === $unique));
             if (count($named) > 1 || count($sameColumns) > 1

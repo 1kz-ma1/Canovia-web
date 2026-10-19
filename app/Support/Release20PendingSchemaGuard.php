@@ -26,7 +26,9 @@ final class Release20PendingSchemaGuard
         }
         foreach ($contract['absent_index_names'] as $table => $names) {
             foreach (Schema::getIndexes($table) as $index) {
-                if (in_array($index['name'], $names, true)) {
+                $matches = array_filter($names, fn ($name) => $index['name'] === $name
+                    || (in_array(DB::getDriverName(), ['mysql', 'sqlite'], true) && strcasecmp($index['name'], $name) === 0));
+                if ($matches !== []) {
                     self::block(); // Index symbols have TABLE scope.
                 }
             }

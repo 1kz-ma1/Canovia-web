@@ -70,6 +70,14 @@ class Release20TransitionPreflightTest extends TestCase
         Release20IdentityMigrationGuard::assertCompatible();
     }
 
+    public function test_case_variant_new_index_name_is_a_collision(): void
+    {
+        $this->initialIdentity();
+        Schema::table('mcp_linked_subjects', fn (Blueprint $table) => $table->index('provider_key', 'MCP_ACTIVE_SUBJECT_IDENTITY_UNIQUE'));
+        $this->expectExceptionMessage('RELEASE20_IDENTITY_PREFLIGHT_BLOCK');
+        Release20IdentityMigrationGuard::assertCompatible();
+    }
+
     public function test_proposal_partial_table_is_not_adopted_or_erased(): void
     {
         Schema::drop('mcp_study_result_proposals');
