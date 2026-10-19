@@ -39,7 +39,7 @@ Docker daemonの管理権限、Git/OS/Python自体、既存GitHub認証は信頼
 
 `MYSQL_*` / `DB_*` / `DATABASE_URL` / transport解除風envは値を表示せず拒否。
 親HOMEは参照・読取・転送しない。`.my.cnf` / login file / client option file / CA / 鍵を開かない。
-子HOMEは存在しない定数path。Docker mysqlは `--no-defaults` を最初の引数に固定し、`--no-login-paths` も固定する。
+子HOMEは存在しない定数path。Docker mysqlは `--no-defaults` を最初の引数に固定し、login-fileを不存在の合成pathへ固定する。8.4は加えて `--no-login-paths` を固定する。8.0ではこのoptionが未対応であることを実際の負例で確認したため、起動前にengineごとの定数argvを選ぶ。失敗後のfallback/retryはしない。
 Docker内のMYSQL_PWDは既知の使い捨てfixture定数だけで、親envから取得しない。実用credential設計とは別物。
 shellは呼ばず、command/stdout/stderr/例外/target/UUID/grantsを出力しない。rawはprivateメモリのみ、CI artifact無し。
 

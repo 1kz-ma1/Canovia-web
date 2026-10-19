@@ -24,6 +24,21 @@ def child_env():
     return {'PATH': '/usr/bin:/bin', 'HOME': '/nonexistent', 'LANG': 'C', 'LC_ALL': 'C'}
 
 
+def mysql_options(series):
+    # 8.0 has no --no-login-paths. Its login-file path is instead fixed to an
+    # absent synthetic path in Docker env. This is an engine contract, no retry.
+    return ['mysql', '--no-defaults'] + (['--no-login-paths'] if series == '8.4' else [])
+
+
+def docker_client_prefix(name, password):
+    # Only fixture constants constructed below/inside disposable.py use this.
+    if name not in {v[0] for v in TARGETS.values()} or password not in (
+            'ci-only-root-password', 'ci-only-e858-inspector'):
+        raise Block('DISPOSABLE_TARGET_REJECTED')
+    return [DOCKER, 'exec', '-i', '-e', 'MYSQL_PWD=' + password, '-e', 'HOME=/nonexistent',
+            '-e', 'MYSQL_TEST_LOGIN_FILE=/nonexistent/client-login', name]
+
+
 class FakeAdapter:
     def __init__(self, payloads):
         if not isinstance(payloads, dict) or any(k not in original.CAPS or not isinstance(v, bytes)
@@ -69,8 +84,7 @@ class DisposableAdapter:
         # client connects to its own container's 127.0.0.1, never an external host.
         self._verify()
         name, _ = TARGETS[self.series]
-        return [DOCKER, 'exec', '-i', '-e', 'MYSQL_PWD=ci-only-e858-inspector',
-                '-e', 'HOME=/nonexistent', name, 'mysql', '--no-defaults', '--no-login-paths',
+        return docker_client_prefix(name, 'ci-only-e858-inspector') + mysql_options(self.series) + [
                 '--protocol=TCP', '--host=127.0.0.1', '--port=3306', '--user=e858_inspector',
                 '--database=canovia_p0_ci', '--batch', '--raw', '--skip-column-names',
                 '--skip-auto-rehash', '--connect-timeout=5'], child_env()

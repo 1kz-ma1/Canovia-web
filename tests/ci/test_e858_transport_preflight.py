@@ -154,7 +154,10 @@ class SQLAndEnvironmentTests(unittest.TestCase):
         with patch.object(adapter.subprocess, 'run', return_value=response(state)) as run:
             item = adapter.DisposableAdapter('8.0'); cmd, env = item._command('identity')
             self.assertEqual('mysql', cmd[cmd.index('mysql')]); self.assertEqual('--no-defaults', cmd[cmd.index('mysql') + 1])
-            self.assertIn('--no-login-paths', cmd); self.assertIn('--host=127.0.0.1', cmd)
+            self.assertNotIn('--no-login-paths', cmd)
+            self.assertIn('MYSQL_TEST_LOGIN_FILE=/nonexistent/client-login', cmd)
+            self.assertIn('--no-login-paths', adapter.mysql_options('8.4'))
+            self.assertIn('--host=127.0.0.1', cmd)
             self.assertNotIn('DOCKER_HOST', env); self.assertEqual(2, run.call_count)
         negatives = []
         for port in ('0.0.0.0', 'synthetic.invalid', '::1'):

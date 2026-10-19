@@ -1,5 +1,6 @@
 """CI-only synthetic Docker exercise; no arbitrary target and no credentials read."""
 import json
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -9,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'scripts/ci'))
 from e858_audit import core as original
 from e858_transport_preflight.core import Block, boundary
-from e858_transport_preflight.adapter import DisposableAdapter, capture, child_env, DOCKER, TARGETS
+from e858_transport_preflight.adapter import (DisposableAdapter, capture, child_env, TARGETS,
+                                             docker_client_prefix, mysql_options)
 from integrated_release20_audit import parse_full_ledger
 from p0_mysql_metadata_grants_guard import verify_grants
 
@@ -25,8 +27,7 @@ def exercise(series):
 
     def synthetic_ddl(sql):
         adapter._verify()
-        p = subprocess.run([DOCKER, 'exec', '-i', '-e', 'MYSQL_PWD=ci-only-root-password', name,
-                            'mysql', '--no-defaults', '--no-login-paths', '-uroot'], input=sql.encode(),
+        p = subprocess.run(docker_client_prefix(name, 'ci-only-root-password') + mysql_options(series) + ['-uroot'], input=sql.encode(),
                            env=child_env(), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=10)
         if p.returncode:
             raise Block('DISPOSABLE_SETUP_REJECTED')
@@ -36,7 +37,8 @@ def exercise(series):
         data = capture(adapter)
         identity = data['identity'].rstrip('\n').split('\t')
         if (len(identity) != 4 or identity[0] != 'canovia_p0_ci'
-                or identity[1] != 'e858_inspector@%' or not identity[2].startswith(series + '.')):
+                or identity[1] != 'e858_inspector@%' or not identity[2].startswith(series + '.')
+                or not re.fullmatch(r'8\.(0|4)\.[0-9]{1,3}', identity[2])):
             raise Block('DISPOSABLE_IDENTITY_REJECTED')
         if not verify_grants(data['grants'], 'canovia_p0_ci'):
             raise Block('METADATA_GRANTS_REJECTED')
