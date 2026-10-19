@@ -81,3 +81,13 @@ CANOVIA_E858_OFFLINE
 認可operator1名、既存service/schemaのprivate binding、既存REFERENCES＋ledger SELECTだけの権限、candidate/source/seal/release、tooling SHA、SQL bundle/参照hash、期限付きtime window・1回、raw非表示/非持出し/廃棄、失効とSTOPを承認票へ固定する。未記入・pin/対象/権限違い・timeout/cap/途中出力・ledger変化・不可視性はSTOP。業務行SELECT・DDL/GRANT・backup/restore・writer停止・Render/Auth0・公開は含めない。
 
 旧c09実測は再利用可能な履歴だけ。strict名前差審査、完全TRIGGER、migration principal/binlog、実identity衝突、実復元/RPO/RTO、全writer、実Web/iOS/Auth0/Render runtimeは未実証のまま。**PRODUCTION_NO_GO_HOLD**。
+
+## 検証範囲の区別
+
+新toolingのPythonテストはsource/ref改変、実shallow clone、symlink/assume-unchanged、SQL/stream cap、private入力・権限・target/ledger差、区分/M18-M20境界とtrigger順序差の合成metadataを対象とする。順序差の単体負例はDBで順序を変更した証拠ではない。
+
+使い捨てMySQL8.0.46/8.4.11で、各2回の94→114再構築、全旧行保持、参照の同一性、22ケースを実行。Index/FK名差、同件数の誤定義/式/prefix/方向/可視性/参照動作、余剰UNIQUE、部分DDL、narrow TRIGGER不可視と実欠落を検証する。既存のAll20移行rehearsal各38ケース（M01衝突、M08別名/重複、中断/保持、M04→M05前提欠落、M18/M19/M20）も新HEADのCIで再実行する。
+
+MCP専用PHP2テストはSQLiteでは安全にskipする契約がある。ローカルのそのskipは成功へ数えず、CIの両MySQLで専用の使い捨てschemaと明示flagを用い、関連2クラス6ケースを`--fail-on-skipped`で実行する。合成writer用の権限はその所有Docker内だけで、最小metadata inspectorの権限は変更しない。offline PHPは別のSQLite適合クラスだけをskip禁止で実行する。
+
+生成元commit、最終tooling HEAD、参照SHA256、全テスト件数・warnings・CI URLはDraft PR/#488に固定する。旧prototypeの成功を新HEADへ流用しない。実Aiven/旧release/new release/main/production/#794は更新せず、production NO-GO/HOLD。

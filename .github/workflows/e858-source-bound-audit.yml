@@ -46,8 +46,7 @@ jobs:
           tests/Feature/IntegratedRelease20MigrationSafetyTest.php
           tests/Feature/ReleaseSchemaLedgerFenceTest.php
           tests/Feature/LearningContextWatchPersistenceTest.php
-          tests/Feature/McpOAuthAccountLinkTest.php
-          tests/Feature/McpMigrationRollbackSafetyTest.php --colors=never
+          tests/Feature/McpOAuthAccountLinkTest.php --fail-on-skipped --colors=never
   mysql:
     name: E858 reference (MySQL ${{ matrix.series }})
     runs-on: ubuntu-latest
@@ -94,3 +93,33 @@ jobs:
         env:
           SERIES: ${{ matrix.series }}
         run: python3 -B scripts/ci/release20_transition_mysql.py --series "$SERIES"
+      - name: Real disposable MCP identity replay and retained grants audit
+        env:
+          SERIES: ${{ matrix.series }}
+          APP_ENV: testing
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_DATABASE: canovia_mcp_lock_ci
+          DB_USERNAME: canovia_ci
+          DB_PASSWORD: ci-only-ephemeral-password
+          DB_URL: ''
+          DATABASE_URL: ''
+          CACHE_STORE: array
+          SESSION_DRIVER: array
+          QUEUE_CONNECTION: sync
+          MAIL_MAILER: array
+          CANOVIA_MCP_DISPOSABLE_LOCK_CI: '1'
+          CANOVIA_PUBLIC_RELEASE_LEVEL: '0'
+          CANOVIA_NATIVE_AI_DRIVER: disabled
+          FEATURE_CANOVIA_AI: 'false'
+        run: |
+          set -euo pipefail
+          if [ "$SERIES" = '8.0' ]; then name=canovia-integration-80; export DB_PORT=13380; else name=canovia-integration-84; export DB_PORT=13384; fi
+          test "$(docker inspect --format '{{index .Config.Labels "canovia.integration"}}' "$name")" = 2026-10-16
+          test "$DB_HOST" = 127.0.0.1
+          test "$DB_DATABASE" = canovia_mcp_lock_ci
+          docker exec -e MYSQL_PWD=ci-only-root-password "$name" mysql -uroot \
+            -e "CREATE DATABASE canovia_mcp_lock_ci CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL PRIVILEGES ON canovia_mcp_lock_ci.* TO 'canovia_ci'@'%';"
+          php artisan migrate --force --no-interaction
+          php artisan test tests/Feature/McpDatabaseLockContentionTest.php tests/Feature/McpMigrationRollbackSafetyTest.php --fail-on-skipped --stop-on-failure --colors=never
