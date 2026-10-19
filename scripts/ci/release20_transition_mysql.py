@@ -253,6 +253,21 @@ def rehearse(series, write_contract=False):
                     complete('interrupted_' + label + '_verified_resume')
                 else:
                     blocked('interrupted_' + label + '_retry')
+            # Reproduce the old defect too: fixed c09 can fill ledger114 after
+            # adopting columns-only remnants, while its strict audit BLOCKS.
+            for label in ('M18', 'M19'):
+                restore()
+                php('scripts/ci/release20_transition_fixture.php', 'interrupt', label, str(fixed_dir))
+                migrate(fixed_dir)
+                raw, shape = capture()
+                if set(ledger()) != set(fixed['candidate']) or equivalent(shape, canonical):
+                    raise ValueError()
+                if compare(fixed, ledger(), snapshot(raw), ref)['result'] != 'BLOCK':
+                    raise ValueError()
+                php('scripts/ci/release20_transition_fixture.php', 'verify-legacy', str(seal))
+                reports['fixed_candidate_' + label + '_unsafe_adoption_control'] = dict(
+                    result='BLOCK', applied_count=114, incomplete_constraints_reproduced=True,
+                    fixed_candidate_source_unmodified=True, legacy_rows_retained=True)
             return dict(result='SYNTHETIC_TESTED', engine=series, version=version, tooling_sha=head,
                         diagnostic_base_sha=PARENT, fixed_candidate=CANDIDATE,
                         source_change_requires_new_candidate=True, cases=reports,

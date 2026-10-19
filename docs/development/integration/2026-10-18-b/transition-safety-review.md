@@ -64,6 +64,8 @@ M番号は固定候補の追加migration名昇順。ファイルとblobの一覧
 
 名前だけの正例は、Indexのみ/FKのみ/両方、別tableのIndex同名を含む。負例は複合順序、同列の異なるUNIQUE、同名異定義Index/FK、新Index/FK/trigger名衝突、M08旧名alias/重複/prefix/不可視、M05前提trigger欠損を含む。停止点はM03/M04/M08列/M08新UNIQUE/M08旧UNIQUE削除/M08history Index/M18/M19/M20の9箇所。合成名は本番の実名と対応付けない。
 
+M18/M19は修正後の拒否だけでなく、固定c09ファイルをGitから私有tempへ抽出した**修正前control**も実行する。CREATE直後に停止して再実行すると、旧版は欠けた制約のままledger114へ進み、元のstrict auditはBLOCKすることを確認する。本番で発生したという主張ではなく、固定ソースの合成再現である。
+
 ## D：名前差の例外審査案（未実装・承認なし）
 
 **strict結果はBLOCKのまま保存する。** 意味的一致は別の診断証拠として紐付け、プログラムでPASSへ変換しない。本Draftは例外承認API/waiverファイル/環境変数による昇格を追加しない。誰がJSONに承認と書いても実行権限・公開判定は増えない。

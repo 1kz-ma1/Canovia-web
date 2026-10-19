@@ -59,7 +59,18 @@ DB::listen(function ($event) use (&$injected, &$ddl, $mode, $target): void {
 });
 $failed = false;
 try {
-    $code = Artisan::call('migrate', ['--force' => true, '--no-interaction' => true]);
+    $options = ['--force' => true, '--no-interaction' => true];
+    if (isset($argv[3])) {
+        // Before/after control uses Git-extracted fixed-source files ONLY in
+        // this process's guarded disposable target and private temp directory.
+        $scope = realpath($argv[3]);
+        if ($scope === false || ! str_starts_with($scope, sys_get_temp_dir().'/canovia-transition-private-')) {
+            throw new RuntimeException('TRANSITION_SOURCE_SCOPE_DENIED');
+        }
+        $options['--realpath'] = true;
+        $options['--path'] = $scope;
+    }
+    $code = Artisan::call('migrate', $options);
     $failed = $code !== 0;
 } catch (Throwable) {
     $failed = true;
