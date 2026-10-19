@@ -1,0 +1,94 @@
+name: E858 Approval Offline Gate
+
+on:
+  pull_request:
+    branches: [audit/e858-transport-offline-preflight]
+    paths:
+      - 'scripts/ci/e858_approval_offline/**'
+      - 'tests/ci/test_e858_approval_*.py'
+      - '.github/workflows/e858-approval-offline.yml'
+      - 'docs/development/integration/2026-10-18-b/e858-approval-offline-2026-10-20.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: Approval offline (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.9', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Pure approval TLS nonce and receipt contracts (no network or child client)
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_approval_offline.py -v
+      - name: New descendant source guard and private CI evidence negatives
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_approval_source.py -v
+      - name: Actual clean source guard at this exact new HEAD
+        run: |
+          python3 -I -B - <<'PY'
+          import pathlib,subprocess,sys
+          root=pathlib.Path.cwd()
+          sys.path.insert(0,str(root/'scripts/ci'))
+          from e858_approval_offline.guard import boundary
+          head=subprocess.check_output(['git','rev-parse','HEAD'],text=True).strip()
+          facts=boundary(root,head)
+          assert len(facts['baseline'])==94 and len(facts['candidate'])==114
+          print('NEW_DESCENDANT_SOURCE_VERIFIED')
+          PY
+  dependencies:
+    name: Pinned dependency regressions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Separate exact immutable dependency checkouts
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse origin/audit/e858-source-bound-readiness)" = be89af9a2cb4b13ef16579d2570f4a5605a711b8
+          test "$(git rev-parse origin/audit/e858-transport-offline-preflight)" = 5e63b7db068121d000c316fa8700f7c5f1c0c3b4
+          for item in '795 be89af9a2cb4b13ef16579d2570f4a5605a711b8' '796 5e63b7db068121d000c316fa8700f7c5f1c0c3b4'; do
+            read -r number sha <<< "$item"
+            target="$RUNNER_TEMP/e858-dependency-$number"
+            git clone --quiet --shared "$GITHUB_WORKSPACE" "$target"
+            git -C "$target" checkout --quiet --detach "$sha"
+            for ref in main production release/2026-10-19-e858b9c8 release/2026-10-19-c09a8fc7 docs/e858-production-readiness audit/e858-source-bound-readiness audit/e858-transport-offline-preflight; do
+              git -C "$target" update-ref "refs/remotes/origin/$ref" "$(git rev-parse "origin/$ref")"
+            done
+            test "$(git -C "$target" rev-parse HEAD)" = "$sha"
+            test -z "$(git -C "$target" status --porcelain)"
+          done
+      - name: Fixed 795 original 33 cases
+        working-directory: ${{ runner.temp }}/e858-dependency-795
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_audit.py -v
+      - name: Fixed 796 original 48 cases including cleanup EPERM
+        working-directory: ${{ runner.temp }}/e858-dependency-796
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_transport_preflight.py -v
+      - name: Existing strict semantic fail-closed Python contracts (same immutable 796 checkout)
+        working-directory: ${{ runner.temp }}/e858-dependency-796
+        run: python3 -B -m unittest discover -s tests/ci -p 'test_integrated_release20*.py' -v
+      - name: Dependency checkouts remain clean and pinned
+        run: |
+          set -euo pipefail
+          test "$(git -C "$RUNNER_TEMP/e858-dependency-795" rev-parse HEAD)" = be89af9a2cb4b13ef16579d2570f4a5605a711b8
+          test "$(git -C "$RUNNER_TEMP/e858-dependency-796" rev-parse HEAD)" = 5e63b7db068121d000c316fa8700f7c5f1c0c3b4
+          test -z "$(git -C "$RUNNER_TEMP/e858-dependency-795" status --porcelain)"
+          test -z "$(git -C "$RUNNER_TEMP/e858-dependency-796" status --porcelain)"
