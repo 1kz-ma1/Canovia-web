@@ -58,7 +58,8 @@ def hashed(value):
 
 def blob_file(root, path, sha):
     file = root / path
-    if file.is_symlink() or not file.is_file() or any(p.is_symlink() for p in file.parents if p != root.parent):
+    if (file.is_symlink() or not file.is_file() or file.stat().st_size>8*1024*1024
+            or any(p.is_symlink() for p in file.parents if p != root.parent)):
         raise Block('SOURCE_FILE_REJECTED')
     raw = file.read_bytes()
     actual = hashlib.sha1(b'blob ' + str(len(raw)).encode() + b'\0' + raw).hexdigest()
@@ -203,7 +204,8 @@ def audit(facts, ledger_before, ledger_after, raw, supplemental, extra, referenc
     dependency=('EXPECTED_NAME_AND_DEFINITION' if actual==expected_dependency and aliases==1 else 'MISSING_INCOMPATIBLE_OR_AMBIGUOUS_BLOCK') if stage=='baseline94' else 'NOT_PREMIGRATION94'
     if stage=='baseline94' and (count or dependency!='EXPECTED_NAME_AND_DEFINITION'):strict='BLOCK'
     return dict(result='BLOCK_REAL_GATES_UNVERIFIED',stage=stage or 'UNKNOWN_OR_PARTIAL',
-                original_strict_result=original['result'],strict_result=strict,strict_code=original['code'],
+                original_strict_result=original['result'],original_strict_code=original['code'],strict_result=strict,
+                strict_code=('EXTENDED_METADATA_OR_DEPENDENCY_BLOCK' if strict=='BLOCK' and original['result']!='BLOCK' else original['code']),
                 applied_count=len(ledger_before),semantic_sections=sections,
                 pending_collision_count=count,m08_name_dependency=dependency,
                 identity_data_collision='UNVERIFIED_METADATA_ONLY',trigger_visibility='UNVERIFIED',
@@ -211,21 +213,32 @@ def audit(facts, ledger_before, ledger_after, raw, supplemental, extra, referenc
                 real_aiven_connected=False,production_modified=False,strict_block_waived=False,release_authorized=False)
 
 
-def reference_binding(facts, blobs, generator):
+def reference_binding(facts, blobs, generator, root=ROOT):
     return dict(kind=KIND,candidate_sha=CANDIDATE,candidate_tree=TREE,release_ref=RELEASE,
                 migration_seal=SEAL,normalization=NORMALIZATION,generator_tooling_sha=generator,
                 source_manifest_sha256=hashed(facts['candidate']),
                 expected_sets_sha256=hashed({k:sorted(facts[k]) for k in ('baseline','candidate')}),
-                protected_blobs=blobs,sql_hashes=query_hashes(),sql_bundle_sha256=hashed(query_hashes()))
+                protected_blobs=blobs,sql_hashes=query_hashes(root),sql_bundle_sha256=hashed(query_hashes(root)))
 
 
 def load_reference(root, series, facts, blobs, tooling):
     path=f'scripts/ci/e858_audit_reference/{series}.json'
     blob_file(root,path,tooling)
     ref=json.loads((root/path).read_text())
-    expected=reference_binding(facts,blobs,ref['generator_tooling_sha'])
-    if any(ref.get(k)!=v for k,v in expected.items()) or ref.get('engine')!=series or ref.get('independent_build_count')!=2:
+    expected=reference_binding(facts,blobs,ref['generator_tooling_sha'],root)
+    contract=json.loads((root/'resources/release20_pending_schema_contract.json').read_text())
+    contract={k:v for k,v in contract.items() if k.startswith('absent_')}
+    fields=set(expected)|{'engine','independent_build_count','pending_contract_sha256','baseline94','candidate114'}
+    if (set(ref)!=fields or any(ref.get(k)!=v for k,v in expected.items()) or ref.get('engine')!=series
+            or ref.get('independent_build_count')!=2 or ref.get('pending_contract_sha256')!=hashed(contract)
+            or not re.fullmatch('[0-9a-f]{40}',ref['generator_tooling_sha'])):
         raise Block('REFERENCE_BINDING_REJECTED')
+    original=json.loads((root/f'scripts/ci/integrated_release20_reference/{series}.json').read_text())
+    for stage in ('baseline94','candidate114'):
+        if (ref[stage]['physical']!=original[stage] or set(ref[stage])!={'physical','projections','semantics',
+                'dependency_sha256','extended_strict_sha256'}
+                or not re.fullmatch('[0-9a-f]{64}',ref[stage]['extended_strict_sha256'])):
+            raise Block('REFERENCE_BINDING_REJECTED')
     git(root,'merge-base','--is-ancestor',ref['generator_tooling_sha'],tooling)
     for path,blob in blobs.items():
         if git(root,'rev-parse',ref['generator_tooling_sha']+':'+path)!=blob:

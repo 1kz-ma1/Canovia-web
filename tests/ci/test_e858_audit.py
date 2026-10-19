@@ -78,6 +78,7 @@ class MetadataTests(unittest.TestCase):
     def test_generated_expression_supplement_tightens_original_match(self):
         out=self.evaluate(lambda r,s,e:(r,s,e.rstrip('\n')+'31\n'))
         self.assertEqual('REVIEW_REQUIRED',out['original_strict_result']);self.assertEqual('BLOCK',out['strict_result'])
+        self.assertEqual('EXTENDED_METADATA_OR_DEPENDENCY_BLOCK',out['strict_code'])
 
     def test_trigger_order_is_not_normalized_away(self):
         f,l,r,s,e,ref,c=fixture()
@@ -189,10 +190,10 @@ class SourceTests(unittest.TestCase):
         try:
             with self.assertRaisesRegex(core.Block,'CLEAN_CHECKOUT_REQUIRED'):core.boundary(self.clone,core.CANDIDATE,self.head)
         finally:file.unlink()
-        original=core.git
-        def shallow(root,*args):return 'true' if args==('rev-parse','--is-shallow-repository') else original(root,*args)
-        with patch.object(core,'git',side_effect=shallow):
-            with self.assertRaisesRegex(core.Block,'FULL_HISTORY_REQUIRED'):core.boundary(self.clone,core.CANDIDATE,self.head)
+        shallow=Path(self.tmp.name).resolve()/'shallow'
+        subprocess.run(['git','clone','--quiet','--depth=1',ROOT.as_uri(),str(shallow)],check=True,
+                       stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        with self.assertRaisesRegex(core.Block,'FULL_HISTORY_REQUIRED'):core.boundary(shallow,core.CANDIDATE,self.head)
 
     def test_ignored_assume_unchanged_and_symlink_cannot_replace_sql(self):
         relative='scripts/ci/e858_audit/queries/engine.sql';file=self.clone/relative;data=file.read_bytes()
@@ -219,6 +220,46 @@ class SourceTests(unittest.TestCase):
 
 
 class OperatorTests(unittest.TestCase):
+    def private_fixture(self,directory):
+        f,l,r,s,e,ref,c=fixture()
+        migration='2026_01_01_000000_synthetic'
+        f['baseline']={migration:'blob'};f['candidate']={migration:'blob','2026_01_02_000000_synthetic':'blob'}
+        identity='synthetic_ci\tci@localhost\t8.0.46\tsynthetic-uuid\n'
+        data=dict(identity_before=identity,identity_after=identity,
+                  approved_identity_sha256=hashlib.sha256(identity.encode()).hexdigest(),
+                  grants='GRANT REFERENCES ON `synthetic_ci`.* TO `ci`@`localhost`\nGRANT SELECT ON `synthetic_ci`.`migrations` TO `ci`@`localhost`\n',
+                  ledger_before='migration_ledger\t'+migration+'\t1\n',
+                  ledger_after='migration_ledger\t'+migration+'\t1\n',metadata=r,semantic=s,column_extra=e)
+        path=Path(directory).resolve()/'bundle.json';path.write_text(json.dumps(data));path.chmod(0o600)
+        return path,data,f,{'8.0':ref},c
+
+    def test_private_bundle_is_offline_and_never_proves_real_visibility(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path,data,f,refs,c=self.private_fixture(tmp)
+            with patch.object(packet.subprocess,'run') as run:
+                result=packet.metadata_input(path,f,refs,c);run.assert_not_called()
+            self.assertEqual('REVIEW_REQUIRED',result['strict_result'])
+            self.assertEqual('UNVERIFIED',result['trigger_visibility'])
+            self.assertNotIn('synthetic_ci',json.dumps(result))
+
+    def test_overprivilege_target_switch_and_ledger_change_are_fixed_blocks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path,data,f,refs,c=self.private_fixture(tmp)
+            for field,value,code in [
+                    ('grants','GRANT ALL PRIVILEGES ON *.* TO `ci`@`localhost`\n','METADATA_GRANTS_REJECTED'),
+                    ('identity_after','another-target','PRIVATE_TARGET_BINDING_REJECTED'),
+                    ('ledger_after',data['ledger_after'].replace('\t1\n','\t2\n'),'LEDGER_CHANGED')]:
+                changed=dict(data);changed[field]=value;path.write_text(json.dumps(changed))
+                with self.assertRaisesRegex(core.Block,code):packet.metadata_input(path,f,refs,c)
+
+    def test_fifo_and_symlink_private_input_rejected_without_reading(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            directory=Path(tmp).resolve();fifo=directory/'fifo';os.mkfifo(fifo,0o600)
+            with self.assertRaisesRegex(core.Block,'PRIVATE_INPUT_REJECTED'):packet.private_json(fifo,1024)
+            target=directory/'target';target.write_text('{}');target.chmod(0o600)
+            link=directory/'link';link.symlink_to(target)
+            with self.assertRaisesRegex(core.Block,'PRIVATE_INPUT_REJECTED'):packet.private_json(link,1024)
+
     def test_real_mode_and_unknown_arguments_never_start_any_subprocess(self):
         for argv in [['--collect','--candidate-sha',core.CANDIDATE,'--tooling-sha','a'*40],['SYNTHETIC_SECRET']]:
             with patch.object(sys,'argv',['e858',*argv]),patch.object(packet.subprocess,'run') as run,patch('sys.stdout',new_callable=io.StringIO) as out:

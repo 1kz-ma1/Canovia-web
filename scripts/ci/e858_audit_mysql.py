@@ -12,7 +12,7 @@ import tempfile
 
 sys.dont_write_bytecode=True
 from e858_audit.core import (ROOT,BASE,CANDIDATE,Block,boundary,git,model,absence,audit,
-                            reference_binding,hashed,queries,load_reference)
+                            reference_binding,hashed,queries,load_reference,environment_guard)
 from e858_audit.transport import Budget,bounded_query
 from integrated_release20_audit import snapshot,parse_full_ledger
 from integrated_release20_semantic_fixtures import structural_cases
@@ -44,6 +44,9 @@ def rehearse(series,facts,blobs,generator):
                 return bounded_query(command,key,budget)
             version=ddl('SELECT VERSION();').strip()
             if not version.startswith(series+'.'):raise Block('DISPOSABLE_ENGINE_REJECTED')
+            identity=query('identity').rstrip('\n').split('\t')
+            if len(identity)!=4 or identity[0]!='canovia_p0_ci' or not identity[2].startswith(series+'.'):
+                raise Block('DISPOSABLE_IDENTITY_REJECTED')
             env={k:os.environ[k] for k in ('PATH','PHPRC','PHP_INI_SCAN_DIR','LD_LIBRARY_PATH','LANG') if k in os.environ}
             env.update(APP_ENV='testing',APP_KEY='base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
                 DB_CONNECTION='mysql',DB_HOST='127.0.0.1',DB_PORT=port,DB_DATABASE='canovia_p0_ci',
@@ -149,6 +152,7 @@ def main():
         parser.add_argument('--series',choices=['8.0','8.4'])
         parser.add_argument('--record',action='store_true')
         with redirect_stderr(io.StringIO()):args=parser.parse_args()
+        environment_guard()
         if args.record and (args.series or os.environ.get('GITHUB_ACTIONS')=='true'):
             raise Block('REFERENCE_RECORDING_REJECTED')
         tooling=git(ROOT,'rev-parse','HEAD')

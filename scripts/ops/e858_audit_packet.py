@@ -32,9 +32,10 @@ def unique_object(pairs):
 def private_json(path, maximum):
     path=Path(path).absolute()
     # User-owned input is never deleted; this tool creates NO raw temp files.
-    if (path.is_symlink() or any(parent.is_symlink() for parent in path.parents)
-            or path.parent.stat().st_mode & 0o077):
+    if path.is_symlink() or path.parent.is_symlink():
         raise Block('PRIVATE_INPUT_REJECTED')
+    path=path.resolve(strict=True)
+    if path.parent.stat().st_mode & 0o077:raise Block('PRIVATE_INPUT_REJECTED')
     if path.is_relative_to(ROOT):raise Block('PRIVATE_INPUT_REJECTED')
     fd=os.open(path,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
     try:
@@ -109,9 +110,13 @@ def packet(candidate,tooling,receipts=None,private_input=None):
     facts,blobs=boundary(ROOT,candidate,tooling)
     refs={s:load_reference(ROOT,s,facts,blobs,tooling) for s in ('8.0','8.4')}
     contract=json.loads((ROOT/'resources/release20_pending_schema_contract.json').read_text())
-    if private_input:return metadata_input(private_input,facts,refs,contract)
     if receipts is None:raise Block('CI_RECEIPTS_REQUIRED')
     ids=receipt_check(receipts,tooling)
+    if private_input:
+        result=metadata_input(private_input,facts,refs,contract)
+        result.update(candidate_source_sha=candidate,tooling_sha=tooling,migration_seal=SEAL,ci_run_ids=ids,
+                      sql_bundle_sha256=hashed(query_hashes()),private_binding='PROVIDED_NOT_AUTHENTICATED')
+        return result
     proc=subprocess.run([sys.executable,'-B','-m','unittest','discover','-s','tests/ci','-p','test_e858_audit.py'],
                         cwd=ROOT,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=90)
     if proc.returncode!=0:raise Block('OFFLINE_FIXTURE_TESTS_FAILED')
