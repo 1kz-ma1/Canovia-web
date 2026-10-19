@@ -334,7 +334,14 @@ final class LearningContextWatchPersistenceTest extends TestCase
         $this->assertSame('recorded_review_candidate', $service->advance($owner, $plan->id)['status']);
 
         $migration = require database_path('migrations/2026_10_15_110000_create_learning_context_watch_persistence.php');
-        $migration->up();
+        // Applied ledger entries are skipped on a normal migration replay.
+        $this->artisan('migrate', ['--force' => true])->assertSuccessful();
+        try {
+            $migration->up();
+            $this->fail('Existing tables must require manual state review.');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('RELEASE20_WATCH_EXISTING_TABLE_BLOCK', $e->getMessage());
+        }
         $this->assertTrue(Schema::hasTable('learning_context_watch_states'));
         $this->assertTrue(Schema::hasTable('learning_context_change_records'));
         $this->assertDatabaseCount('learning_context_watch_states', 1);

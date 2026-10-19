@@ -20,7 +20,7 @@ from integrated_release20_semantics import KIND as SEMANTIC_KIND, parse, semanti
 from integrated_release20_semantic_fixtures import canonical_cases, structural_cases
 
 
-def rehearse(series, write_reference=False, write_semantic_reference=False):
+def rehearse(series, write_reference=False, write_semantic_reference=False, fixed_source_only=False):
     name, port = {'8.0': ('canovia-integration-80', '13380'),
                   '8.4': ('canovia-integration-84', '13384')}[series]
     with tempfile.TemporaryDirectory(prefix='canovia-diagnostic-ci-') as tmp:
@@ -39,7 +39,10 @@ def rehearse(series, write_reference=False, write_semantic_reference=False):
                 raise ValueError()
             head = run(['git', 'rev-parse', 'HEAD']).strip()
             src = source(ROOT, CANDIDATE)
-            if source(ROOT, head) != src:
+            if fixed_source_only:
+                from release20_proposal_packet import packet
+                packet(head)  # Verify independent proposal and immutable audit.
+            elif source(ROOT, head) != src:
                 raise ValueError()
             # Ensure ignored/assume-unchanged source cannot change expectations.
             protected = ['scripts/sql/integrated_release20_metadata.sql',
@@ -220,9 +223,10 @@ def main():
     p.add_argument('--series', choices=('8.0', '8.4'), required=True)
     p.add_argument('--write-reference', action='store_true')
     p.add_argument('--write-semantic-reference', action='store_true')
+    p.add_argument('--fixed-source-only', action='store_true', help='Rehearse original c09 migrations under independently checked proposal tooling')
     args = p.parse_args()
     try:
-        result = rehearse(args.series, args.write_reference, args.write_semantic_reference)
+        result = rehearse(args.series, args.write_reference, args.write_semantic_reference, args.fixed_source_only)
     except Exception:
         print(json.dumps({'result': 'BLOCK', 'code': 'DISPOSABLE_DIAGNOSTIC_FIXTURE_FAILED'}))
         return 2

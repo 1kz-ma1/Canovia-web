@@ -8,6 +8,8 @@ return new class extends Migration
 {
     public function up(): void
     {
+        \App\Support\Release20PendingSchemaGuard::assertInitialBoundary();
+
         Schema::table('development_activity_observations', function (Blueprint $table) {
             // GitHub's entity version, not the webhook delivery timestamp.
             // NULL is retained for legacy records and non-versioned sources.
