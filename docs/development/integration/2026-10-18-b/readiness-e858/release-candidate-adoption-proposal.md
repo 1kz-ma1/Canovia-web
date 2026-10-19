@@ -38,7 +38,7 @@ ownerが採用を個別承認した場合のrelease名案は `release/2026-10-19
 | 候補採用GO | owner、固定source/seal/差分/指定CIの受入、未達ゲートの明記。新release pinのみ別操作 | DB接続、DDL、復元、Render、Auth0、公開 |
 | 実Aiven metadata read GO | owner＋認可operator、採用済release/new tooling/new referenceのoffline受入、私的対象binding、期限付き1回 | 実データ、追加GRANT、TRIGGER権限拡張、strict waiver |
 | backup/隔離restore・writer停止 GO | owner＋DBA/復旧責任者、費用/RPO/RTO/対象/廃棄/leaseの承認 | 実migrationとdeployの自動承認 |
-| 実migration GO | owner＋DBA、全P0 evidence、actor停止、復元済backup、失敗時復旧案、実行runtime40桁SHA | production昇格・公開・機能flag変更 |
+| 実migration GO | owner＋DBA、P0の移行前DB/source/復旧ゲート、事前隔離受入、actor停止、復元済backup、失敗時復旧案、実行runtime40桁SHA | production昇格・公開・機能flag変更、限定deploy後の実機受入完了の認定 |
 | production merge / Render deploy GO | owner、固定release、保護/5必須check、merge tree/新runtime SHA、DDL/source一致、Auto Deploy OFF | 未完了実機受入の完了認定、一般公開、Auth0変更 |
 | 限定機能受入GO | owner、実Web/iPhone、独立Auth0/本人同意・取消検証を段階実施 | tasks/summary/context/write/一般公開の一括許可 |
 

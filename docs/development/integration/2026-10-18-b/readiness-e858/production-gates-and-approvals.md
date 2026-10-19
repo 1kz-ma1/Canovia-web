@@ -2,6 +2,8 @@
 
 2026-10-19 UTC / 正本 [#488](https://github.com/1kz-ma1/Canovia-web/issues/488)。対象は[監査票](release-candidate-readiness-audit.md)の固定main。**PRODUCTION_NO_GO_HOLD**。PASSは記載範囲内だけ、UNVERIFIEDは運用上BLOCK。下表の承認はすべて未取得であり、文書作成やCIが承認を代行しない。
 
+P0は公開前の優先度を示し、全項目を実DDL前に実行する意味ではない。source/DB適合・権限/backup/復旧/writer停止は**移行前ゲート**。実Web/iOS/Auth0は事前の隔離環境受入と、別承認の限定deploy後の実runtime受入を分ける。後者が未完了なら一般traffic/機能公開はHOLDのまま。実Plan readはその専用承認まで行わず、DDL承認のために前倒ししない。
+
 | 優先度・ゲート | 現在 | 次の証拠・判断者 / STOP |
 | --- | --- | --- |
 | P0 Source・親/tree・旧94/114・seal | PASS（固定e858） | ownerが[固定結果](source-audit.json)を審査。ref/集合/blob/seal/祖先差で失効 |
