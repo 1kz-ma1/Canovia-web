@@ -48,7 +48,9 @@ def _unique(pairs):
     return out
 
 
-def _ascii(value):
+def _ascii(value,depth=0):
+    if depth>16:
+        raise Block('JSON_DEPTH_REJECTED')
     if isinstance(value, str):
         if any(ord(c) < 32 or ord(c) > 126 for c in value):
             raise Block('JSON_TEXT_REJECTED')
@@ -56,10 +58,10 @@ def _ascii(value):
         for k,v in value.items():
             if type(k) is not str:
                 raise Block('JSON_TYPE_REJECTED')
-            _ascii(k); _ascii(v)
+            _ascii(k,depth+1); _ascii(v,depth+1)
     elif isinstance(value, list):
         for v in value:
-            _ascii(v)
+            _ascii(v,depth+1)
     elif value is not None and type(value) not in (bool,int):
         raise Block('JSON_TYPE_REJECTED')
 

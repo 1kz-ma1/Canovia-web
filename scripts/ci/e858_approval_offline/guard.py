@@ -109,7 +109,7 @@ def private_receipts(directory):
         fd=os.open(file,os.O_RDONLY|getattr(os,'O_NOFOLLOW',0)|getattr(os,'O_NONBLOCK',0))
         try:
             info=os.fstat(fd)
-            if (not stat.S_ISREG(info.st_mode) or info.st_uid!=os.getuid() or info.st_mode & 0o077
+            if (not stat.S_ISREG(info.st_mode) or info.st_nlink!=1 or info.st_uid!=os.getuid() or info.st_mode & 0o077
                     or info.st_size>1024*1024):
                 raise Block('CI_FILES_REJECTED')
             with os.fdopen(fd,'rb',closefd=False) as stream:
@@ -122,7 +122,12 @@ def private_receipts(directory):
                     if k in value:raise Block('CI_RECEIPT_REJECTED')
                     value[k]=v
                 return value
-            out[name]=json.loads(raw.decode('ascii'),object_pairs_hook=unique)
+            try:
+                out[name]=json.loads(raw.decode('ascii'),object_pairs_hook=unique)
+            except Block:
+                raise
+            except (ValueError,UnicodeError,RecursionError):
+                raise Block('CI_RECEIPT_REJECTED') from None
         finally:
             os.close(fd)
     return out

@@ -57,7 +57,7 @@ class ContractTests(unittest.TestCase):
         for data in (b'{"kind":1,"kind":2}',b'{"target":{"host":1,"host":2}}'):
             with self.assertRaisesRegex(c.Block,'JSON_DUPLICATE_KEY'):c.decode(data)
         for raw in (b'{',b'x'*16385,b'{"x":NaN}',b'{"x":1.1}',b'{"x":"\\u0000"}',
-                    b'{"x":"\\u65e5"}',b'{"x":"\\u007f"}',b'\xff'):
+                    b'{"x":"\\u65e5"}',b'{"x":"\\u007f"}',b'\xff',b'['*30+b'0'+b']'*30):
             with self.assertRaises(c.Block):c.decode(raw)
 
     def test_unknown_mutable_and_real_approval_fields_rejected(self):
@@ -226,6 +226,19 @@ class ContractTests(unittest.TestCase):
         record=self.review();self.value['nonce']='b'*32
         self.proofs=self.authority.endorsements(c.canonical(self.value))
         with self.assertRaisesRegex(c.Block,'TARGET_OR_BINDING_CHANGED'):self.consume(record)
+
+    def test_jit_changed_observation_or_revocation_and_mono_rollback(self):
+        record=self.review()
+        self.tls['ledger_count']=114
+        with self.assertRaisesRegex(c.Block,'TARGET_OR_BINDING_CHANGED'):self.consume(record)
+        self.tls['ledger_count']=94;self.tls['writer_epoch']='synthetic-writer-2'
+        with self.assertRaisesRegex(c.Block,'SNAPSHOT_UNVERIFIED'):self.consume(record)
+        self.tls['writer_epoch']='synthetic-writer-1';self.authority.revoked.add('operator')
+        with self.assertRaisesRegex(c.Block,'SIGNER_REVOKED'):self.consume(record)
+        self.authority.revoked.clear();self.clock.monotonic=-1
+        with self.assertRaisesRegex(c.Block,'CLOCK_UNVERIFIED'):self.consume(record)
+        self.clock=c.FakeClock(monotonic=2);self.clock.observe();self.clock.monotonic=1
+        with self.assertRaisesRegex(c.Block,'CLOCK_ROLLBACK'):self.clock.observe()
         self.value['nonce']='a'*32;self.proofs=self.authority.endorsements(c.canonical(self.value))
         self.authority.rotate()
         with self.assertRaisesRegex(c.Block,'STALE_SIGNER'):self.consume(record)
@@ -236,8 +249,8 @@ class ContractTests(unittest.TestCase):
         out=c.plan_descriptor();self.assertEqual('NOT_EXECUTABLE',out['kind'])
         self.assertEqual('UNREVIEWED',out['state']);self.assertEqual(14,out['unique_sql_count'])
         self.assertEqual(17,out['execution_count'])
-        for forbidden in ('password','host','argv','READY_TO_CONNECT','APPROVED','GO'):
-            self.assertNotIn(forbidden,json.dumps(out)) if forbidden!='GO' else None
+        for forbidden in ('password','host','argv','READY_TO_CONNECT','APPROVED'):
+            self.assertNotIn(forbidden,json.dumps(out))
         self.assertEqual('EXPIRED',c.state_for('EXPIRED'))
         self.assertEqual('REPLAY_REJECTED',c.state_for('REPLAY_REJECTED'))
         self.assertEqual('TLS_UNVERIFIED',c.state_for('TLS_UNVERIFIED'))

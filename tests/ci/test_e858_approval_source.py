@@ -118,6 +118,8 @@ class ReceiptFileTests(unittest.TestCase):
             with self.assertRaisesRegex(Block,'CI_FILES_REJECTED'):g.private_receipts(path)
             file.chmod(0o600);file.write_text('{"x":1,"x":2}')
             with self.assertRaisesRegex(Block,'CI_RECEIPT_REJECTED'):g.private_receipts(path)
+            file.write_text('{')
+            with self.assertRaisesRegex(Block,'CI_RECEIPT_REJECTED'):g.private_receipts(path)
             file.unlink();file.symlink_to(path/'tooling-ci.json')
             with self.assertRaisesRegex(Block,'CI_FILES_REJECTED'):g.private_receipts(path)
             file.unlink();os.mkfifo(file,0o600)
