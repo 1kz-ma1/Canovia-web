@@ -1,0 +1,133 @@
+{
+  "baseline94": {
+    "physical": {
+      "engine": "8.4",
+      "sections": {
+        "check": {
+          "count": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "column": {
+          "count": 1154,
+          "sha256": "16e54183299b4ef64ee5b4d5ef4d3312d62d3635f0ffd095c532f1597d98bcd6"
+        },
+        "foreign_key": {
+          "count": 181,
+          "sha256": "9ae38ad45ba3136a1fd2ca693a9186b6517988d2757018c2901f00233357be70"
+        },
+        "index": {
+          "count": 604,
+          "sha256": "322c634bf4c7cdc0c98e2259940f26146c3c126184398bf7e84c6401e38913bc"
+        },
+        "table": {
+          "count": 91,
+          "sha256": "32b0217cd3169fc96ecc1bc1a2f0fc2358eb7ea7845d48bd91176f21b4657d21"
+        },
+        "trigger": {
+          "count": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        }
+      }
+    },
+    "projections": {
+      "check": {
+        "collations": null,
+        "identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "without_collation": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "column": {
+        "collations": "e02ea1b223a167ae97a624c3d89a247cf893ea0abe6411109a4cfa981e71dc87",
+        "identity": "b0bee713cabee4f329a7e14dec95914723216646ea964e1a69e2a05d6aa67e6d",
+        "without_collation": "102b2372acb458fcb29ce14b6aa74f90af3c2570ec0531c89bdbc85c75459e45"
+      },
+      "foreign_key": {
+        "collations": null,
+        "identity": "d42f48e8ac01fcf98fce46ba494101c39992fc3fceaba5ed221c55d845922631",
+        "without_collation": "9ae38ad45ba3136a1fd2ca693a9186b6517988d2757018c2901f00233357be70"
+      },
+      "index": {
+        "collations": null,
+        "identity": "56fb94903072fdf2cb3dd3125ca16f150bdbeebc10a7638e0987af9ee8384a44",
+        "without_collation": "322c634bf4c7cdc0c98e2259940f26146c3c126184398bf7e84c6401e38913bc"
+      },
+      "table": {
+        "collations": "86656592039271ae30aa3ecaf430aa3693466c89942d6624553100b30dc32933",
+        "identity": "d4733a4f28c87fd90c73f47294d8d37c683acbb6352ef8c97e0aba82ce50f9fa",
+        "without_collation": "8454c2939b5d5075adb7b97f541b76200f595071d4178d9da9e0cec5aa2f6923"
+      },
+      "trigger": {
+        "collations": null,
+        "identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "without_collation": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      }
+    }
+  },
+  "baseline_sha": "15abdc9de6f24b5250fb255c579d1aa55facaf1a",
+  "candidate114": {
+    "physical": {
+      "engine": "8.4",
+      "sections": {
+        "check": {
+          "count": 0,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        "column": {
+          "count": 1271,
+          "sha256": "06c900861891e865def45dea5b2aacb095a3bc517fb715e234c5bcef7d237558"
+        },
+        "foreign_key": {
+          "count": 194,
+          "sha256": "7f1d372291882172e6a1c00024428dfd0757de52153f716362a293cc969fa895"
+        },
+        "index": {
+          "count": 649,
+          "sha256": "ec6f4ac66438a91958e5f10b15af5bfb7154dcc44b4b8091807d59aaf2e0dc60"
+        },
+        "table": {
+          "count": 102,
+          "sha256": "81e32b0b9fc29aab7ac2d1c3a28d37d1bd027cbac8471f9daed2f76bf36cecb3"
+        },
+        "trigger": {
+          "count": 3,
+          "sha256": "1b9973f99f8566e1f67c2780c6fb1181f3f1709df771a0883b1997755f05bfe9"
+        }
+      }
+    },
+    "projections": {
+      "check": {
+        "collations": null,
+        "identity": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "without_collation": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+      },
+      "column": {
+        "collations": "d762e766205e21e1b2875e639d564bc46582a430c3492a8fa73cba2791b360d7",
+        "identity": "87a4dc774e167576e33653383ab5c27166803dff170f44b7af246e4ea75d80b9",
+        "without_collation": "96f6317830f984736326b83e07db3990abe091ccb663b4ed6b37de85c4720b7d"
+      },
+      "foreign_key": {
+        "collations": null,
+        "identity": "47c11d64e328df67655e93bb95eda633e5657ef7d380074a54b8c2a035a69761",
+        "without_collation": "7f1d372291882172e6a1c00024428dfd0757de52153f716362a293cc969fa895"
+      },
+      "index": {
+        "collations": null,
+        "identity": "ebbeeca1480bb1966c13c08e2be99e2eace99f10e086744ae83b8c42091eff31",
+        "without_collation": "ec6f4ac66438a91958e5f10b15af5bfb7154dcc44b4b8091807d59aaf2e0dc60"
+      },
+      "table": {
+        "collations": "c233d40d578ae505cd46e14ad4f77593ebfead8ce767bfacc54ec902274aae51",
+        "identity": "ffc9d6114c3fa6a95cea0896efb34beaaca9ba891a438ba5a629d05e1a4ac8d6",
+        "without_collation": "3df5180ad85298348764119a8761a6e36353f1ad6e1d5b28a74e1c9999b260d9"
+      },
+      "trigger": {
+        "collations": null,
+        "identity": "896d51031217138ef5662fc9a7044b9840f686d99154ca7af0133e8812c5c747",
+        "without_collation": "1b9973f99f8566e1f67c2780c6fb1181f3f1709df771a0883b1997755f05bfe9"
+      }
+    }
+  },
+  "candidate_sha": "c09a8fc718c338f98a4045a4b5f2260c7571fdaa",
+  "engine": "8.4",
+  "kind": "DISPOSABLE_DIAGNOSTIC_PROJECTIONS_ONLY",
+  "migration_seal": "821e10e942cdd225bf12767ea8a1411105570c4fd755d274c0411a91f52fbcec"
+}

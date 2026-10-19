@@ -51,6 +51,10 @@
 
 ## 専用監査器・最短オーナー受入
 
+実Aivenの固定候補 `c09a8fc718c338f98a4045a4b5f2260c7571fdaa` に対する2区分不一致はBLOCKを維持する。新しい独立Draftの[診断専用操作票](schema-diagnostic-owner-operations.md)は、元のhash/判定を変更せず区分・件数・定義/Collation差を分類する準備であり、再接続承認ではない。
+
+#791の後続HEADは、オーナー実測のindex/FK識別子差を引き継ぎ、[名前と定義の意味比較・20 migration名前依存の操作票](constraint-semantics-owner-operations.md)を追加する。旧toolingの承認・Mac受入を新版へ流用しない。名前だけでもstrict BLOCK、移行互換性は別ゲート。
+
 - `scripts/ci/integrated_release20_audit.py`: networkなし。旧94/候補114のGit migration seal、ledger、metadataを、両版で生成・Gitレビューしたreferenceと照合。未知履歴・途中適用・型/default/index/FK/check/trigger差分はBLOCK。全一致でも **REVIEW_REQUIRED / release_authorized=false**。
 - `scripts/ops/integrated_release20_collect.py`: **既定OFFLINE**。HEAD/clean tree/full history、監査SQL/実行コード/referenceのGit blobを実ファイルと検証。ignored/assume-unchangedによるSQL差替もblob検査で拒否。credential環境overrideを拒否。`--collect`は別のowner承認、対象確認、採用済みrelease refのSHA一致/main祖先、既存login-path、VERIFY_IDENTITY＋CA、narrow SHOW GRANTSを必須にする。CIから実接続は禁止。
 - SQLはinformation_schemaとmigration ledgerのみ。生metadata・grants・client errorは0700一時領域で扱い、成功/失敗とも削除し、画面へ固定code/countだけ返す。実データ・秘密値をログ/GitHubへ渡さない。

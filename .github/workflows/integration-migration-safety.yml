@@ -79,7 +79,9 @@ jobs:
             -e MYSQL_DATABASE=canovia_p0_ci -e MYSQL_USER=canovia_ci \
             -e MYSQL_PASSWORD=ci-only-ephemeral-password "mysql:$SERIES" --log-bin-trust-function-creators=1
           for attempt in $(seq 1 60); do
-            if docker exec -e MYSQL_PWD=ci-only-ephemeral-password "$name" mysql -u canovia_ci -Nse 'SELECT 1'; then exit 0; fi
+            # The image's temporary initialization server disables TCP. A
+            # socket probe can succeed just before that server shuts down.
+            if docker exec -e MYSQL_PWD=ci-only-ephemeral-password "$name" mysql --protocol=TCP -h127.0.0.1 -u canovia_ci -Nse 'SELECT 1' >/dev/null 2>&1; then exit 0; fi
             sleep 1
           done
           exit 1
