@@ -1,0 +1,74 @@
+name: AP MCP Legacy Release Bridge Review (No Deploy)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/ap_mcp_release_bridge_review.py'
+      - 'tests/ci/test_ap_mcp_release_bridge_review.py'
+      - '.github/workflows/ap-mcp-release-bridge-review.yml'
+      - 'docs/development/MCP_AP_LEGACY_RELEASE_BRIDGE_REVIEW_2026_10_18.md'
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-review-only:
+    name: AP legacy promotion gap (not a release)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Test release preview fail-closed decisions
+        run: python3 -m unittest discover -s tests/ci -p 'test_ap_mcp_release_bridge_review.py' -v
+      - name: Fetch exact existing Git refs (read-only)
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin \
+            '+refs/heads/main:refs/remotes/origin/main' \
+            '+refs/heads/production:refs/remotes/origin/production' \
+            '+refs/heads/feature/ap-mcp-live94-auth0-20261018:refs/remotes/origin/feature/ap-mcp-live94-auth0-20261018'
+          test "$(git rev-parse refs/remotes/origin/main)" = "4e3a6e97949602409ea337290c4d4f2052fda998"
+          test "$(git rev-parse refs/remotes/origin/production)" = "15abdc9de6f24b5250fb255c579d1aa55facaf1a"
+          observed="$(git rev-parse refs/remotes/origin/feature/ap-mcp-live94-auth0-20261018)"
+          if [ "$observed" != "ef3c814128cd6aa317ba7a23d073291f0dcc443b" ]; then
+            echo "::warning::AP pilot branch moved; the report applies only to frozen SHA and NOT latest PR HEAD."
+          fi
+      - name: Inspect source-level exception blockers, not authorization
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/ap_mcp_release_bridge_review.py \
+            --main-sha 4e3a6e97949602409ea337290c4d4f2052fda998 \
+            --production-sha 15abdc9de6f24b5250fb255c579d1aa55facaf1a \
+            --pilot-sha ef3c814128cd6aa317ba7a23d073291f0dcc443b \
+            --pilot-branch feature/ap-mcp-live94-auth0-20261018 \
+            > "$RUNNER_TEMP/ap-mcp-release-bridge.json"
+          python3 - "$RUNNER_TEMP/ap-mcp-release-bridge.json" <<'PY'
+          import json
+          import sys
+          with open(sys.argv[1], encoding="utf-8") as f:
+              d = json.load(f)
+          assert d["result"] == "REVIEW_REQUIRED"
+          assert d["code"] == "EXCEPTION_BOOTSTRAP_REQUIRES_OWNER_REVIEW"
+          assert d["candidate_is_main_ancestor"] is False
+          assert d["candidate_has_release_branch_name"] is False
+          assert d["required_check_workflow_files_missing_on_candidate"] == ["Production promotion contract"]
+          expected = {
+              "Production promotion contract", "workspace-resume", "migration-recovery",
+              "P0 schema integrity (MySQL 8.0)", "P0 schema integrity (MySQL 8.4)",
+          }
+          assert set(d["required_check_contexts_not_runnable_on_production_pr"]) == expected
+          assert set(d["required_check_contexts_not_runnable_on_production_push"]) == expected
+          assert d["production_release_authorized"] is False
+          assert d["github_required_status_checks_verified"] is False
+          print("legacy AP release gap verified; production HOLD")
+          PY
+      - name: Upload sanitized review evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ap-legacy-release-bridge-review
+          path: ${{ runner.temp }}/ap-mcp-release-bridge.json
+          retention-days: 7
