@@ -123,6 +123,68 @@ class BoundaryTests(unittest.TestCase):
 
 
 class SQLAndEnvironmentTests(unittest.TestCase):
+    def test_positive_fake_snapshot_runs_exact_order_without_socket(self):
+        payload = {key: b'synthetic\n' for key in original.CAPS}
+        with patch('socket.socket') as socket, patch('subprocess.Popen', wraps=subprocess.Popen) as start:
+            data = adapter.capture(adapter.FakeAdapter(payload), root=ROOT)
+            self.assertEqual(set(original.CAPS), set(data)); self.assertEqual(17, start.call_count)
+            socket.assert_not_called()
+            for call in start.call_args_list:
+                self.assertNotIn('shell', call.kwargs)
+                self.assertEqual('/nonexistent', call.kwargs['env']['HOME'])
+
+    def test_ledger_identity_and_grants_change_stop_without_retry(self):
+        fixed = core.plan(ROOT)
+        for key in ('ledger', 'identity', 'grants'):
+            seen = {}
+            def query(_cmd, query_id, _budget, **_kwargs):
+                seen[query_id] = seen.get(query_id, 0) + 1
+                return 'changed\n' if query_id == key and seen[query_id] > 1 else 'synthetic\n'
+            with patch.object(adapter, 'bounded_query', side_effect=query) as run:
+                with self.assertRaisesRegex(core.Block, 'LEDGER_CHANGED' if key == 'ledger' else 'PRIVATE_BINDING_CHANGED'):
+                    adapter.capture(adapter.FakeAdapter({k: b'x\n' for k in original.CAPS}), root=ROOT)
+                self.assertEqual(2, seen[key]); self.assertLessEqual(run.call_count, len(fixed))
+
+    def test_disposable_ownership_and_loopback_scope_cannot_be_substituted(self):
+        state = {'Name': '/canovia-integration-80', 'State': {'Running': True},
+                 'Config': {'Image': 'mysql:8.0', 'Labels': {'canovia.integration': '2026-10-16'}},
+                 'NetworkSettings': {'Ports': {'3306/tcp': [{'HostIp': '127.0.0.1', 'HostPort': '13380'}]}}}
+        def response(value):
+            return subprocess.CompletedProcess([], 0, json.dumps([value]).encode(), b'')
+        with patch.object(adapter.subprocess, 'run', return_value=response(state)) as run:
+            item = adapter.DisposableAdapter('8.0'); cmd, env = item._command('identity')
+            self.assertEqual('mysql', cmd[cmd.index('mysql')]); self.assertEqual('--no-defaults', cmd[cmd.index('mysql') + 1])
+            self.assertIn('--no-login-paths', cmd); self.assertIn('--host=127.0.0.1', cmd)
+            self.assertNotIn('DOCKER_HOST', env); self.assertEqual(2, run.call_count)
+        negatives = []
+        for port in ('0.0.0.0', 'synthetic.invalid', '::1'):
+            changed = copy.deepcopy(state); changed['NetworkSettings']['Ports']['3306/tcp'][0]['HostIp'] = port
+            negatives.append(changed)
+        changed = copy.deepcopy(state); changed['Config']['Labels'] = {}; negatives.append(changed)
+        changed = copy.deepcopy(state); changed['Config']['Image'] = 'mysql:8.4'; negatives.append(changed)
+        changed = copy.deepcopy(state); changed['Name'] = '/SYNTHETIC_SECRET'; negatives.append(changed)
+        for changed in negatives:
+            with patch.object(adapter.subprocess, 'run', return_value=response(changed)), patch('subprocess.Popen') as start:
+                with self.assertRaisesRegex(core.Block, 'DISPOSABLE_TARGET_REJECTED'):
+                    adapter.DisposableAdapter('8.0')
+                start.assert_not_called()
+
+    def test_disposable_identity_and_privilege_checked_before_metadata(self):
+        with patch.object(adapter.DisposableAdapter, '_verify'):
+            item = adapter.DisposableAdapter('8.0')
+            for bad_id in ('wrong\twrong\t8.0.46\tSYNTHETIC_SECRET\n',
+                           'canovia_p0_ci\te858_inspector@%\t8.4.11\tsynthetic\n'):
+                with patch.object(adapter, 'bounded_query', return_value=bad_id) as run:
+                    with self.assertRaisesRegex(core.Block, 'DISPOSABLE_IDENTITY_REJECTED'):
+                        adapter.capture(item, root=ROOT)
+                    self.assertEqual(1, run.call_count)
+            values = ['canovia_p0_ci\te858_inspector@%\t8.0.46\tsynthetic\n',
+                      'GRANT ALL PRIVILEGES ON *.* TO `synthetic`@`localhost`\n']
+            with patch.object(adapter, 'bounded_query', side_effect=values) as run:
+                with self.assertRaisesRegex(core.Block, 'METADATA_GRANTS_REJECTED'):
+                    adapter.capture(item, root=ROOT)
+                self.assertEqual(2, run.call_count)
+
     def test_fixed_14_statements_and_17_ordered_executions(self):
         plan = core.plan(ROOT)
         self.assertEqual(17, len(plan)); self.assertEqual(14, len(dict(plan)))
@@ -208,6 +270,23 @@ class StreamTests(unittest.TestCase):
         for kwargs in ({'max_bytes': 8}, {'budget': Budget(maximum=8)}):
             with self.assertRaisesRegex(core.Block, 'QUERY_BYTES_EXCEEDED'):
                 self.run_fake(b'engine\t8.0\n', **kwargs)
+
+    def test_actual_eight_mib_and_sixteen_mib_limits(self):
+        with self.assertRaisesRegex(core.Block, 'QUERY_BYTES_EXCEEDED'):
+            self.run_fake((b'x' * 100000 + b'\n') * 84, 'column')
+        budget = Budget()
+        chunk = (b'x' * 100000 + b'\n') * 60
+        self.run_fake(chunk, 'column', budget=budget)
+        self.run_fake(chunk, 'column', budget=budget)
+        with self.assertRaisesRegex(core.Block, 'QUERY_BYTES_EXCEEDED'):
+            self.run_fake(chunk, 'column', budget=budget)
+
+    def test_inherited_default_limits_and_no_per_capture_override(self):
+        before = time.monotonic(); budget = Budget()
+        self.assertLessEqual(budget.until - before, 120.1)
+        self.assertEqual(16 * 1024 * 1024, budget.maximum)
+        with self.assertRaises(TypeError):
+            adapter.capture(adapter.FakeAdapter({}), root=ROOT, seconds=999)
 
     def test_partial_non_ascii_controls_and_del(self):
         for raw in (b'partial', b'\xff\n', b'x\x00\n', b'x\x1b\n', b'x\x7f\n', b'x\r\n'):
