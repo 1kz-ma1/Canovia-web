@@ -48,14 +48,22 @@ class ClosedBoundaryTests(unittest.TestCase):
 
     def test_oversized_protocol_row_rejected_before_read(self):
         c = t.StrictConnection(host=t.HOST)
+        c.authenticated = True
         with patch.object(t.pymysql.connections.Connection, '_read_bytes') as read:
             with self.assertRaisesRegex(t.Block, 'WIRE_ROW_CAP'): c._read_bytes(t.ROW + 1)
             read.assert_not_called()
 
     def test_protocol_total_cap_rejected_before_read(self):
         c = t.StrictConnection(host=t.HOST); c.wire_bytes = t.TOTAL
+        c.authenticated = True
         with patch.object(t.pymysql.connections.Connection, '_read_bytes') as read:
             with self.assertRaisesRegex(t.Block, 'WIRE_TOTAL_CAP'): c._read_bytes(1)
+            read.assert_not_called()
+
+    def test_authentication_preamble_is_bounded_before_read(self):
+        c = t.StrictConnection(host=t.HOST)
+        with patch.object(t.pymysql.connections.Connection, '_read_bytes') as read:
+            with self.assertRaisesRegex(t.Block, 'AUTH_PREAMBLE_CAP'): c._read_bytes(t.PREAMBLE + 1)
             read.assert_not_called()
 
     def test_time_limits_cannot_be_increased(self):

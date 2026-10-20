@@ -125,6 +125,15 @@ def run():
         os.chmod('/out/snapshot.json', 0o600)
         return dict(verified=True, statements=17, tls_session_count=1, remote_connection_ended=True)
 
+    def tcp_shutdown_isolation():
+        c = connection(); cid = c.thread_id()
+        require(c._sock.getsockname() != admin.conn._sock.getsockname())
+        c._sock.shutdown(socket.SHUT_RDWR)
+        c.close()
+        require(rows(admin.conn, 'SELECT @@server_uuid')[0][0] == admin.uuid)
+        require(admin.gone(cid)['verified'])
+        return dict(verified=True, unrelated_tls_connection_preserved=True)
+
     def tls_negative(fault):
         try: c = connection(fault=fault)
         except Exception as error:
@@ -347,6 +356,7 @@ def run():
         return dict(server_error_3024=True, remote_query_ended=True, connection_required_separate_close=True)
 
     try:
+        case('TCP_SHUTDOWN_ISOLATION', tcp_shutdown_isolation)
         case('TLS_VALID_SAME_SESSION', normal)
         for fault in ('wrong_ca', 'wrong_host', 'expired'): case('TLS_' + fault.upper(), lambda f=fault: tls_negative(f))
         def weak():
