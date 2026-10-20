@@ -16,9 +16,9 @@
 | 適用対象 | 固定e858 source SHA、固定release、個別に確定されたtooling/SQL/reference、Aivenの既存1サービス・1DB・既存限定監査principal、1回のmetadata-only読取 | **設計方針採用**。実target/tooling/operator bindingは未受入 |
 | 本人と明示承認 | owner兼operatorが私的に対象・read scope・影響・開始時刻・終了期限を確認し、その実行1回に対して**接続直前に改めて明示承認**。過去の「進めて」や本節採用・GitHubコメント・CIは実監査承認ではない | 手順未受入／実行未承認 |
 | 再試行・実行済管理 | 自動発行・再利用tokenは設けない。private operator receiptに試行ID・実行開始・終了/中断・再実行不可を記録。異常・接続失敗・タイムアウト・端末再起動後はその許可を終了扱いとし、再実行には**別の新規承認**が必須 | **手続上の再実行防止**。ホスト複製・rollback・意図的なリプレイを技術的に不可能にする保証はない。旧atomic one-shotと同等と表現しない |
-| ターゲット・TLS | ownerが既存Aiven Consoleと接続先・CA・監査principalを私的に独立照合。VERIFY_IDENTITY/ホスト名・証明書・期待DB/current user/server身份とセッション整合を検証。fallbackやTLS弱化なし | 実toolingへの接続・session整合実装が未検証。STOP |
+| ターゲット・TLS | ownerが既存Aiven Consoleと接続先・CA・監査principalを私的に独立照合。VERIFY_IDENTITY/ホスト名・証明書・期待DB/current user/server識別子とセッション整合を検証。fallbackやTLS弱化なし | 実toolingへの接続・session整合実装が未検証。STOP |
 | 取得データ | 既存allowlist Q0/Q1、Laravel migration ledger、information_schemaの物理metadataのみ。Plan/Task/Account行、実dump、自由SQL、DDL/GRANT、権限追加なし | SQL/referenceと上限制約は旧監査契約から緩和しない |
-| 検証と証跡 | 実収集先はMacの非同期/非Git private領域にのみ、一時生データは限時削除。公開IssueにはSHA・対象匿名分類・固定判定／カウンタ・実行日時・中断コードだけを出す | 生のDB名/host/query/error/grants/PII/token/keyを公開しない |
+| 検証と証跡 | 実収集先はMacのGit・クラウド同期対象外のprivate領域にのみ、一時生データは限時削除。公開IssueにはSHA・対象匿名分類・固定判定／カウンタ・実行日時・中断コードだけを出す | 生のDB名/host/query/error/grants/PII/token/keyを公開しない |
 
 **残留リスクの明示**：BはAの独立発行署名・失効照会・復元後にも破れないone-shot ledgerを**置き換えず、短期の人間監督により運用リスクを限定する再設計**。悪意あるローカル管理者や端末の巻戻し等への強い技術保証がない点は、本番接続前にownerへ別途具体的に提示して受入判断を求める。Bを選択しただけでは旧ゲートのBLOCKをPASSにしない。
 
