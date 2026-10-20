@@ -1,0 +1,54 @@
+name: E858 B Offline Operator Packet
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/e858_b_offline.py'
+      - 'tests/ci/test_e858_b_offline.py'
+      - 'scripts/ci/p0_mysql_metadata_grants_input.py'
+      - '.github/workflows/e858-b-offline.yml'
+      - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    name: B offline (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, python: '3.9'}
+          - {os: ubuntu-latest, python: '3.12'}
+          - {os: macos-15, python: '3.12'}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Reuse 801 bounded private input and minimum grants
+        run: python3 -B -m unittest discover -s tests/ci -p 'test_p0_mysql_metadata_grants*.py' -v
+      - name: B scope time retry source tamper and secret-free negatives
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_b_offline.py -v
+      - name: Actual clean tooling and frozen assets produce only an unreviewed template
+        run: |
+          set -euo pipefail
+          python3 -I -B scripts/ci/e858_b_offline.py --tooling-sha "$(git rev-parse HEAD)" --template > "$RUNNER_TEMP/b-template.json"
+          python3 -I -B - <<'PY'
+          import json,os,pathlib
+          value=json.loads((pathlib.Path(os.environ['RUNNER_TEMP'])/'b-template.json').read_text())
+          assert value['result']=='B_OFFLINE_TEMPLATE' and value['execution_allowed'] is False
+          assert value['fresh_owner_go_required'] is True
+          assert all(v=='NOT_REVIEWED' for v in value['template']['declarations'].values())
+          print('B_TEMPLATE_OFFLINE_ONLY_NOT_AUTHORIZATION')
+          PY
+          test -z "$(git status --porcelain)"

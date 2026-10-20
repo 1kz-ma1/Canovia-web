@@ -38,6 +38,32 @@
 
 **現状態**：`B_MANUAL_SINGLE_RUN_DESIGN_ADOPTED` / `B_OPERATOR_PACKET_NOT_ACCEPTED` / `REAL_OPERATOR_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。AはFuture Design。Auth0/MCP・Render session Key Value・MCP staging Postgresに監査承認権限を追加しない。将来Aへ移る際は別の承認・設計変更が必要。
 
+### B1 オフライン操作票・合成結果票の実装（2026-10-20）
+
+`scripts/ci/e858_b_offline.py` は**ローカルGitの読取と匿名チェック票の検査のみ**。実client/credential loader/GO発行/実行スイッチはない。`execution_allowed=false`、`owner_approval_verified=false`、`fresh_owner_go_required=true` を常に出す。チェック完了も実行許可・本人/対象の実証ではない。
+
+| 操作票 | 確認内容・停止条件 |
+| --- | --- |
+| B0 固定対象 | source `e858b9c855970fbe73f37a2d60c9db6525b132d6`、release `release/2026-10-19-e858b9c8`。checker候補SHAはPR/Issueに固定し、`--tooling-sha` と実HEADが一致すること。#795 be89af9a → #796 5e63b7db → #797 9f7d248e は別の固定依存。最新mainを監査sourceへ置換しない |
+| B0 SQL/Reference | #797の固定blobからliteral manifestを読み、#795の14 SQL/17順序と両referenceのhashを再照合。source tree/seal、旧94/全114定義も既存source関数で照合。SQL/reference/strict/上限の変更不可 |
+| B1 実行環境 | 管理Mac、Python3.9以上、full-historyのclean checkout、正常なtracked bytes/実行mode、固定remote-tracking refs。これらのprivate照合の宣言を検査する。OS本人確認・端末管理の真偽は検証しない |
+| B1 本人/対象 | owner兼operator、既存1 service/1 DB/期待DB・CURRENT_USER・version/UUID・CA/hostnameをConsole/既存認可DBA証拠と私的に照合。checkerには実値を入れず匿名宣言のみ。未確定/未知operatorならSTOP |
+| B1 scope/権限 | 既存metadata allowlist（identity/own grants/ledger/information_schema）だけ。REFERENCES schema＋SELECT ledger＋任意USAGEを維持。実ユーザー行、自由SQL、DDL/GRANT、dump不可。不足・過剰/未知の実効権限はSTOP。TRIGGER完全可視性は既存DBAの別証拠で、inspectorの拡権なし |
+| B1 時間/保管 | 開始UTC/終了期限と120秒以内の予定窓、private試行IDを記入。Git/クラウド同期外0700領域、raw0600/限時削除・crash残骸確認・私的な責任者を確認。識別子やrawをcheckerへ入力しない。時計の真正性・完全消去は検証しない |
+| B2 個別承認 | B0/B1と実transportの安全レビュー後に、固定対象/実行者/metadata-only scope/時刻窓/1回/再試行不可をオーナーが私的に確認し、接続直前の別GO。設計採用、合成review宣言、CI/JSON/環境変数/commentはGOではない。今は実GOを求めない |
+| B3 STOP | pin/対象/operator/権限/TLS差、別session/再接続、query10s/stream120s、8MiB/16MiB、row256KiB/cell128KiB/行数上限超過、raw漏えい、SQL error/未知構造、query/接続終了不明で停止。TLS弱化/fallback/自動retryなし。remote終了保証は未実装・未検証でSTOPを残す |
+| B4 結果/終了 | 固定source/tooling/SQL/ref整合、匿名target分類、開始/終了UTC、固定成功/BLOCK/UNVERIFIED分類・件数、cleanup、再承認要否のみを共有。実測のない時刻/件数/cleanupはNOT_RUN/未記録。DB名/host/credential/token/CA内容/生SQL出力/詳細error/個人行を共有しない。成功でもrelease GOにしない |
+
+**匿名操作票の使用（無接続）**：clean checkoutで `python3 -I -B scripts/ci/e858_b_offline.py --tooling-sha <PRに固定したchecker HEAD> --template`。stdoutの `template` 部分だけをprivate領域へ保存し、`NOT_REVIEWED` は実際の私的確認後にのみ所定宣言へ変える。`attempt_id` は非秘密の32桁hex試行ID、`starts_at`/`ends_at` はUTC epoch整数。raw target/本人情報や秘密を追記してはならない。templateの自動生成は確認完了を意味しない。
+
+`--packet <private JSON>` で形式と不足を検査し、匿名の **SYNTHETIC_RECEIPT** を出す。入力は#801の16KiB・regular file・nonblocking・最終symlink拒否を再利用し、repo内入力/duplicate key/未知field/float/巨大/期限切れも拒否。出力は固定分類のみ。独自HMACや署名authorityを作らない。tooling/SQL/ref照合はオフラインだけの証拠で、remote refの最新性や実TLSを証明しない。
+
+**再実行の境界**：`prior_attempt` がNOT_RUN以外、retry要求、`--prior-receipt` の再利用はBLOCK。合成COMPLETED/BLOCK/INTERRUPTEDのreceiptも実時刻・実件数・cleanupを捏造せず、実状態はNOT_RUNのまま。receiptが消失/省略/複製/rollbackされた場合を技術的に防止しない。オフライン再検査を繰り返しても実許可は発生しない。実操作ではownerがprivate試行台帳へ開始と終了/失敗/中断を記録し、失敗・再起動・再接続を含め**同じGOで再開せず新しい個別承認**を必要とする。
+
+**既存証拠の再利用**：#801入力20件と、新しいBのsource/SQL/ref改変、未確認/期限切れ、対象/operator不明、再試行/中断、TLS弱化/過剰権限、file/CLI秘匿負例をLinux3.9/3.12・macOS3.12で実施。#795〜#797の受入とMySQL8.0/8.4各38ケース、#800の独立論理復元は再構築せず参照する。今回の変更はDB・SQL・runtimeに達しない。
+
+**Bの次の技術課題は1件**：固定allowlist/limitsを維持する、同一VERIFY_IDENTITY TLS session内のQ0/Q1→metadata→postflightと異常時remote query/接続終了の検証設計。#796の別client方式やlocal kill成功だけを実session/remote停止の証拠にしない。実接続機能を有効化せず、local fake/隔離環境で先にレビュー可能な設計と負例を用意する。現段階のowner操作はB0〜B4と手続上の再実行保証差の**無接続レビュー1件のみ**。A案authority/store選定をBの必須条件として再要求しない。
+
 ## 固定対象と再利用
 
 - 作業base main `7258a02ca3599f4efd3afacbd91d5017caeb9842`。本PRのHEADは独立tooling候補であり、固定監査候補の代わりにしない。
