@@ -3,6 +3,41 @@
 **TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD**。
 正本は[Issue #488](https://github.com/1kz-ma1/Canovia-web/issues/488)。これは実接続の承認票・実行CLIではない。
 
+## 2026-10-20 オーナー採用決定：B案・人間監督付き単発metadata監査
+
+**決定：B方式をこの1回のe858監査に向けた設計ベースラインとして採用（2026-10-20、ownerの対話による明示決定）。A方式の自動・独立署名authority／durable atomic nonce消費は将来設計として保留。今回の決定は実接続・監査実行・既存コードガードの解除・本番移行の承認ではない。**
+
+本節は下記の「A/Bいずれも未採用」「次はdurable trust store選定」などの**過去時点の比較・保留記述に優先する**。履歴は変更せず残す。下記のsource/SQL/reference厳密性、最小権限、実MySQL物理・trigger検証、metadata-only、production NO-GO等の停止条件は維持する。
+
+### Bの適用範囲と保証の差
+
+| 区分 | Bでの要求 | 判定 |
+| --- | --- | --- |
+| 適用対象 | 固定e858 source SHA、固定release、個別に確定されたtooling/SQL/reference、Aivenの既存1サービス・1DB・既存限定監査principal、1回のmetadata-only読取 | **設計方針採用**。実target/tooling/operator bindingは未受入 |
+| 本人と明示承認 | owner兼operatorが私的に対象・read scope・影響・開始時刻・終了期限を確認し、その実行1回に対して**接続直前に改めて明示承認**。過去の「進めて」や本節採用・GitHubコメント・CIは実監査承認ではない | 手順未受入／実行未承認 |
+| 再試行・実行済管理 | 自動発行・再利用tokenは設けない。private operator receiptに試行ID・実行開始・終了/中断・再実行不可を記録。異常・接続失敗・タイムアウト・端末再起動後はその許可を終了扱いとし、再実行には**別の新規承認**が必須 | **手続上の再実行防止**。ホスト複製・rollback・意図的なリプレイを技術的に不可能にする保証はない。旧atomic one-shotと同等と表現しない |
+| ターゲット・TLS | ownerが既存Aiven Consoleと接続先・CA・監査principalを私的に独立照合。VERIFY_IDENTITY/ホスト名・証明書・期待DB/current user/server身份とセッション整合を検証。fallbackやTLS弱化なし | 実toolingへの接続・session整合実装が未検証。STOP |
+| 取得データ | 既存allowlist Q0/Q1、Laravel migration ledger、information_schemaの物理metadataのみ。Plan/Task/Account行、実dump、自由SQL、DDL/GRANT、権限追加なし | SQL/referenceと上限制約は旧監査契約から緩和しない |
+| 検証と証跡 | 実収集先はMacの非同期/非Git private領域にのみ、一時生データは限時削除。公開IssueにはSHA・対象匿名分類・固定判定／カウンタ・実行日時・中断コードだけを出す | 生のDB名/host/query/error/grants/PII/token/keyを公開しない |
+
+**残留リスクの明示**：BはAの独立発行署名・失効照会・復元後にも破れないone-shot ledgerを**置き換えず、短期の人間監督により運用リスクを限定する再設計**。悪意あるローカル管理者や端末の巻戻し等への強い技術保証がない点は、本番接続前にownerへ別途具体的に提示して受入判断を求める。Bを選択しただけでは旧ゲートのBLOCKをPASSにしない。
+
+### 1回のオーナー実監査の審査フロー（この文書は実行票ではない）
+
+1. **B0 方針採用（今回）**：Bの運用方針のみ採用。元の固定監査sourceは `e858b9c855970fbe73f37a2d60c9db6525b132d6`、releaseは `release/2026-10-19-e858b9c8`。toolingや実接続先をここでは採用しない。
+2. **B1 オフライン準備と別レビュー**：最新mainと固定candidateの差を確認。固定監査tooling #795→#797の現HEAD/ソース固定/SQL hash/reference hash/クリーンcheckoutを再照合。B用の一操作票・実行後receipt、ログ非漏えい、strict mismatch分類、停止条件、Mac実session/TLS・query kill/timeout設計をレビュー。旧synthetic Mac受入の再実行を無目的に要求しない。実接続可能なCLI・credential loaderは安全性検証なしに実装しない。
+3. **B2 接続前個別GO**：operator/ownerを特定し、対象Aiven service・DB・endpoint/port/CA・login-path・現在の最小権限（強化なし）を**private**に照合。固定source/tooling/SQL/reference hashと実行対象・1回の時刻window・許されるSQLの範囲、再試行不可条件を記したオーナー操作票に対して別途明示GOを得る。未確定・古い承認・時間切れ・別対象ならSTOP。
+4. **B3 実行（まだNOT_RUN）**：認可operatorが指定Macから一度だけ、実toolingのfail-closedなTLS・Q0/Q1・metadata read・postflight・出力上限を監督。TLS/identity/grants/ledger/strict判定/remote query停止が不明なら中止し、接続し直すときも再GOを要求。取得した生metadataは共有しない。旧実監査collectorにBを示す環境変数を足しただけで許可を通さない。
+5. **B4 実行後**：rawのprivate削除確認、source/tooling/SQL hashと限定判定の公開記録、INDEX/FK名前差・新設衝突・M08・TRIGGER完全可視性の独立DBA証拠・migration principal/binlogの未達を分類する。read-only診断のPASSはDDL/backup復元/production merge/deploy/一般公開を許可しない。
+
+### Codexへ任せる次のオフライン作業（優先度順）
+
+- 既存監査仕様とBの差分を短いoperator操作票／receipt templateに落とし込み、**実接続を起動せず**対象とscope・GO・STOPをチェックできる形式へ整理する。作る場合は識別子・秘密を記録しない合成fixtureのみで検証する。
+- 実認証なし・旧固定source guard/SQL/referenceを改造しない条件下で、事故防止の負例（別source、古い承認、対象不明、再実行要求、TLS弱化、過剰grants、通信中断、raw漏えい等）を合成テストで確認する。再実行の人的抑止は暗号的proofと誤称しない。
+- 実Aivenにつなぐ運用経路がBに適合するか**レビューして差分だけ**明示する。必要ならレビュー済み固定toolingの新候補を別PRで準備し、接続動作は明示GOまで無効のままとする。
+
+**現状態**：`B_MANUAL_SINGLE_RUN_DESIGN_ADOPTED` / `B_OPERATOR_PACKET_NOT_ACCEPTED` / `REAL_OPERATOR_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。AはFuture Design。Auth0/MCP・Render session Key Value・MCP staging Postgresに監査承認権限を追加しない。将来Aへ移る際は別の承認・設計変更が必要。
+
 ## 固定対象と再利用
 
 - 作業base main `7258a02ca3599f4efd3afacbd91d5017caeb9842`。本PRのHEADは独立tooling候補であり、固定監査候補の代わりにしない。
