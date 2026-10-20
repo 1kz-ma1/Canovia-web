@@ -10,6 +10,10 @@ import { chromium, webkit } from 'playwright';
 
 const base = process.env.CANOVIA_IA2E_BASE_URL;
 const engine = process.env.CANOVIA_IA2E_BROWSER_ENGINE ?? 'chromium';
+const entry = process.env.CANOVIA_IA2E_ENTRY ?? 'browse';
+if (!['browse', 'diagnosis'].includes(entry)) {
+    throw Error('Unsupported first-value entry');
+}
 if (!['chromium', 'webkit'].includes(engine)) {
     throw Error('Unsupported browser engine for isolated first-value smoke');
 }
@@ -30,12 +34,18 @@ const next = '次はログアウト後のホーム復帰を直す';
 const browser = await (mobile ? webkit : chromium).launch({
     headless: true,
     ...(mobile ? {} : { args: ['--no-sandbox'] }),
+    ...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH
+        ? { executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH } : {}),
 });
 const ctx = await browser.newContext({
     viewport: mobile ? { width: 390, height: 844 } : { width: 1280, height: 850 },
     locale: 'ja-JP',
+    serviceWorkers: 'block',
     ...(mobile ? { isMobile: true, hasTouch: true } : {}),
 });
+// These are synthetic journeys; even fonts must stay inside the loopback boundary.
+await ctx.route(/^https?:\/\//, route => new URL(route.request().url()).origin === base
+    ? route.continue() : route.abort());
 const page = await ctx.newPage();
 page.setDefaultTimeout(20000);
 const step = (name) => process.stdout.write(`PASS ${name}\n`);
@@ -43,25 +53,50 @@ try {
     const initial = await page.goto(`${base}/`, { waitUntil: 'domcontentloaded' });
     assert.equal(initial.status(), 200, 'The guest should enter the actual first-run Welcome');
     assert.equal(new URL(page.url()).pathname, '/welcome');
-    await page.locator('[data-first-run-choice="browse"]').click();
-    await page.waitForURL(url => url.pathname === '/workspace/overview');
-    await page.locator('[data-overview-planless-start]').waitFor({state:'visible'});
-    if (mobile) {
-        assert.ok(await page.locator('[data-overview-start-manual-plan]').isVisible(),
-            'Mobile WebKit must expose an accessible optional Plan action');
+    if (entry === 'browse') {
+        await page.locator('[data-first-run-choice="browse"]').click();
+        await page.waitForURL(url => url.pathname === '/workspace/overview');
+        await page.locator('[data-overview-planless-start]').waitFor({state:'visible'});
+        if (mobile) {
+            assert.ok(await page.locator('[data-overview-start-manual-plan]').isVisible(),
+                'Mobile WebKit must expose an accessible optional Plan action');
+        }
+        assert.equal(await page.locator('[data-overview-primary-action]').count(), 0,
+            'A zero-Plan visitor must not see a fictitious recommended Action');
+        step('Guest chose Browse and reached a truthful Planless Overview without a forced diagnosis');
+        await page.locator('[data-overview-start-manual-plan]').click();
+        await page.waitForURL(url => url.pathname === '/plans/create/manual');
+        step('Guest voluntarily selected manual Plan creation from the Overview');
+    } else {
+        await page.locator('[data-first-run-choice="diagnosis"]').click();
+        await page.waitForURL(url => url.pathname === '/personalization');
+        const diagnosis = page.locator('[data-personalization-form]');
+        await diagnosis.locator('label:has([data-personalization-domain="development"])').click();
+        await diagnosis.locator('input[name="development_goal"]').fill('編集前の開発目標');
+        await diagnosis.locator('input[name="deadline"]').fill('2026-12-01');
+        await diagnosis.locator('select[name="weekly_capacity"]').selectOption('2_5');
+        await diagnosis.locator('select[name="development_stage"]').selectOption('existing');
+        await diagnosis.locator('select[name="github_usage"]').selectOption('no');
+        await diagnosis.locator('select[name="repository_ready"]').selectOption('no');
+        await diagnosis.getByRole('button', { name: 'おすすめを作る' }).click();
+        await page.waitForURL(url => url.pathname === '/personalization/result');
+        await page.locator('[data-plan-seed="development_existing"]')
+            .getByRole('button', { name: 'この型からPlanを作る' }).click();
+        await page.waitForURL(url => url.pathname === '/plans/create/manual');
+        const editor = page.locator('form[data-onboarding-target="plan-form"]');
+        assert.equal(await editor.locator('input[name="title"]').inputValue(), '編集前の開発目標');
+        assert.equal(await editor.locator('input[name="deadline"]').inputValue(), '2026-12-01');
+        assert.match(await editor.locator('textarea[name="description"]').inputValue(), /Current State/);
+        step('Diagnosis supplied an editable phase outline, not an automatically scheduled Task');
     }
-    assert.equal(await page.locator('[data-overview-primary-action]').count(), 0,
-        'A zero-Plan visitor must not see a fictitious recommended Action');
-    step('Guest chose Browse and reached a truthful Planless Overview without a forced diagnosis');
-    await page.locator('[data-overview-start-manual-plan]').click();
-    await page.waitForURL(url => url.pathname === '/plans/create/manual');
-    step('Guest voluntarily selected manual Plan creation from the Overview');
 
     const form = page.locator('form[data-onboarding-target="plan-form"]');
     await form.locator('input[name="title"]').fill(title);
     // Category is deliberately hidden in progressive-disclosure details.
     // Open it as a human does; do not force hidden DOM interactions.
-    await form.locator('details:has(select[name="category"]) > summary').click();
+    if (!await form.locator('select[name="category"]').isVisible()) {
+        await form.locator('details:has(select[name="category"]) > summary').click();
+    }
     await form.locator('select[name="category"]').selectOption('個人開発');
     await form.locator('button[type="submit"]').click();
     await page.waitForURL(url => !url.pathname.startsWith('/plans/create'), { timeout: 25000 });
@@ -79,6 +114,23 @@ try {
     await registration.getByRole('button', { name: '登録してそのまま続ける' }).click();
     await page.waitForURL(url => url.pathname !== '/register');
     step('Guest Plan claimed by newly registered account');
+
+    const csrfDenied = await ctx.request.post(`${base}/plans`, {
+        form: { title: 'This tokenless request must not create a Plan' },
+        headers: { 'Sec-Fetch-Site': 'cross-site' },
+        maxRedirects: 0,
+    });
+    assert.equal(csrfDenied.status(), 419, 'A cross-site write without CSRF proof must fail');
+    step('A real HTTP write with no CSRF token is rejected');
+    const emptyPlan = JSON.parse(execFileSync(
+        'php', ['scripts/ci/prelaunch_ia2e_verify_first_value.php', '--plan-only'],
+        { encoding: 'utf8', env: process.env, timeout: 20000 },
+    ));
+    assert.equal(emptyPlan.plan_id, planId);
+    assert.equal(emptyPlan.plan_count, 1, 'Diagnosis and rejected CSRF cannot silently create another Plan');
+    assert.equal(emptyPlan.task_count, 0, 'A phase outline is not a generated Task');
+    if (entry === 'diagnosis') assert.equal(emptyPlan.deadline, '2026-12-01');
+    step('Edited Plan survived Guest-to-Account claim with zero automatically created Tasks');
 
     // Follow the real empty Plan -> Plan builder link instead of injecting a Task.
     const planPage = await page.goto(`${base}/plans/${planId}`);
@@ -254,6 +306,33 @@ try {
     assert.equal(checked.plan_id, planId);
     assert.equal(checked.task_evidence_count, 1);
     step('Backend facts match browser-visible action (2 runs, 1 Evidence, progress unchanged)');
+    // A second real registered actor has no grant to the first actor's private Plan.
+    const other = await browser.newContext({ serviceWorkers: 'block' });
+    try {
+        await other.route(/^https?:\/\//, route => new URL(route.request().url()).origin === base
+            ? route.continue() : route.abort());
+        const otherPage = await other.newPage();
+        await otherPage.goto(`${base}/register`);
+        const register = otherPage.locator('form[action$="/register"]');
+        await register.locator('input[name="name"]').fill('Unrelated synthetic account');
+        await register.locator('input[name="email"]').fill('ia2e-other@example.invalid');
+        await register.locator('input[name="password"]').fill(password);
+        await register.locator('input[name="password_confirmation"]').fill(password);
+        await register.getByRole('button', { name: '登録してそのまま続ける' }).click();
+        await otherPage.waitForURL(url => url.pathname !== '/register');
+        for (const [url, status] of [[`/plans/${planId}`, 404],
+            [`/plans/${planId}/dashboard`, 404],
+            [`/workspace/development?plan_id=${planId}`, 404],
+            [new URL(guidedUrl).pathname, 403]]) {
+            const denied = await otherPage.goto(base + url);
+            assert.equal(denied.status(), status, `Another account must be denied ${url}`);
+            assert.equal(await otherPage.getByText(title, { exact: true }).count(), 0);
+        }
+        step('Another registered account is denied private Plan, Dashboard, Workspace and Task');
+    } finally {
+        await other.close();
+    }
+    step(`First-value entry: ${entry}`);
     step(`Acceptance engine: ${engine}${mobile ? ' / touch 390x844' : ' / desktop 1280x850'}`);
     process.stdout.write('IA-2e FIRST VALUE E2E PASS (owner-entered Task; browser Evidence and current state; NOT real device/live public GO)\n');
 } finally {

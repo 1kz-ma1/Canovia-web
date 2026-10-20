@@ -24,7 +24,7 @@ if (
     || ! str_starts_with((string) config('database.connections.sqlite.database'), '/')
     || ! str_starts_with((string) config('app.url'), 'http://127.0.0.1:')
     || count($argv) !== 2
-    || ! in_array($argv[1], ['--lookup', '--verify'], true)
+    || ! in_array($argv[1], ['--plan-only', '--lookup', '--verify'], true)
 ) {
     fwrite(STDERR, "IA-2e read-only verifier requires isolated localhost testing SQLite.\n");
     exit(2);
@@ -35,6 +35,15 @@ $plan = Plan::query()
     ->where('user_id', $user->id)
     ->where('title', 'IA2e 初回体験開発Plan')
     ->sole();
+if ($argv[1] === '--plan-only') {
+    echo json_encode([
+        'plan_id' => (int) $plan->id,
+        'plan_count' => Plan::query()->count(),
+        'task_count' => Task::query()->where('plan_id', $plan->id)->count(),
+        'deadline' => $plan->deadline?->format('Y-m-d'),
+    ], JSON_THROW_ON_ERROR).PHP_EOL;
+    exit(0);
+}
 $task = Task::query()->where('plan_id', $plan->id)->sole();
 if ($task->title !== '最初の一歩として画面を確認する') {
     fwrite(STDERR, "IA-2e Task must originate from the expected browser-entered import.\n");

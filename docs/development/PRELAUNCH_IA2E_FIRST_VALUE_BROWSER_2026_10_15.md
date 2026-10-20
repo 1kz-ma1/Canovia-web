@@ -37,3 +37,16 @@
 - GitHub ActionsのIA-2e専用ジョブが実Chromiumを実行し、全ステップ成功。
 - 既存の必須CIは最終PR HEADで成功し、Review/Concurrent main競合がない。
 - 実機と本番の受入は **unknown / pending** のまま。統合は開発`main`だけ、RenderはAuto Deploy OFFを確認して手動デプロイしない。
+
+
+## 2026-10-20 C-Lightの連続経路と拒否境界
+
+既存Chromium workflowを`browse` / `diagnosis`の2条件にする。後者は開発診断の目標・12/1期限・現在地・時間を入力し、定型フェーズSeedのprefillを確認してタイトルを編集保存する。同じ本人のGuest Plan claim→Task手動JSON→Action/Evidence→明示承認→再ログイン復帰までつなぐ。
+
+- `--plan-only`は既存の隔離SQLite read-only verifierの追加mode。編集済みPlan=1、Task=0、診断の期限保持をimport前に照合。具体Task/日程のAI自動生成を証明しない。
+- 実HTTPでtokenなしcross-site POSTは419、他アカウントのPlan/Dashboard/Workspaceは404、Task実行は既存認可どおり403。認可エラーをredirect成功で代用しない。
+- 同じ26 PHPテスト（Bootstrap18、Audience3、Session3、Reflection2）を各Chromium jobで実行。重複job実行を52種類のcoverageと数えない。
+- 既存touch WebKitは既定Browseのまま同じCSRF/他人拒否を実行。Chromiumは任意のローカル実行ファイルを指定可能。全browser contextでservice workerと非loopback HTTP(S)を遮断する。
+- これはテスト/CIの補強。runtime、SQL、migration、release pin、#794〜#797の固定親/guard/receiptは変更しない。実機/本番、ゲスト診断contextの登録後永続化、Study採点全体の受入は別。
+
+今回の最新状態・残存ゲート・1段階ずつのowner操作は[B案正本のe858追記](integration/2026-10-18-b/README.md)とIssue #488を参照。過去IA-2e結果を新HEADのCI結果として転記しない。

@@ -13,6 +13,11 @@ on:
       - 'app/Services/PlanDashboardWorkspaceService.php'
       - 'resources/views/plans/partials/dashboard-information-board.blade.php'
       - 'tests/Feature/PrelaunchPlanDashboardReflectionV1Test.php'
+      - 'app/Services/PersonalizationBootstrapService.php'
+      - 'app/Http/Controllers/PersonalizationController.php'
+      - 'app/Http/Controllers/PlanController.php'
+      - 'app/Services/FirstRunService.php'
+      - 'resources/views/personalization/**'
   workflow_dispatch:
 
 permissions:
@@ -20,8 +25,15 @@ permissions:
 
 jobs:
   first-value-chromium:
+    name: First value Chromium (${{ matrix.entry }})
     runs-on: ubuntu-latest
     timeout-minutes: 22
+    strategy:
+      fail-fast: false
+      matrix:
+        entry: [browse, diagnosis]
+    env:
+      CANOVIA_IA2E_ENTRY: ${{ matrix.entry }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,8 +77,12 @@ jobs:
           php artisan migrate --force --no-interaction
           php -l scripts/ci/prelaunch_ia2e_verify_first_value.php
           node --check scripts/ci/prelaunch_ia2e_first_value_browser_smoke.mjs
-      - name: Test Plan Dashboard reflection scope and false-progress guard
-        run: php artisan test --filter=PrelaunchPlanDashboardReflectionV1Test
+      - name: Test audience, bootstrap, session and false-progress boundaries
+        run: >-
+          php artisan test tests/Feature/PrelaunchPlanDashboardReflectionV1Test.php
+          tests/Feature/PersonalizationBootstrapV5825Test.php
+          tests/Feature/InitialReleaseAudienceTest.php
+          tests/Feature/P0DatabaseSessionLoginRegressionTest.php --colors=never
       - name: Install pinned headless Chromium (CI only)
         run: |
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
@@ -88,6 +104,6 @@ jobs:
         run: node scripts/ci/prelaunch_ia2e_first_value_browser_smoke.mjs
       - name: Clarify first-value browser-proof limits
         run: |
-          echo "Browser: real Chromium/CSRF from Browse Welcome to owner-created Plan/Task/Evidence and Dashboard/Overview; isolated SQLite. No DB Task seeding."
+          echo "Browser: Browse or Diagnosis, edited Plan/Guest claim, tokenless cross-site rejection, owner-created Task/Evidence/resume, other-account denial; isolated SQLite."
           echo "NOT tested: autonomous AI first Task, Study feature, native iPhone/Safari, true human comprehension, Render/Aiven Live or production rollout."
           echo "NO release selection/production GO from browser CI."
