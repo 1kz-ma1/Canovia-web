@@ -107,6 +107,7 @@ class Observer:
         self.uuid = rows(self.conn, 'SELECT @@server_uuid')[0][0]
         self.fault = fault
         self.role = role
+        self.seen = set()
         self.conn._read_timeout = 2
         self.conn._write_timeout = 2
 
@@ -123,6 +124,7 @@ class Observer:
                if self.role == 'root' else
                'SELECT COMMAND FROM information_schema.PROCESSLIST WHERE ID=%s')
         found = rows(self.conn, sql, (int(cid),))
+        if found: self.seen.add(int(cid))
         return dict(exists=bool(found), running=bool(found and found[0][0] != 'Sleep'))
 
     def gone(self, cid, seconds=2):
@@ -133,6 +135,7 @@ class Observer:
             while time.monotonic() < until:
                 value = self.state(cid); last = value
                 if not value['exists']:
+                    if int(cid) not in self.seen: raise Block('REMOTE_VISIBILITY_UNPROVEN')
                     return dict(query_ended=True, connection_ended=True, verified=True, status='VERIFIED')
                 time.sleep(.02)
         except Exception as error:
@@ -185,6 +188,8 @@ class Session:
         self.executions = 0
         self.identity = None
         self.ledger = None
+        if not observer.state(self.cid)['exists']:
+            self.abort(); raise Block('REMOTE_VISIBILITY_UNPROVEN')
         manifest = json.loads(Path('/synthetic/manifest.json').read_text())
         self.order, self.caps = manifest['order'], manifest['caps']
         self.series = manifest['series']

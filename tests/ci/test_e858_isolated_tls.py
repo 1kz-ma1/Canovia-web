@@ -109,6 +109,13 @@ class ClosedBoundaryTests(unittest.TestCase):
         self.assertFalse(proof['connection_ended'] or proof['verified'])
         self.assertEqual('REMOTE_TERMINATION_UNVERIFIED', proof['status'])
 
+    def test_empty_view_without_prior_visibility_cannot_prove_absence(self):
+        observer = object.__new__(t.Observer); observer.seen = set()
+        with patch.object(observer, 'state', return_value=dict(exists=False, running=False)):
+            proof = observer.gone(123, .01)
+        self.assertFalse(proof['verified'] or proof['connection_ended'])
+        self.assertEqual('REMOTE_TERMINATION_UNVERIFIED', proof['status'])
+
     def test_cli_real_modes_arguments_and_duplicates_do_not_create_resources(self):
         for args in (['--host', CANARY], ['--collect'], ['--credential', CANARY],
                      ['--series', '8.0', '--tooling-sha', 'a' * 40, '--execute'],

@@ -183,6 +183,7 @@ def run():
 
     def tcp_shutdown_isolation():
         c = connection(); cid = c.thread_id()
+        require(admin.state(cid)['exists'])
         require(c._sock.getsockname() != admin.local)
         c._sock.shutdown(socket.SHUT_RDWR)
         c.close()
@@ -315,6 +316,7 @@ def run():
                 require(str(error) == 'TLS_REQUIRED_NO_FALLBACK')
                 require(relay.client_payload == 0)
                 cid = relay.server_cid
+                require(cid is not None and admin.state(cid)['exists'])
                 relay.close(); require(cid is not None and admin.gone(cid)['verified'])
                 return dict(blocked_before_password=True, remote_connection_ended=True)
             c.close(); raise Block('TLS_FALLBACK_ACCEPTED')
