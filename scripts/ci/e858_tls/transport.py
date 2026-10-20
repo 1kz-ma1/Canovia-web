@@ -131,6 +131,7 @@ class Observer:
         until = time.monotonic() + seconds
         last = None
         error_code = None
+        observation_failed = False
         try:
             while time.monotonic() < until:
                 value = self.state(cid); last = value
@@ -139,8 +140,9 @@ class Observer:
                     return dict(query_ended=True, connection_ended=True, verified=True, status='VERIFIED')
                 time.sleep(.02)
         except Exception as error:
+            observation_failed = True
             error_code = error.args[0] if error.args and type(error.args[0]) is int else None
-        return dict(query_ended=bool(last and not last['running'] and error_code is None),
+        return dict(query_ended=bool(last and not last['running'] and not observation_failed),
                     connection_ended=False, verified=False,
                     status='REMOTE_TERMINATION_UNVERIFIED', last_observation=last, observer_error_code=error_code)
 

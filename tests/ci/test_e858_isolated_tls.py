@@ -112,7 +112,7 @@ class ClosedBoundaryTests(unittest.TestCase):
         observer = object.__new__(t.Observer); observer.seen = set()
         with patch.object(observer, 'state', return_value=dict(exists=False, running=False)):
             proof = observer.gone(123, .01)
-        self.assertFalse(proof['verified'] or proof['connection_ended'])
+        self.assertFalse(proof['verified'] or proof['connection_ended'] or proof['query_ended'])
         self.assertEqual('REMOTE_TERMINATION_UNVERIFIED', proof['status'])
 
     def test_cli_real_modes_arguments_and_duplicates_do_not_create_resources(self):
