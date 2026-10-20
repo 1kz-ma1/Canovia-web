@@ -224,10 +224,11 @@ def main():
         def error(self, message): raise Block('ARGUMENTS_REJECTED')
     try:
         parser = PrivateParser(add_help=False, allow_abbrev=False)
-        parser.add_argument('--series', choices=['8.0','8.4'], required=True)
-        parser.add_argument('--tooling-sha', required=True)
+        parser.add_argument('--series', choices=['8.0','8.4'], required=True, action='append')
+        parser.add_argument('--tooling-sha', required=True, action='append')
         args = parser.parse_args()
-        result = rehearse(args.series, args.tooling_sha)
+        if len(args.series) != 1 or len(args.tooling_sha) != 1: raise Block('ARGUMENTS_REJECTED')
+        result = rehearse(args.series[0], args.tooling_sha[0])
         code = 0
     except (Exception, SystemExit, KeyboardInterrupt) as error:
         # Public failure identifies a fixed fixture stage only.

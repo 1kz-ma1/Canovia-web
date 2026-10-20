@@ -36,11 +36,13 @@ def long_client(pipe, role='inspector'):
 
 class Relay:
     """Raw TCP fault fixture; cannot decrypt TLS, fixed upstream only."""
-    def __init__(self, blackhole=False):
+    def __init__(self, blackhole=False, strip_ssl=False):
         self.listener = socket.socket()
         self.listener.bind(('127.0.0.1', 0)); self.listener.listen(1)
         self.port = self.listener.getsockname()[1]
-        self.blackhole = blackhole; self.client = None; self.server = None
+        self.blackhole = blackhole; self.strip_ssl = strip_ssl
+        self.client_payload = 0; self.server_cid = None
+        self.client = None; self.server = None
         self.stop = threading.Event()
         self.thread = threading.Thread(target=self.run, daemon=True); self.thread.start()
 
@@ -50,12 +52,28 @@ class Relay:
             if self.blackhole:
                 self.stop.wait(2); return
             self.server = socket.create_connection(('mysql.synthetic.invalid', 3306), timeout=2)
+            if self.strip_ssl:
+                def exact(count):
+                    data = b''
+                    while len(data) < count:
+                        part = self.server.recv(count - len(data))
+                        if not part: raise OSError()
+                        data += part
+                    return data
+                header = exact(4); size = int.from_bytes(header[:3], 'little')
+                if size > 4096: raise OSError()
+                data = bytearray(exact(size)); end = data.index(0, 1)
+                self.server_cid = int.from_bytes(data[end+1:end+5], 'little')
+                caps = end + 1 + 4 + 8 + 1
+                data[caps + 1] &= ~8  # CLIENT.SSL bit11 in plaintext greeting.
+                self.client.sendall(header + data)
             import select
             while not self.stop.is_set():
                 ready, _, _ = select.select([self.client, self.server], [], [], .05)
                 for sock in ready:
                     data = sock.recv(65536)
                     if not data: return  # Keep upstream fd open for parent observation.
+                    if sock is self.client: self.client_payload += len(data)
                     (self.server if sock is self.client else self.client).sendall(data)
         except OSError: pass
 
@@ -107,7 +125,7 @@ def run():
         except Exception as error:
             original = getattr(error, 'original_exception', error)
             require(isinstance(original, ssl.SSLCertVerificationError))
-            expected = {'wrong_ca': (20, 21), 'wrong_host': (62,), 'expired': (10,)}[fault]
+            expected = {'wrong_ca': (18, 19, 20, 21), 'wrong_host': (62,), 'expired': (10,)}[fault]
             require(original.verify_code in expected)
             return dict(blocked=True, certificate_validation_failed=True)
         c.close(); raise Block('TLS_NEGATIVE_DID_NOT_BLOCK')
@@ -206,6 +224,20 @@ def run():
         finally: c.close(); relay.close()
         raise Block('HANDSHAKE_TIMEOUT_DID_NOT_BLOCK')
 
+    def no_ssl_fallback():
+        relay = Relay(strip_ssl=True)
+        sock = socket.create_connection(('127.0.0.1', relay.port), timeout=1)
+        try:
+            try: c = connection(sock=sock)
+            except Block as error:
+                require(str(error) == 'TLS_REQUIRED_NO_FALLBACK')
+                require(relay.client_payload == 0)
+                cid = relay.server_cid
+                relay.close(); require(cid is not None and admin.gone(cid)['verified'])
+                return dict(blocked_before_password=True, remote_connection_ended=True)
+            c.close(); raise Block('TLS_FALLBACK_ACCEPTED')
+        finally: relay.close()
+
     def failed_cleanup(kind):
         observer = Observer(fault=kind)
         c = connection(); cid = c.thread_id()
@@ -267,6 +299,7 @@ def run():
             except Block: return dict(blocked_before_connect=True)
             raise Block('WEAK_TLS_ACCEPTED')
         case('TLS_WEAKENING', weak)
+        case('TLS_NO_ADVERTISEMENT_FALLBACK', no_ssl_fallback)
         for fault in ('sql', 'order', 'swap', 'postflight', 'disconnect', 'reconnect', 'concurrent', 'cell', 'row'):
             case('POLICY_' + fault.upper(), lambda f=fault: policy_negative(f))
         for kind in ('excess', 'missing'): case('GRANTS_' + kind.upper(), lambda k=kind: privilege(k))
