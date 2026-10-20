@@ -61,7 +61,7 @@ def certificate_material(root):
     (client / 'wrong-ca.pem').write_bytes(wrong.public_bytes(serialization.Encoding.PEM))
     for name, host, expired in [('server', 'mysql.synthetic.invalid', False),
                                  ('expired', 'expired.synthetic.invalid', True)]:
-        directory = root / name; directory.mkdir(mode=0o755)
+        directory = root / name; directory.mkdir(mode=0o755); directory.chmod(0o755)
         key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
         cert = (x509.CertificateBuilder()
             .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, host)]))
@@ -151,6 +151,16 @@ def rehearse(series, head):
                     if ready.returncode == 0 and ready.stdout.strip() == b'0': break
                     if time.monotonic() >= until: raise Block('ISOLATED_SERVER_NOT_READY')
                     time.sleep(.25)
+                ssl_state = run(['docker', 'exec', '-e', 'MYSQL_PWD=' + ROOT_PASSWORD, name,
+                    'mysql', '--protocol=socket', '-uroot', '-Nse', "SHOW VARIABLES LIKE 'have_ssl'"])
+                if b'YES' not in ssl_state:
+                    logs = run(['docker', 'logs', name])
+                    if os.environ.get('GITHUB_ACTIONS') != 'true':
+                        info = dict(cert_permission_error=b'Permission denied' in logs,
+                            certificate_error=b'certificate' in logs.lower(),
+                            key_error=b'private key' in logs.lower())
+                        Path('/tmp/canovia-e858-server-tls-debug.json').write_text(json.dumps(info))
+                    raise Block('ISOLATED_SERVER_TLS_NOT_ENABLED')
                 state = json.loads(run(['docker', 'inspect', name]))[0]
                 net = json.loads(run(['docker', 'network', 'inspect', network]))[0]
                 if (state['Config']['Labels'].get(LABEL) != token or state['HostConfig']['PortBindings']
