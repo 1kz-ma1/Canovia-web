@@ -66,7 +66,9 @@ class StudyAdaptiveActionV536Test extends TestCase
 
         $task = $this->task($plan, '二次関数を演習する');
 
-        $result = app(StudyAdaptiveActionService::class)->evaluate($plan);
+        // This assertion evaluates the fixture date, not the runner's date.
+        // Carbon::setTestNow does not freeze native DateTimeImmutable.
+        $result = app(StudyAdaptiveActionService::class)->evaluate($plan, now());
 
         $action = $result->primaryAction();
 

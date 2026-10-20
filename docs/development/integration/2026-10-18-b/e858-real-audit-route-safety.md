@@ -81,6 +81,8 @@
 
 **MySQL timeoutの限界**：`max_execution_time` は主にread-only SELECTのstatement制限であり、SHOW/SET・全SQL・connection寿命を一括保証しない。長時間SELECTのerror3024と、その後のconnection残存/別途終了を検証する。通信断やclient死亡時は、サーバー側の実状態を独立観測しない限り終了扱いしない。接続timeout fixtureはTCP確立後のMySQL greeting無応答を対象とし、実ネットワークのSYN timeoutやAiven障害の再現とはしない。
 
+CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失敗した。固定base mainと作業HEADの両方で同一assertionを再現した。Carbonの固定時刻がnative `DateTimeImmutable()` に伝わらないため、当該テストの直接evaluateだけに既存のcapturedAt引数 `now()` を明示する。アプリの期限判定・HTTP処理・assertionは変更せず、skip/期待値緩和も行わない。
+
 検証状態・各engineの件数・CI runと独立tooling SHAはPRとIssue #488へ記録する。合成実通信に成功した場合のレベルは `ISOLATED_MYSQL_TLS_TESTED` / `ISOLATED_REMOTE_TERMINATION_TESTED`。**常に `REAL_AIVEN_UNVERIFIED` / `REAL_OPERATOR_GO_NOT_GRANTED` / `PRODUCTION_NO_GO_HOLD`**。
 
 **実監査までの残作業（接続依頼ではない）**：実principalのまま利用できる独立した同一対象の終了観測/制御経路、control channel故障時の既存認可operatorへの引継ぎ、private対象/CA/本人binding、管理Macでの実行・中断挙動を別審査する。追加control接続やKILLを旧metadata-only承認へ暗黙に含めない。既存権限で成立しない場合はSTOPし、拡権を自動解決策にしない。本番経路は未実装のまま閉じる。B0〜B4の無接続レビューと、実SQL一回の個別GOは分離する。
