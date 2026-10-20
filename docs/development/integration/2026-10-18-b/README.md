@@ -2,6 +2,9 @@
 
 2026-10-18 JST。正本: [#787](https://github.com/1kz-ma1/Canovia-web/pull/787)、[#488](https://github.com/1kz-ma1/Canovia-web/issues/488)、[統合マスター](../../CANOVIA_INTEGRATION_FREEZE_RELEASE_MASTER_2026_10_16.md)、最新AGENTS/[workflow](../../../CANOVIA_DEVELOPMENT_WORKFLOW.md)。旧A案 #785/#786 は比較資料として保持し、merge/cherry-pick/closeしない。
 
+実metadata監査の最新差分・状態遷移・未実装STOPは
+[e858実監査経路の安全性](e858-real-audit-route-safety.md)を参照。実接続の承認ではない。
+
 ## 2026-10-20：Free Full記録と独立logical restoreの検証範囲
 
 正本の[owner Console記録](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6282189535)を更新根拠にする。
