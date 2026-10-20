@@ -1,0 +1,51 @@
+name: DEC1 Evidence-to-Action Cross-Mode (Synthetic)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/dec1-evidence-to-action-cross-mode.yml'
+      - 'tests/Feature/Dec1EvidenceToActionCrossModeTest.php'
+      - 'docs/development/DEC1_EVIDENCE_TO_ACTION_ACCEPTANCE_2026_10_20.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cross-mode-synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - name: Install locked PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Syntax check isolated integration test
+        run: php -l tests/Feature/Dec1EvidenceToActionCrossModeTest.php
+      - name: Exercise recorded Study + Development state and owner separation
+        env:
+          APP_ENV: testing
+          APP_KEY: 'base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+          SESSION_DRIVER: array
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          NATIVE_AI_DRIVER: disabled
+        run: |
+          php artisan test \
+            tests/Feature/Dec1EvidenceToActionCrossModeTest.php \
+            tests/Feature/OverviewWorkspaceV545Test.php \
+            tests/Feature/OverviewRelevanceV5865Test.php
+      - name: Record strict evidence boundary
+        run: |
+          echo "SYNTHETIC ONLY: SQLite, owner-scoped seeded Study Attempt + TaskEvidence + simulated GitHub Evidence."
+          echo "No real GitHub App, webhook, external provider, approved public questions, browser, physical iPhone or Aiven."
+          echo "Do NOT infer actual external syncing, production readiness, automatic progress or release GO."
