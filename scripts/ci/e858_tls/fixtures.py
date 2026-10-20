@@ -91,6 +91,8 @@ def run():
     manifest = json.loads(Path('/synthetic/manifest.json').read_text())
     admin = Observer()
     version = rows(admin.conn, 'SELECT VERSION()')[0][0]
+    rows(admin.conn, "SET GLOBAL log_output='TABLE'")
+    rows(admin.conn, 'SET GLOBAL general_log=ON')
     require(version.startswith(manifest['series'] + '.'))
     # Minimal structure fixture, NOT a 94-migration deployment/rehearsal.
     rows(admin.conn, 'CREATE TABLE migrations(id BIGINT PRIMARY KEY AUTO_INCREMENT, migration VARCHAR(255), batch INT)')
@@ -191,6 +193,7 @@ def run():
         probe = Observer()
         s = Session(probe, query_seconds=.25, stream_seconds=.12 if kind == 'stream' else 120)
         require(s.socket is not probe.conn._sock and s.cid != probe.conn.thread_id())
+        begin = time.monotonic()
         try: s._execute('SELECT SLEEP(30)', 1)
         except Block as error:
             require(str(error) == ('STREAM_TIMEOUT' if kind == 'stream' else 'QUERY_TIMEOUT'))
@@ -200,12 +203,16 @@ def run():
                 try:
                     fresh_state = fresh.state(s.cid)
                     control_state = fresh.state(probe.conn.thread_id())
+                    events = rows(fresh.conn, 'SELECT command_type FROM mysql.general_log WHERE thread_id=%s', (probe.conn.thread_id(),))
+                    wait_timeout = rows(fresh.conn, 'SELECT @@wait_timeout')[0][0]
                 finally: fresh.close()
                 raise Block('OBSERVER_CHANNEL_FAILED', dict(
                     fresh_channel_worked=True, remote_running=fresh_state['running'],
                     control_session_exists=control_state['exists'], control_session_running=control_state['running'],
                     socket_fds_distinct=s.socket.fileno() != probe.conn._sock.fileno() if probe.conn._sock else True,
                     mysql_code=error.args[0] if error.args else None,
+                    elapsed_ms=int((time.monotonic()-begin)*1000), wait_timeout=wait_timeout,
+                    control_quit_logged=any(row[0] == 'Quit' for row in events), control_query_count=sum(row[0] == 'Query' for row in events),
                     original_timed_out='timed out' in str(error))) from None
             proof = s.abort(); require(proof['verified'])
             return dict(blocked=True, remote_running_after_local_timeout=state['running'], **proof)
