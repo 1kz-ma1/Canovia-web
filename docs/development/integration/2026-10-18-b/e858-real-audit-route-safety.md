@@ -63,3 +63,29 @@ REFERENCES schema + SELECT ledger + 任意USAGEという既存判定は変更し
 #800の合成mysqldump復元はAiven Full自体のrestoreではない。FreeおよびDeveloper USD5/月のFork不可は確認済みで、upgradeを解決策にしない。実dump/restoreはmetadata監査と別承認。
 
 暗号化/manifest/鍵管理/保持・削除、実MySQL8.4隔離先/容量、DEFINER・APP_KEY・private files・IdP、snapshot以降の同意取消/Account削除/session失効を巻き戻さない設計、全writer/DDL整合・RPO/RTOは既存[復旧条件](README.md)に残す。今回の最優先の次作業は**選定した実行・信頼基盤上での実本人認証とdurable one-shot契約の確定**。これらが未達なので「承認するだけで実監査可能」とは結論しない。
+
+## 既存信頼基盤の実環境調査（2026-10-20）
+
+**証拠と限界：** 既存GitHub main 067ea9b35a23 のAuth0/MCP資料、およびRenderのowner workspace My Workspaceで list_services、list_postgres_instances、list_key_value を読み取り。Auth0管理画面/APIや実Aivenへは接続せず、Render設定・課金・env・秘密・DB行の取得・操作もない。以下は認可を成立させる証拠でなく、既存リソースの使い道の限定である。
+
+| 既存候補 | 観測した事実 | 判定 |
+| --- | --- | --- |
+| Auth0 MCP用テスト構成 | Canovia first-party account linkとChatGPT clientの分離、JWT認証・合成Development Planへの同意/取消の過去受入はGitHub資料で確認 | **未採用**。DB operatorの独立承認issuer/role/MFA/step-up、実tokenの即時取消、発行authorityと権限分離は未検証。MCP同意/トークンを実DBの許可へ流用不可 |
+| Render Key Value | Session用Free Key Value、region Singapore、persistenceMode=off、noeviction、available（直接APIメタデータ観測） | **不適格**。cache上のnonceはprocess/host restart・復元・消去・rollbackへの耐久消費を保証しない。設定変更なし |
+| Render PostgreSQL 17 | MCP staging専用、Free、available、expiresAt=2026-11-08T01:04:45Z、HAなし（直接APIメタデータ観測） | **不適格**。短い有効期限・専用staging境界・backup/耐rollback未証明。監査承認台帳へ混在不可。SQL接続・DB行閲覧なし |
+| Render Web/MCP staging | WebはFree、Canovia本番Web/StaticとMCP stagingはそれぞれAuto Deploy OFF。承認専用管理アプリなし（取得したサービス一覧の範囲） | **不適格**。ログイン、稼働、GitHub CIは独立認可・一回限り台帳を証明しない |
+| オーナーMac | #488にオフライン合成監査受入実績 | **operator端末の第一候補のみ**。OS login/端末管理/MFA、署名・取消と耐rollback永続台帳は別審査。ローカルSQLite/ファイルロックのみで永続消費の保証を主張しない |
+| GitHub Issues/Actions | source・CI・監査の公開証跡に利用中 | **認可authorityには不適格**。comment/CI/JSON approved=trueを実操作権限として扱わない |
+
+### 現時点の結論と次の人間による選択
+
+**オーナーMacを実行場所の候補に絞る。ただし既存の独立した承認authorityとdurable atomic one-shot storeは検証できず、選定・本番採用は行わない。** 一回の実監査を行うためにMCP Staging・session Redisや本番Aivenへの台帳機能追加を勝手に行わない。
+
+1. 本人認証：owner/operatorの本人確認、認証担当、実署名authorityと独立取消経路を選定する。Auth0利用時も専用client/audience/issuer/role/MFAの実契約を閲覧のみで確認し、MCP用client/Plan consentとは分離する。
+2. 一回限り消費：専用の信頼ストアの実所在/責任者、ISSUED→CONSUMEDのatomic durability、並行・再起動・削除・復元・rollback・複製・時刻改変への対処と取消判定/監査ログを確認する。候補なしの場合はBLOCKのまま。
+3. 実接続：発行主体の真正性とtarget/source/tooling/SQL/ref/TLS/期限binding、同じverified TLS session内のQ0/Q1・metadata/postflight、remote query終了証明が条件。個人行読取/DDL/拡権/credential loader/real connectorをまだ作らない。
+4. 費用と隔離：新規有料resource・既存Auth0/Render/Aiven設定変更は別承認。Staging Postgres Freeの11月8日期限を長期監査ストアとして利用しない。
+
+**次の設計分岐（いずれも未承認）**：A=現在の厳密な自動one-shotモデルを保ち、独立署名authority+復元後も消費が復活しないtrust storeの実証後にオフライン実装する。B=短期の人間監督による単発metadata監査へ要件を変更するが、現行の承認・durability/TLS保証からの設計変更が必要であり、ownerの明示的判断と新たな安全受入なしでは実接続してはならない。Bはフラグを立てて既存BLOCKを解除する方法ではない。
+
+判定：OWNER_MAC_EXECUTION_CANDIDATE_ONLY / NO_EXISTING_DURABLE_TRUST_STORE_VALIDATED / AUTH0_OPERATOR_AUTHORITY_UNVERIFIED / REAL_AIVEN_NOT_RUN / TECHNICAL_WORK_REMAINING / PRODUCTION_NO_GO_HOLD。
