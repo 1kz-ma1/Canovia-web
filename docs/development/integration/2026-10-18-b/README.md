@@ -1,5 +1,9 @@
 # B案：main統合リリース / Draft・NO-GO
 
+## 統合後mainの独立readiness審査（2026-10-19）
+
+[#791〜#793統合済み固定main e858の監査・承認ゲート・実Aiven診断計画・復旧票](readiness-e858/release-candidate-readiness-audit.md)。指定post-merge CIは3本13 jobs成功。候補正式採用、新source監査セット、実環境操作は未承認でproduction **NO-GO/HOLD**。以下の開始時SHA・旧候補・Draft記述は当時の履歴として保持し、新mainの採用証拠へ読み替えない。
+
 2026-10-18 JST。正本: [#787](https://github.com/1kz-ma1/Canovia-web/pull/787)、[#488](https://github.com/1kz-ma1/Canovia-web/issues/488)、[統合マスター](../../CANOVIA_INTEGRATION_FREEZE_RELEASE_MASTER_2026_10_16.md)、最新AGENTS/[workflow](../../../CANOVIA_DEVELOPMENT_WORKFLOW.md)。旧A案 #785/#786 は比較資料として保持し、merge/cherry-pick/closeしない。
 
 ## 2026-10-20：e858収束 / 12月1日C-Light審査（現行の追記）

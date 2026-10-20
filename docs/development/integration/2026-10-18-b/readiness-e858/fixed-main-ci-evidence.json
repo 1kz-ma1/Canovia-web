@@ -1,0 +1,125 @@
+{
+  "verified_at_utc": "2026-10-19T05:27:21+00:00",
+  "verification": "GitHub run head SHA, every job status and private archive aggregate inspection",
+  "source_sha": "e858b9c855970fbe73f37a2d60c9db6525b132d6",
+  "workflows": [
+    {
+      "workflow": "Integration Schema Diagnostics",
+      "run_id": 39201947065,
+      "url": "https://github.com/1kz-ma1/Canovia-web/actions/runs/39201947065",
+      "head_sha": "e858b9c855970fbe73f37a2d60c9db6525b132d6",
+      "event": "workflow_dispatch",
+      "created_at": "2026-10-19T04:56:01Z",
+      "completed_at": "2026-10-19T04:57:28Z",
+      "result": "success",
+      "jobs": [
+        {
+          "name": "Schema diagnosis (MySQL 8.0)",
+          "result": "success"
+        },
+        {
+          "name": "Schema diagnosis (MySQL 8.4)",
+          "result": "success"
+        }
+      ],
+      "transition_cases_by_engine": {},
+      "fixed_c09_diagnostic_cases_by_engine": {
+        "8.4": 29,
+        "8.0": 29
+      },
+      "upgrade_engines": [],
+      "synthetic_restore_reports": 0
+    },
+    {
+      "workflow": "Integration Migration Safety",
+      "run_id": 39201955575,
+      "url": "https://github.com/1kz-ma1/Canovia-web/actions/runs/39201955575",
+      "head_sha": "e858b9c855970fbe73f37a2d60c9db6525b132d6",
+      "event": "workflow_dispatch",
+      "created_at": "2026-10-19T04:56:07Z",
+      "completed_at": "2026-10-19T04:57:26Z",
+      "result": "success",
+      "jobs": [
+        {
+          "name": "startup-policy",
+          "result": "success"
+        },
+        {
+          "name": "upgrade (8.0)",
+          "result": "success"
+        },
+        {
+          "name": "upgrade (8.4)",
+          "result": "success"
+        }
+      ],
+      "transition_cases_by_engine": {},
+      "fixed_c09_diagnostic_cases_by_engine": {},
+      "upgrade_engines": [
+        "8.4",
+        "8.0"
+      ],
+      "synthetic_restore_reports": 2
+    },
+    {
+      "workflow": "Release20 Transition Safety",
+      "run_id": 39201963912,
+      "url": "https://github.com/1kz-ma1/Canovia-web/actions/runs/39201963912",
+      "head_sha": "e858b9c855970fbe73f37a2d60c9db6525b132d6",
+      "event": "workflow_dispatch",
+      "created_at": "2026-10-19T04:56:13Z",
+      "completed_at": "2026-10-19T04:59:45Z",
+      "result": "success",
+      "jobs": [
+        {
+          "name": "All20 alias transition (MySQL 8.0)",
+          "result": "success"
+        },
+        {
+          "name": "migration-regression / startup-policy",
+          "result": "success"
+        },
+        {
+          "name": "Transition PHP and offline safety",
+          "result": "success"
+        },
+        {
+          "name": "All20 alias transition (MySQL 8.4)",
+          "result": "success"
+        },
+        {
+          "name": "fixed-diagnostic-regression / Schema diagnosis (MySQL 8.0)",
+          "result": "success"
+        },
+        {
+          "name": "fixed-diagnostic-regression / Schema diagnosis (MySQL 8.4)",
+          "result": "success"
+        },
+        {
+          "name": "migration-regression / upgrade (8.4)",
+          "result": "success"
+        },
+        {
+          "name": "migration-regression / upgrade (8.0)",
+          "result": "success"
+        }
+      ],
+      "transition_cases_by_engine": {
+        "8.4": 38,
+        "8.0": 38
+      },
+      "fixed_c09_diagnostic_cases_by_engine": {
+        "8.4": 29,
+        "8.0": 29
+      },
+      "upgrade_engines": [
+        "8.0",
+        "8.4"
+      ],
+      "synthetic_restore_reports": 2
+    }
+  ],
+  "total_jobs": 13,
+  "real_aiven_connected": false,
+  "release_authorized": false
+}
