@@ -23,7 +23,7 @@ def oracle_process(pipe):
         while True:
             operation, args = pipe.recv()
             if operation == 'close':
-                observer.close(); pipe.send((True, None)); break
+                pipe.send((True, None)); break
             try:
                 if operation == 'rows': result = client_rows(observer.conn, *args)
                 elif operation in ('state', 'gone', 'terminate'): result = getattr(observer, operation)(*args)
@@ -66,6 +66,7 @@ class Oracle:
             self.process.join(3)
             if self.process.is_alive(): self.process.kill(); self.process.join(2)
             self.pipe.close()
+        if self.process.exitcode != 0: raise Block('ORACLE_CLEANUP_UNVERIFIED')
 
 
 def rows(conn, sql, args=None):

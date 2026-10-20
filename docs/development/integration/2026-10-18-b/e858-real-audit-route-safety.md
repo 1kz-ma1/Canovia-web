@@ -71,9 +71,9 @@
 - hostは毎回テスト専用CA・SAN付きserver証明書・期限切れ証明書を作り、秘密鍵はserver側だけへmount。workerにはpublic CA・固定Git blobのSQL・匿名manifestだけを渡す。コンテナは公開portなし、単一internal network、workerはread-only filesystemでDocker socket/host credentialを持たない。依存wheelはhost側TLSで取得して固定SHAを照合し、image内ではnetworkなしでinstallする。認証情報は合成固定値のみ。
 - PyMySQL 1.1.2のSSLContextはCERT_REQUIRED＋hostname検証＋TLS1.2以上。serverのSSL capabilityが無ければpassword送信前に拒否。暗黙/明示の2回目connectを拒否し、同一connection object/socket/CONNECTION_IDでQ0→Q1→固定17処理→postflightを行う。server UUIDやconnection IDだけをTLS証明にしない。
 - metadata SQLは#795の14 blobを無変更で再利用。前後の固定 `SELECT CONNECTION_ID()` と `SET SESSION max_execution_time=10000` は**隔離fixture envelope内の補助SQL**であり、旧bundleへ混ぜない。将来の実運用で制御/観測SQLを使うには、対象・追加接続・操作scopeの別審査が必要。
-- query10秒/収集120秒、cell128KiB/row256KiB/section8MiB/total16MiBと旧行capを維持。パケットを読む前にもrow/total上限を適用する。タイマーはsocketをshutdownして新規収集を止め、結果を破棄して再実行を拒否する。テストでは0.25秒/0.12秒へ短縮し、上限増加を拒否する。緊急終了確認は別のbounded制御処理で、収集期限の延長やmetadata再取得ではない。
+- query10秒/収集120秒、cell128KiB/row256KiB/section8MiB/total16MiBと旧行capを維持。パケットを読む前にもrow/total上限を適用する。タイマーは所有するTCP descriptorの複製をshutdownし、SSL読取中のSSLオブジェクトを別threadから変更せず新規収集を止め、結果を破棄して再実行を拒否する。テストでは0.25秒/0.12秒へ短縮し、上限増加を拒否する。緊急終了確認は別のbounded制御処理で、収集期限の延長やmetadata再取得ではない。
 
-**終了の証拠**：クライアント例外/close/SIGKILLだけではremote終了にしない。独立した合成root oracleがserver UUIDとperformance_schemaの対象session有無・実行状態を観測する。終了要求(KILL QUERY/KILL CONNECTION)の失敗フラグと、query終了・connection消滅の観測を分ける。観測失敗・observer切断・権限不足・connection残存は `REMOTE_TERMINATION_UNVERIFIED`。後続のテスト管理cleanupに成功しても、元のUNVERIFIEDをPASSへ戻さない。失敗したSessionは再利用不可で、別Sessionの作成を本物の新承認と扱わない。
+**終了の証拠**：クライアント例外/close/SIGKILLだけではremote終了にしない。独立したspawnプロセス内の合成root oracleがserver UUIDとperformance_schemaの対象session有無・実行状態を観測する。終了要求(KILL QUERY/KILL CONNECTION)の失敗フラグと、query終了・connection消滅の観測を分ける。観測失敗・observer切断・権限不足・connection残存は `REMOTE_TERMINATION_UNVERIFIED`。後続のテスト管理cleanupに成功しても、元のUNVERIFIEDをPASSへ戻さない。失敗したSessionは再利用不可で、別Sessionの作成を本物の新承認と扱わない。
 
 **権限境界**：管理rootは隔離環境の試験oracle/合成DDL/最後の掃除専用であり、本番inspectorへPROCESS/CONNECTION_ADMIN等を要求・GRANTしない。REFERENCES schema＋SELECT ledgerだけの同一principal別接続による自身sessionの観測/停止も別fixtureで評価する。別principalに対するKILL権限拒否と、見えないsessionを「不在」と誤認しない負例を含める。実Aivenでの可視性・KILL可否・proxy/運用制約は未検証で、合成MySQLの標準動作から推定しない。
 

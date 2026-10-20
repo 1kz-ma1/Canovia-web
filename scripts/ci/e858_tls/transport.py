@@ -137,7 +137,8 @@ class Observer:
                 time.sleep(.02)
         except Exception as error:
             error_code = error.args[0] if error.args and type(error.args[0]) is int else None
-        return dict(query_ended=False, connection_ended=False, verified=False,
+        return dict(query_ended=bool(last and not last['running'] and error_code is None),
+                    connection_ended=False, verified=False,
                     status='REMOTE_TERMINATION_UNVERIFIED', last_observation=last, observer_error_code=error_code)
 
     def terminate(self, cid):

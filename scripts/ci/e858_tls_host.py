@@ -153,7 +153,8 @@ def rehearse(series, head):
                     time.sleep(.25)
                 ssl_state = run(['docker', 'exec', '-e', 'MYSQL_PWD=' + ROOT_PASSWORD, name,
                     'mysql', '--protocol=socket', '-uroot', '-Nse', "SHOW GLOBAL STATUS LIKE 'Ssl_server_not_after'"])
-                if not ssl_state.strip().split(b'\t')[-1]:
+                fields = ssl_state.strip().split(b'\t')
+                if len(fields) != 2 or not fields[1]:
                     logs = run(['docker', 'logs', name])
                     if os.environ.get('GITHUB_ACTIONS') != 'true':
                         info = dict(cert_permission_error=b'Permission denied' in logs,

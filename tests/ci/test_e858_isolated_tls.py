@@ -101,6 +101,14 @@ class ClosedBoundaryTests(unittest.TestCase):
                     self.assertTrue(result['query_request_failed'] and result['connection_request_failed'])
                 self.assertNotIn(CANARY, json.dumps(result))
 
+    def test_idle_connection_does_not_prove_connection_termination(self):
+        observer = object.__new__(t.Observer)
+        with patch.object(observer, 'state', return_value=dict(exists=True, running=False)):
+            proof = observer.gone(123, .01)
+        self.assertTrue(proof['query_ended'])
+        self.assertFalse(proof['connection_ended'] or proof['verified'])
+        self.assertEqual('REMOTE_TERMINATION_UNVERIFIED', proof['status'])
+
     def test_cli_real_modes_arguments_and_duplicates_do_not_create_resources(self):
         for args in (['--host', CANARY], ['--collect'], ['--credential', CANARY],
                      ['--series', '8.0', '--tooling-sha', 'a' * 40, '--execute'],
