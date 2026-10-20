@@ -1,0 +1,310 @@
+"""Runs ONLY inside the owned internal Docker network; all SQL below is synthetic."""
+import contextlib
+import json
+import multiprocessing
+import os
+from pathlib import Path
+import socket
+import ssl
+import threading
+import time
+import traceback
+
+from transport import (Block, Observer, Session, connection, context, rows,
+                       DB, USER, PASSWORD, ROOT_PASSWORD, CELL)
+
+
+def require(value):
+    if not value: raise Block('ISOLATED_ASSERTION_FAILED')
+
+
+def wait_running(observer, cid):
+    until = time.monotonic() + 3
+    while time.monotonic() < until:
+        if observer.state(cid)['running']: return True
+        time.sleep(.01)
+    raise Block('REMOTE_QUERY_NOT_OBSERVED')
+
+
+def long_client(pipe, role='inspector'):
+    c = connection(role)
+    pipe.send(c.thread_id())
+    try: rows(c, 'SELECT SLEEP(30)')
+    except Exception: pass
+    finally: c.close(); pipe.close()
+
+
+class Relay:
+    """Raw TCP fault fixture; cannot decrypt TLS, fixed upstream only."""
+    def __init__(self, blackhole=False):
+        self.listener = socket.socket()
+        self.listener.bind(('127.0.0.1', 0)); self.listener.listen(1)
+        self.port = self.listener.getsockname()[1]
+        self.blackhole = blackhole; self.client = None; self.server = None
+        self.stop = threading.Event()
+        self.thread = threading.Thread(target=self.run, daemon=True); self.thread.start()
+
+    def run(self):
+        try:
+            self.client, _ = self.listener.accept()
+            if self.blackhole:
+                self.stop.wait(2); return
+            self.server = socket.create_connection(('mysql.synthetic.invalid', 3306), timeout=2)
+            import select
+            while not self.stop.is_set():
+                ready, _, _ = select.select([self.client, self.server], [], [], .05)
+                for sock in ready:
+                    data = sock.recv(65536)
+                    if not data: return  # Keep upstream fd open for parent observation.
+                    (self.server if sock is self.client else self.client).sendall(data)
+        except OSError: pass
+
+    def close(self):
+        self.stop.set()
+        for sock in (self.client, self.server, self.listener):
+            if sock:
+                try: sock.shutdown(socket.SHUT_RDWR)
+                except OSError: pass
+                sock.close()
+        self.thread.join(1)
+
+
+def run():
+    manifest = json.loads(Path('/synthetic/manifest.json').read_text())
+    admin = Observer()
+    version = rows(admin.conn, 'SELECT VERSION()')[0][0]
+    require(version.startswith(manifest['series'] + '.'))
+    # Minimal structure fixture, NOT a 94-migration deployment/rehearsal.
+    rows(admin.conn, 'CREATE TABLE migrations(id BIGINT PRIMARY KEY AUTO_INCREMENT, migration VARCHAR(255), batch INT)')
+    for name in manifest['baseline_names']:
+        rows(admin.conn, 'INSERT INTO migrations(migration,batch) VALUES(%s,1)', (name,))
+    rows(admin.conn, 'CREATE TABLE tls_fixture_parent(id BIGINT PRIMARY KEY)')
+    rows(admin.conn, 'CREATE TABLE tls_fixture_child(id BIGINT PRIMARY KEY, parent_id BIGINT, FOREIGN KEY(parent_id) REFERENCES tls_fixture_parent(id))')
+    rows(admin.conn, 'CREATE TRIGGER tls_fixture_trigger BEFORE UPDATE ON tls_fixture_parent FOR EACH ROW SET NEW.id=OLD.id')
+    rows(admin.conn, "CREATE USER 'e858_tls_inspector'@'%' IDENTIFIED BY 'ci-only-tls-inspector' REQUIRE SSL")
+    rows(admin.conn, "CREATE USER 'e858_tls_other'@'%' IDENTIFIED BY 'ci-only-other' REQUIRE SSL")
+    rows(admin.conn, "GRANT REFERENCES ON canovia_p0_ci.* TO 'e858_tls_other'@'%'")
+    rows(admin.conn, "GRANT REFERENCES ON canovia_p0_ci.* TO 'e858_tls_inspector'@'%'")
+    rows(admin.conn, "GRANT SELECT ON canovia_p0_ci.migrations TO 'e858_tls_inspector'@'%'")
+    reports = {}
+    current = ['BOOTSTRAP']
+    def case(label, func):
+        current[0] = label
+        value = func()
+        reports[label] = value or dict(verified=True)
+
+    def normal():
+        s = Session(admin)
+        data = s.collect()
+        require(s.executions == 17 and s.conn.connect_count == 1)
+        require(s.finish()['verified'])
+        Path('/out/snapshot.json').write_text(json.dumps(data))
+        os.chmod('/out/snapshot.json', 0o600)
+        return dict(verified=True, statements=17, tls_session_count=1, remote_connection_ended=True)
+
+    def tls_negative(fault):
+        try: c = connection(fault=fault)
+        except Exception as error:
+            original = getattr(error, 'original_exception', error)
+            require(isinstance(original, ssl.SSLCertVerificationError))
+            expected = {'wrong_ca': (20, 21), 'wrong_host': (62,), 'expired': (10,)}[fault]
+            require(original.verify_code in expected)
+            return dict(blocked=True, certificate_validation_failed=True)
+        c.close(); raise Block('TLS_NEGATIVE_DID_NOT_BLOCK')
+
+    def policy_negative(kind):
+        s = Session(admin)
+        try:
+            if kind == 'sql': s.read('identity', b'SELECT SLEEP(30)')
+            elif kind == 'order': s.read('table')
+            elif kind == 'swap':
+                s.read('identity'); replacement = connection(); s.conn = replacement
+                try: s.read('grants')
+                finally: replacement.close(); s.original.close()
+            elif kind == 'postflight':
+                for key in s.order[:15]: s.read(key)
+                rows(s.conn, 'USE information_schema'); s.read('identity')
+            elif kind == 'disconnect':
+                s.read('identity'); rows(admin.conn, 'KILL CONNECTION %s', (s.cid,)); s.read('grants')
+            elif kind == 'concurrent':
+                s.lock.acquire()
+                try: s.read('identity')
+                finally: s.lock.release()
+            elif kind == 'cell': s._execute('SELECT REPEAT(\'x\',131073)', 1)
+            elif kind == 'row': s._execute('SELECT REPEAT(\'x\',131072),REPEAT(\'x\',131072)', 1)
+        except Exception:
+            require(s.abort()['verified'])
+            try: s.read('identity')
+            except Block: return dict(blocked=True, remote_connection_ended=True)
+        finally:
+            s.abort()
+        raise Block('POLICY_NEGATIVE_DID_NOT_BLOCK')
+
+    def privilege(kind):
+        if kind == 'excess': rows(admin.conn, "GRANT SELECT ON canovia_p0_ci.* TO 'e858_tls_inspector'@'%'")
+        else: rows(admin.conn, "REVOKE SELECT ON canovia_p0_ci.migrations FROM 'e858_tls_inspector'@'%'")
+        try:
+            s = Session(admin)
+            try:
+                s.read('identity'); s.read('grants')
+            except Block:
+                require(s.executions == 1 and s.abort()['verified'])
+                return dict(blocked_before_metadata=True)
+            finally: s.abort()
+            raise Block('PRIVILEGE_NEGATIVE_DID_NOT_BLOCK')
+        finally:
+            if kind == 'excess': rows(admin.conn, "REVOKE SELECT ON canovia_p0_ci.* FROM 'e858_tls_inspector'@'%'")
+            else: rows(admin.conn, "GRANT SELECT ON canovia_p0_ci.migrations TO 'e858_tls_inspector'@'%'")
+
+    def timeout(kind):
+        s = Session(admin, query_seconds=.25, stream_seconds=.12 if kind == 'stream' else 120)
+        try: s._execute('SELECT SLEEP(30)', 1)
+        except Block:
+            state = admin.state(s.cid)
+            proof = s.abort(); require(proof['verified'])
+            return dict(blocked=True, remote_running_after_local_timeout=state['running'], **proof)
+        finally: s.abort()
+        raise Block('TIMEOUT_DID_NOT_BLOCK')
+
+    def process_kill():
+        parent, child = multiprocessing.Pipe()
+        process = multiprocessing.Process(target=long_client, args=(child,))
+        process.start(); child.close()
+        require(parent.poll(5)); cid = parent.recv(); wait_running(admin, cid)
+        process.kill(); process.join(2); require(not process.is_alive())
+        before = admin.state(cid)
+        proof = admin.terminate(cid); require(proof['verified'])
+        parent.close()
+        return dict(client_exit_confirmed=True, remote_running_after_sigkill=before['running'], **proof)
+
+    def relay_disconnect():
+        relay = Relay(); sock = socket.create_connection(('127.0.0.1', relay.port), timeout=2)
+        c = connection(sock=sock); cid = c.thread_id()
+        thread = threading.Thread(target=lambda: swallow(lambda: rows(c, 'SELECT SLEEP(30)')))
+        thread.start(); wait_running(admin, cid)
+        relay.client.shutdown(socket.SHUT_RDWR); relay.client.close()
+        thread.join(2); require(not thread.is_alive())
+        before = admin.state(cid); proof = admin.terminate(cid); require(proof['verified'])
+        relay.close(); c.close()
+        return dict(client_link_lost=True, remote_running_after_disconnect=before['running'], **proof)
+
+    def handshake_timeout():
+        relay = Relay(blackhole=True)
+        sock = socket.create_connection(('127.0.0.1', relay.port), timeout=1)
+        from transport import StrictConnection
+        c = StrictConnection(host='mysql.synthetic.invalid', user=USER, password=PASSWORD,
+                             database=DB, ssl=context(), read_timeout=.2, connect_timeout=1)
+        begin = time.monotonic()
+        try: c.connect(sock=sock)
+        except Exception:
+            require(time.monotonic() - begin < 2)
+            return dict(blocked=True, phase='MYSQL_GREETING_TIMEOUT', remote_mysql_session_created=False)
+        finally: c.close(); relay.close()
+        raise Block('HANDSHAKE_TIMEOUT_DID_NOT_BLOCK')
+
+    def failed_cleanup(kind):
+        observer = Observer(fault=kind)
+        c = connection(); cid = c.thread_id()
+        thread = threading.Thread(target=lambda: swallow(lambda: rows(c, 'SELECT SLEEP(30)')))
+        thread.start(); wait_running(admin, cid)
+        proof = observer.terminate(cid)
+        if kind == 'kill_query': require(proof['query_request_failed'] and proof['verified'])
+        else: require(not proof['verified'])
+        # Unobservable / still-live connections remain UNVERIFIED even though
+        # the harness subsequently performs independent emergency cleanup.
+        emergency = admin.terminate(cid); require(emergency['verified'])
+        thread.join(2); require(not thread.is_alive()); c.close(); observer.close()
+        return dict(expected_block=True, transport_proof=proof,
+                    emergency_fixture_cleanup_verified=True)
+
+    def permission_denial():
+        c = connection('root'); cid = c.thread_id()
+        other = connection('other'); failures = []
+        thread = threading.Thread(target=lambda: swallow(lambda: rows(c, 'SELECT SLEEP(30)')))
+        thread.start(); wait_running(admin, cid)
+        try:
+            for command in ('KILL QUERY %s', 'KILL CONNECTION %s'):
+                try: rows(other, command, (cid,))
+                except Exception as error: failures.append(error.args[0] == 1095)
+            require(failures == [True, True] and admin.state(cid)['running'])
+            invisible = Observer(role='other')
+            require(not invisible.gone(cid, .1)['verified']); invisible.close()
+            return dict(query_denied=True, connection_denied=True, still_running_observed=True,
+                        invisible_observer_rejected=True)
+        finally:
+            require(admin.terminate(cid)['verified']); thread.join(2); c.close(); other.close()
+
+    def same_principal_cleanup():
+        own = Observer(role='inspector'); c = connection(); cid = c.thread_id()
+        thread = threading.Thread(target=lambda: swallow(lambda: rows(c, 'SELECT SLEEP(30)')))
+        thread.start(); wait_running(admin, cid); require(own.state(cid)['running'])
+        proof = own.terminate(cid); require(proof['verified'] and admin.gone(cid)['verified'])
+        thread.join(2); c.close(); own.close()
+        return dict(no_privileges_added=True, own_session_observed=True, **proof)
+
+    def server_timeout():
+        c = connection(); cid = c.thread_id()
+        rows(c, 'SET SESSION max_execution_time=150')
+        begin = time.monotonic(); error_code = None
+        try:
+            rows(c, 'SELECT COUNT(*) FROM information_schema.columns a CROSS JOIN information_schema.columns b CROSS JOIN information_schema.columns d')
+        except Exception as error: error_code = error.args[0]
+        elapsed = time.monotonic() - begin
+        state = admin.state(cid)
+        require(error_code == 3024 and elapsed < 3 and not state['running'])
+        require(admin.terminate(cid)['verified']); c.close()
+        return dict(server_error_3024=True, remote_query_ended=True, connection_required_separate_close=True)
+
+    try:
+        case('TLS_VALID_SAME_SESSION', normal)
+        for fault in ('wrong_ca', 'wrong_host', 'expired'): case('TLS_' + fault.upper(), lambda f=fault: tls_negative(f))
+        def weak():
+            try: context(mode='REQUIRED')
+            except Block: return dict(blocked_before_connect=True)
+            raise Block('WEAK_TLS_ACCEPTED')
+        case('TLS_WEAKENING', weak)
+        for fault in ('sql', 'order', 'swap', 'postflight', 'disconnect', 'concurrent', 'cell', 'row'):
+            case('POLICY_' + fault.upper(), lambda f=fault: policy_negative(f))
+        for kind in ('excess', 'missing'): case('GRANTS_' + kind.upper(), lambda k=kind: privilege(k))
+        case('QUERY_TIMEOUT', lambda: timeout('query'))
+        case('STREAM_TIMEOUT', lambda: timeout('stream'))
+        case('CLIENT_SIGKILL', process_kill)
+        case('COMMUNICATION_LOSS', relay_disconnect)
+        case('CONNECT_GREETING_TIMEOUT', handshake_timeout)
+        for kind in ('kill_query', 'kill_connection', 'unobservable'):
+            case('REMOTE_' + kind.upper(), lambda k=kind: failed_cleanup(k))
+        case('REMOTE_PERMISSION_DENIED', permission_denial)
+        case('SAME_PRINCIPAL_TERMINATION', same_principal_cleanup)
+        case('SERVER_SELECT_TIMEOUT', server_timeout)
+        remaining = rows(admin.conn, "SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE USER IN ('e858_tls_inspector','e858_tls_other')")[0][0]
+        require(remaining == 0)
+        return dict(result='ISOLATED_SYNTHETIC_VERIFIED', version=version, cases=reports,
+                    synthetic_sessions_remaining=0, real_aiven_connected=False,
+                    release_authorized=False, strict_block_waived=False)
+    except BaseException as error:
+        private_error(error)
+        return dict(result='BLOCK', code='ISOLATED_CASE_FAILED', case=current[0],
+                    real_aiven_connected=False, release_authorized=False)
+    finally:
+        admin.close()
+
+
+def swallow(func):
+    try: func()
+    except Exception: pass
+
+
+def private_error(error):
+    # No error text / SQL / addresses / credentials, even in private diagnostics.
+    Path('/out/private-error.json').write_text(json.dumps(dict(
+        type=type(error).__name__, mysql_code=error.args[0] if error.args and type(error.args[0]) is int else None,
+        frames=[(Path(f.filename).name, f.lineno) for f in traceback.extract_tb(error.__traceback__)])))
+
+
+if __name__ == '__main__':
+    try: report = run()
+    except BaseException as error:
+        private_error(error)
+        report = dict(result='BLOCK', code='ISOLATED_BOOTSTRAP_FAILED', real_aiven_connected=False)
+    print(json.dumps(report, sort_keys=True))
+    raise SystemExit(0 if report['result'] == 'ISOLATED_SYNTHETIC_VERIFIED' else 2)
