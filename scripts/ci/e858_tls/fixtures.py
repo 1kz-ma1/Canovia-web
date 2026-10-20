@@ -14,8 +14,8 @@ from transport import (Block, Observer, Session, connection, context, rows,
                        DB, USER, PASSWORD, ROOT_PASSWORD, CELL)
 
 
-def require(value):
-    if not value: raise Block('ISOLATED_ASSERTION_FAILED')
+def require(value, facts=None):
+    if not value: raise Block('ISOLATED_ASSERTION_FAILED', facts)
 
 
 def wait_running(observer, cid):
@@ -153,7 +153,7 @@ def run():
             elif kind == 'cell': s._execute('SELECT REPEAT(\'x\',131073)', 1)
             elif kind == 'row': s._execute('SELECT REPEAT(\'x\',131072),REPEAT(\'x\',131072)', 1)
         except Exception:
-            require(s.abort()['verified'])
+            proof = s.abort(); require(proof['verified'], proof)
             try: s.read('identity')
             except Block: return dict(blocked=True, remote_connection_ended=True)
         finally:
@@ -283,7 +283,7 @@ def run():
         rows(c, 'SET SESSION max_execution_time=150')
         begin = time.monotonic(); error_code = None
         try:
-            rows(c, 'SELECT COUNT(*) FROM information_schema.columns a CROSS JOIN information_schema.columns b CROSS JOIN information_schema.columns d')
+            rows(c, 'SELECT SUM(LENGTH(a.COLUMN_NAME)+LENGTH(b.COLUMN_NAME)+LENGTH(d.COLUMN_NAME)) FROM information_schema.columns a CROSS JOIN information_schema.columns b CROSS JOIN information_schema.columns d')
         except Exception as error: error_code = error.args[0]
         elapsed = time.monotonic() - begin
         state = admin.state(cid)
@@ -335,6 +335,7 @@ def private_error(error):
     # No error text / SQL / addresses / credentials, even in private diagnostics.
     Path('/out/private-error.json').write_text(json.dumps(dict(
         type=type(error).__name__, mysql_code=error.args[0] if error.args and type(error.args[0]) is int else None,
+        details=error.args[1] if len(error.args) > 1 and type(error.args[1]) is dict else None,
         frames=[(Path(f.filename).name, f.lineno) for f in traceback.extract_tb(error.__traceback__)])))
 
 

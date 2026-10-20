@@ -109,15 +109,18 @@ class Observer:
 
     def gone(self, cid, seconds=2):
         until = time.monotonic() + seconds
+        last = None
+        error_code = None
         try:
             while time.monotonic() < until:
-                value = self.state(cid)
+                value = self.state(cid); last = value
                 if not value['exists']:
-                    return dict(query_ended=True, connection_ended=True, verified=True)
+                    return dict(query_ended=True, connection_ended=True, verified=True, status='VERIFIED')
                 time.sleep(.02)
-        except Exception:
-            pass
-        return dict(query_ended=False, connection_ended=False, verified=False)
+        except Exception as error:
+            error_code = error.args[0] if error.args and type(error.args[0]) is int else None
+        return dict(query_ended=False, connection_ended=False, verified=False,
+                    status='REMOTE_TERMINATION_UNVERIFIED', last_observation=last, observer_error_code=error_code)
 
     def terminate(self, cid):
         result = dict(query_request_failed=False, connection_request_failed=False)
