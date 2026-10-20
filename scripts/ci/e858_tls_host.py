@@ -218,7 +218,10 @@ def rehearse(series, head):
                 if run(['docker', 'ps', '-aq', '--filter', 'label=' + LABEL + '=' + token]).strip():
                     cleanup = False
             except Exception: cleanup = False
-            subprocess.run(['docker', 'image', 'rm', image], capture_output=True)
+            try:
+                images = run(['docker', 'image', 'ls', '-q', '--filter', 'label=' + LABEL + '=' + token]).split()
+                for owned_image in set(images): run(['docker', 'image', 'rm', owned_image.decode('ascii')])
+            except Exception: cleanup = False
             if not cleanup: raise Block('ISOLATED_CLEANUP_UNVERIFIED')
     result['owned_containers_network_certificates_removed'] = True
     return result
