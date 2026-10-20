@@ -145,7 +145,7 @@ def run():
                 for key in s.order[:15]: s.read(key)
                 rows(s.conn, 'USE information_schema'); s.read('identity')
             elif kind == 'disconnect':
-                s.read('identity'); rows(admin.conn, 'KILL CONNECTION %s', (s.cid,)); s.read('grants')
+                s.read('identity'); s.socket.shutdown(socket.SHUT_RDWR); s.read('grants')
             elif kind == 'reconnect':
                 s.conn.close(); s.conn.ping(reconnect=True)
             elif kind == 'concurrent':
@@ -245,14 +245,15 @@ def run():
         c = connection(); cid = c.thread_id()
         thread = threading.Thread(target=lambda: swallow(lambda: rows(c, 'SELECT SLEEP(30)')))
         thread.start(); wait_running(admin, cid)
-        if kind == 'observer_disconnect': rows(admin.conn, 'KILL CONNECTION %s', (observer.conn.thread_id(),))
+        if kind == 'observer_disconnect': observer.conn._sock.shutdown(socket.SHUT_RDWR)
         proof = observer.terminate(cid)
         if kind == 'kill_query': require(proof['query_request_failed'] and proof['verified'])
         else: require(not proof['verified'])
         # Unobservable / still-live connections remain UNVERIFIED even though
         # the harness subsequently performs independent emergency cleanup.
+        close_client(c, thread)
         emergency = admin.terminate(cid); require(emergency['verified'])
-        thread.join(2); require(not thread.is_alive()); c.close(); observer.close()
+        observer.close()
         return dict(expected_block=True, transport_proof=proof,
                     emergency_fixture_cleanup_verified=True)
 
@@ -271,15 +272,25 @@ def run():
             return dict(query_denied=True, connection_denied=True, still_running_observed=True,
                         invisible_observer_rejected=True)
         finally:
-            require(admin.terminate(cid)['verified']); thread.join(2); c.close(); other.close()
+            close_client(c, thread)
+            require(admin.terminate(cid)['verified']); other.close()
 
     def same_principal_cleanup():
-        own = Observer(role='inspector'); c = connection(); cid = c.thread_id()
-        thread = threading.Thread(target=lambda: swallow(lambda: rows(c, 'SELECT SLEEP(30)')))
-        thread.start(); wait_running(admin, cid); require(own.state(cid)['running'])
-        proof = own.terminate(cid); require(proof['verified'] and admin.gone(cid)['verified'])
-        thread.join(2); c.close(); own.close()
-        return dict(no_privileges_added=True, own_session_observed=True, **proof)
+        own = Observer(role='inspector')
+        for operation in ('QUERY', 'CONNECTION'):
+            c = connection(); cid = c.thread_id()
+            def active():
+                try: rows(c, 'SELECT SLEEP(30)')
+                except Exception: pass
+                finally: c.close()
+            thread = threading.Thread(target=active)
+            thread.start(); wait_running(admin, cid); require(own.state(cid)['running'])
+            rows(own.conn, 'KILL ' + operation + ' %s', (cid,))
+            thread.join(2); require(not thread.is_alive())
+            require(own.gone(cid)['verified'] and admin.gone(cid)['verified'])
+        own.close()
+        return dict(no_privileges_added=True, own_session_observed=True,
+                    own_query_kill_verified=True, own_connection_kill_verified=True)
 
     def server_timeout():
         c = connection(); cid = c.thread_id()
@@ -332,6 +343,14 @@ def run():
 def swallow(func):
     try: func()
     except Exception: pass
+
+
+def close_client(c, thread):
+    try:
+        if c._sock: c._sock.shutdown(socket.SHUT_RDWR)
+    except OSError: pass
+    thread.join(2); require(not thread.is_alive())
+    if c.open: c.close()
 
 
 def private_error(error):
