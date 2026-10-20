@@ -194,7 +194,14 @@ def run():
         try: s._execute('SELECT SLEEP(30)', 1)
         except Block as error:
             require(str(error) == ('STREAM_TIMEOUT' if kind == 'stream' else 'QUERY_TIMEOUT'))
-            state = probe.state(s.cid)
+            try: state = probe.state(s.cid)
+            except Exception as error:
+                fresh = Observer()
+                try: fresh_state = fresh.state(s.cid)
+                finally: fresh.close()
+                raise Block('OBSERVER_CHANNEL_FAILED', dict(
+                    fresh_channel_worked=True, remote_running=fresh_state['running'],
+                    original_timed_out='timed out' in str(error))) from None
             proof = s.abort(); require(proof['verified'])
             return dict(blocked=True, remote_running_after_local_timeout=state['running'], **proof)
         finally: s.abort(); probe.close()
