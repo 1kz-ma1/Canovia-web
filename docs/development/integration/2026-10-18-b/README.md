@@ -29,7 +29,7 @@ Consoleの記録はowner提出で、こちらは実Aiven/Console/APIに接続し
 
 - 同じimage IDの**別container・別server UUID・空tmpfs datadir**へrestore。外部network/公開port/host mountなし。8.0→同8.0、8.4→同8.4をそれぞれ検証し、8.4→8.0 downgradeや実Aiven互換の証明にしない。同一CIホスト上の独立instanceであり、別ホスト/別provider/転送障害/災害ドメインは未検証。
 - 旧94＋合成user/Plan/Task/Attempt/同意・取消・監査/session seed直後にも復元を実行し、pre-DDL復旧点を追加。従来の114復元を保持。
-- DB全行のdump bytes、ledger、既存metadata SQLの全section＋index方向、trigger DEFINER/SQL mode/charset、SHOW CREATE TABLE（AUTO_INCREMENT到達値・生成式・row format等）を比較。全FKについて複合列順序を保ち、全child非NULLのorphanがないことも検査する。restore時のFOREIGN_KEY_CHECKS=0が遡及検査をしない点を補う。
+- DB全行のdump bytes、ledger、既存metadata SQLの全section＋index方向、trigger DEFINER/SQL mode/charset、実効charset・AUTO_INCREMENT到達値・生成式・row format/CREATE_OPTIONS等を比較。SHOW CREATE TABLEはrestore後に同じcharsetを明示表記する差があるため、その文字列を物理不一致の根拠にしない。既存strict metadata/hash判定は不変。全FKについて複合列順序を保ち、全child非NULLのorphanがないことも検査する。restore時のFOREIGN_KEY_CHECKS=0が遡及検査をしない点を補う。
 - 114ではtriggerが存在してもDEFINER不在で実行時1449となる負例、準備した合成principalでepoch更新・member再割当拒否・Plan UNIQUEを実動確認。DDL定義一致だけで実効性PASSにしない。
 - 最小合成export profile（SELECT/SHOW VIEW/TRIGGER、PROCESS/SUPER/DDL一般権限なし）でdump。data UPDATE/CREATE TABLE拒否を確認。ただし**TRIGGER権限はtrigger作成/削除も可能で、DBのread-only roleではない**。narrow exportでtrigger不可視/欠落があれば拒否する。既存metadata inspectorを流用/拡権しない。
 - 改変dump、mysqlがexit0でも不完全な入力、同件数のデータ差、orphan、FK欠損を拒否。非InnoDB/view/routine/event/不明inventoryは現profile外としてBLOCK。これらの不存在はowned CI adminによる観測であり、実本番の不可視性を解消しない。

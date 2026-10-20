@@ -166,14 +166,19 @@ def rehearse(series, artifacts, expected=114):
                  "ORDER BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX; "
                  "SELECT TRIGGER_NAME,DEFINER,SQL_MODE,CHARACTER_SET_CLIENT,COLLATION_CONNECTION,DATABASE_COLLATION "
                  "FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() ORDER BY TRIGGER_NAME")
-    table_names = sql(source, 'SELECT TABLE_NAME FROM information_schema.TABLES '
-                      'WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME').decode('ascii').splitlines()
-    create_sql = ';'.join('SHOW CREATE TABLE ' + quote(name) for name in table_names)
+    attributes_sql = (
+        "SET SESSION information_schema_stats_expiry=0; "
+        "SELECT TABLE_NAME,ROW_FORMAT,COALESCE(AUTO_INCREMENT,0),CREATE_OPTIONS,HEX(TABLE_COMMENT) "
+        "FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME; "
+        "SELECT TABLE_NAME,ORDINAL_POSITION,COALESCE(CHARACTER_SET_NAME,''),"
+        "HEX(GENERATION_EXPRESSION),HEX(COLUMN_COMMENT) FROM information_schema.COLUMNS "
+        "WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME,ORDINAL_POSITION")
 
     def shape(container):
-        # Includes AUTO_INCREMENT high-water marks, generated expressions,
-        # row format and all CREATE options in addition to section metadata.
-        return sql(container, schema_sql) + sql(container, extra_sql) + sql(container, create_sql)
+        # SHOW CREATE can add explicit CHARACTER SET syntax after restore even
+        # with equal effective definitions. Compare actual attributes, without
+        # rewriting the original strict audit SQL/reference or any hash gate.
+        return sql(container, schema_sql) + sql(container, extra_sql) + sql(container, attributes_sql)
 
     schema = shape(source)
     before = dump(source, data_only=True)
@@ -233,8 +238,8 @@ def rehearse(series, artifacts, expected=114):
         def verify():
             parity(sql(target_id, 'SELECT COUNT(*) FROM migrations').strip(), str(expected).encode(),
                    'RESTORED_LEDGER_MISMATCH')
-            parity(schema, shape(target_id), 'RESTORED_SCHEMA_MISMATCH')
             checked = orphans(target_id)
+            parity(schema, shape(target_id), 'RESTORED_SCHEMA_MISMATCH')
             parity(before, dump(target_id, data_only=True), 'RESTORED_DATA_MISMATCH')
             return checked
 
