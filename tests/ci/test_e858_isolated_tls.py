@@ -1,6 +1,5 @@
 """Offline boundaries; actual wire/session/server facts come from Docker CI."""
 import contextlib
-import inspect
 import io
 import json
 from pathlib import Path

@@ -188,8 +188,10 @@ class Session:
         self.executions = 0
         self.identity = None
         self.ledger = None
-        if not observer.state(self.cid)['exists']:
-            self.abort(); raise Block('REMOTE_VISIBILITY_UNPROVEN')
+        try:
+            if not observer.state(self.cid)['exists']: raise Block('REMOTE_VISIBILITY_UNPROVEN')
+        except Exception:
+            self.abort(); raise Block('REMOTE_VISIBILITY_UNPROVEN') from None
         manifest = json.loads(Path('/synthetic/manifest.json').read_text())
         self.order, self.caps = manifest['order'], manifest['caps']
         self.series = manifest['series']

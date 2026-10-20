@@ -1,5 +1,4 @@
 """Runs ONLY inside the owned internal Docker network; all SQL below is synthetic."""
-import contextlib
 import json
 import multiprocessing
 import os
@@ -256,6 +255,16 @@ def run():
             if kind == 'excess': rows(admin.conn, "REVOKE SELECT ON canovia_p0_ci.* FROM 'e858_tls_inspector'@'%'")
             else: rows(admin.conn, "GRANT SELECT ON canovia_p0_ci.migrations TO 'e858_tls_inspector'@'%'")
 
+    def visibility_required():
+        invisible = Observer(role='other')
+        try:
+            try: Session(invisible)
+            except Block as error:
+                require(str(error) == 'REMOTE_VISIBILITY_UNPROVEN')
+                return dict(blocked_before_metadata=True, observer_absence_not_trusted=True)
+            raise Block('INVISIBLE_OBSERVER_ACCEPTED')
+        finally: invisible.close()
+
     def timeout(kind):
         s = Session(admin, query_seconds=.25)
         if kind == 'stream': s.until = min(s.until, time.monotonic() + .12)
@@ -400,6 +409,7 @@ def run():
         for fault in ('sql', 'order', 'swap', 'postflight', 'disconnect', 'reconnect', 'concurrent', 'cell', 'row'):
             case('POLICY_' + fault.upper(), lambda f=fault: policy_negative(f))
         for kind in ('excess', 'missing'): case('GRANTS_' + kind.upper(), lambda k=kind: privilege(k))
+        case('SESSION_VISIBILITY_REQUIRED', visibility_required)
         case('QUERY_TIMEOUT', lambda: timeout('query'))
         case('STREAM_TIMEOUT', lambda: timeout('stream'))
         case('CLIENT_SIGKILL', process_kill)
