@@ -46,6 +46,13 @@ class InputSafetyTests(unittest.TestCase):
         self.path.write_text(ROWS.replace("`", '"'), encoding="ascii")
         self.assertEqual(ACCEPT, self.cli(self.args))
 
+    def test_missing_validator_has_no_traceback_or_path_disclosure(self):
+        isolated = self.root / "input.py"
+        isolated.write_bytes(SCRIPT.read_bytes())
+        result = subprocess.run([sys.executable, "-I", "-B", str(isolated)] + self.args,
+                                capture_output=True, text=True, timeout=3)
+        self.assertEqual(BLOCK, (result.returncode, result.stdout, result.stderr))
+
     def test_unknown_missing_duplicate_and_abbreviated_arguments_are_private(self):
         cases = [[], self.args + ["--unexpected", CANARY],
                  ["--database", CANARY], self.args + ["--input", CANARY],

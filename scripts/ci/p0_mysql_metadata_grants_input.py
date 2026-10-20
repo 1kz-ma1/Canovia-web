@@ -6,13 +6,20 @@ The frozen guard and its permission decisions are deliberately unchanged.
 """
 import argparse
 import os
+from pathlib import Path
 import stat
 import sys
 
-if __package__:
-    from .p0_mysql_metadata_grants_guard import DATABASE, MAX_BYTES, verify_grants
-else:
-    from p0_mysql_metadata_grants_guard import DATABASE, MAX_BYTES, verify_grants
+try:
+    if __package__:
+        from .p0_mysql_metadata_grants_guard import DATABASE, MAX_BYTES, verify_grants
+    else:
+        # -I omits the script directory; use only this fixed sibling module.
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from p0_mysql_metadata_grants_guard import DATABASE, MAX_BYTES, verify_grants
+except (ImportError, OSError):
+    print("P0_METADATA_GRANTS: BLOCK", file=sys.stderr)
+    sys.exit(2)
 
 
 class PrivateParser(argparse.ArgumentParser):
