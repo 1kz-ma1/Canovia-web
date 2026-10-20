@@ -166,7 +166,16 @@ def rehearse(series, artifacts, expected=114):
                  "ORDER BY TABLE_NAME,INDEX_NAME,SEQ_IN_INDEX; "
                  "SELECT TRIGGER_NAME,DEFINER,SQL_MODE,CHARACTER_SET_CLIENT,COLLATION_CONNECTION,DATABASE_COLLATION "
                  "FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA=DATABASE() ORDER BY TRIGGER_NAME")
-    schema = sql(source, schema_sql) + sql(source, extra_sql)
+    table_names = sql(source, 'SELECT TABLE_NAME FROM information_schema.TABLES '
+                      'WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME').decode('ascii').splitlines()
+    create_sql = ';'.join('SHOW CREATE TABLE ' + quote(name) for name in table_names)
+
+    def shape(container):
+        # Includes AUTO_INCREMENT high-water marks, generated expressions,
+        # row format and all CREATE options in addition to section metadata.
+        return sql(container, schema_sql) + sql(container, extra_sql) + sql(container, create_sql)
+
+    schema = shape(source)
     before = dump(source, data_only=True)
     source_uuid = sql(source, 'SELECT @@server_uuid')
     source_id = state['Id']
@@ -224,7 +233,7 @@ def rehearse(series, artifacts, expected=114):
         def verify():
             parity(sql(target_id, 'SELECT COUNT(*) FROM migrations').strip(), str(expected).encode(),
                    'RESTORED_LEDGER_MISMATCH')
-            parity(schema, sql(target_id, schema_sql) + sql(target_id, extra_sql), 'RESTORED_SCHEMA_MISMATCH')
+            parity(schema, shape(target_id), 'RESTORED_SCHEMA_MISMATCH')
             checked = orphans(target_id)
             parity(before, dump(target_id, data_only=True), 'RESTORED_DATA_MISMATCH')
             return checked
@@ -253,8 +262,8 @@ def rehearse(series, artifacts, expected=114):
             parity(trigger_probe(target_id).strip(), b'1', 'RESTORED_TRIGGER_NOT_EFFECTIVE')
             sql(target_id, 'UPDATE plan_members SET user_id=(SELECT user_id FROM plans '
                 'WHERE id=plan_members.plan_id) WHERE id>0', deny=1644)
-            sql(target_id, 'INSERT INTO learning_context_source_epochs(plan_id,epoch) '
-                'SELECT plan_id,1 FROM learning_context_source_epochs LIMIT 1', deny=1062)
+            sql(target_id, 'INSERT INTO learning_context_source_epochs(plan_id,epoch,last_mutation_kind) '
+                "SELECT plan_id,1,'synthetic_restore_probe' FROM learning_context_source_epochs LIMIT 1", deny=1062)
             cases['restored_trigger_binding_and_unique_enforced'] = True
             # A client may succeed while omitting invisible triggers. Refuse
             # either client failure or full-schema mismatch; neither is PASS.
@@ -268,7 +277,7 @@ def rehearse(series, artifacts, expected=114):
                 cases['trigger_invisible_export_rejected'] = True
             restore(payload)
             sql(target_id, 'SET FOREIGN_KEY_CHECKS=0; INSERT INTO learning_context_source_epochs'
-                '(plan_id,epoch) VALUES (999999999,1); SET FOREIGN_KEY_CHECKS=1;')
+                "(plan_id,epoch,last_mutation_kind) VALUES (999999999,1,'synthetic_restore_probe'); SET FOREIGN_KEY_CHECKS=1;")
             rejected(verify, 'RESTORED_FOREIGN_KEY_ORPHAN')
             cases['orphan_rows_rejected'] = True
             restore(payload)
@@ -288,7 +297,7 @@ def rehearse(series, artifacts, expected=114):
         restore(payload)
         verify()
         parity(before, dump(source, data_only=True), 'SOURCE_WRITES_DURING_REHEARSAL')
-        parity(schema, sql(source, schema_sql) + sql(source, extra_sql), 'SOURCE_DDL_DURING_REHEARSAL')
+        parity(schema, shape(source), 'SOURCE_DDL_DURING_REHEARSAL')
         cases['source_data_and_schema_unchanged'] = True
     finally:
         cleanup(target_id, run, source, users_created)
