@@ -2,7 +2,7 @@
 """B operator checklist rehearsal ONLY. No database client or approval issuer.
 
 All declarations are anonymous and unverified. Every output forbids execution.
-Only read-only local Git subprocesses are used; nothing fetches or connects.
+Only read-only local Git/source subprocesses are used; nothing fetches or connects.
 """
 import argparse
 import ast
@@ -17,7 +17,6 @@ import sys
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from integrated_release20_audit import source
 from p0_mysql_metadata_grants_input import read_grants as read_input
 from release488_runtime_ddl_restore_gate import unique_keys
 
@@ -66,14 +65,27 @@ def decode(raw):
         raise Block('INPUT_REJECTED')
     def reject(_):
         raise Block('INPUT_REJECTED')
-    return json.loads(raw, object_pairs_hook=unique_keys, parse_constant=reject, parse_float=reject)
+    value = json.loads(raw, object_pairs_hook=unique_keys, parse_constant=reject, parse_float=reject)
+    stack = [(value, 0)]
+    while stack:
+        item, depth = stack.pop()
+        if depth > 16:
+            raise Block('INPUT_REJECTED')
+        if isinstance(item, dict): stack.extend((v, depth + 1) for v in item.values())
+        elif isinstance(item, list): stack.extend((v, depth + 1) for v in item)
+    return value
+
+
+def local_env():
+    return {'PATH': os.defpath, 'LC_ALL': 'C', 'GIT_CONFIG_NOSYSTEM': '1',
+            'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_TERMINAL_PROMPT': '0',
+            'GIT_NO_REPLACE_OBJECTS': '1'}
 
 
 def git(root, *args):
     result = subprocess.run(['git', '--no-replace-objects', '-c', 'core.fsmonitor=false',
         '-c', 'core.hooksPath=/nonexistent', '-C', str(root), *args], capture_output=True,
-        timeout=20, env={'PATH': os.defpath, 'LC_ALL': 'C', 'GIT_CONFIG_NOSYSTEM': '1',
-                         'GIT_CONFIG_GLOBAL': '/dev/null', 'GIT_TERMINAL_PROMPT': '0'})
+        timeout=20, env=local_env())
     if result.returncode or len(result.stdout) > 8 * 1024 * 1024:
         raise Block('LOCAL_SOURCE_REJECTED')
     return result.stdout
@@ -96,9 +108,7 @@ def integrity(root, head):
             raise Block('FIXED_REF_MISMATCH')
     if git(root, 'rev-parse', SOURCE + '^{tree}').decode().strip() != TREE:
         raise Block('SOURCE_MISMATCH')
-    # Reuse the unchanged ledger/source implementation. No remote Git calls.
-    # Reject replacement/ambient Git overrides before using its legacy helper.
-    if git(root, 'for-each-ref', 'refs/replace') or any(k.startswith('GIT_') for k in os.environ):
+    if git(root, 'for-each-ref', 'refs/replace'):
         raise Block('GIT_OVERRIDE_REJECTED')
     protected = ('scripts/ci/integrated_release20_audit.py',
                  'scripts/ci/p0_mysql_full_ledger_offline_check.py',
@@ -108,9 +118,6 @@ def integrity(root, head):
     for path in protected:
         if git(root, 'show', head + ':' + path) != git(root, 'show', BASE + ':' + path):
             raise Block('DEPENDENCY_CHANGED')
-    facts = source(root, SOURCE)
-    if facts['migration_seal'] != SEAL:
-        raise Block('SOURCE_MISMATCH')
     # Confirm actual tracked bytes, even when status lies/hidden flags are set.
     tracked = {}
     for line in git(root, 'ls-tree', '-r', head).decode().splitlines():
@@ -127,6 +134,18 @@ def integrity(root, head):
         tracked[path] = blob
     if 'scripts/ci/e858_b_offline.py' not in tracked:
         raise Block('CHECKER_NOT_TRACKED')
+    # Reuse the unchanged source implementation in a fixed local-only child,
+    # after checking its bytes, with no ambient credential/Git option env.
+    code = """import json,pathlib,sys
+root=pathlib.Path(sys.argv[1]);sys.path.insert(0,str(root/'scripts/ci'))
+from integrated_release20_audit import source
+facts=source(root,'e858b9c855970fbe73f37a2d60c9db6525b132d6')
+print(json.dumps([facts['migration_seal'],len(facts['baseline']),len(facts['candidate'])]))
+"""
+    facts = subprocess.run([sys.executable, '-I', '-B', '-c', code, str(root)],
+                           capture_output=True, timeout=20, env=local_env())
+    if facts.returncode or len(facts.stdout) > 1024 or json.loads(facts.stdout) != [SEAL, 94, 114]:
+        raise Block('SOURCE_MISMATCH')
     # Read only literal manifest constants from the fixed 797 blob, not its code.
     constants = {}
     tree = ast.parse(git(root, 'show', CONTRACT + ':scripts/ci/e858_approval_offline/contracts.py'))
