@@ -197,10 +197,15 @@ def run():
             try: state = probe.state(s.cid)
             except Exception as error:
                 fresh = Observer()
-                try: fresh_state = fresh.state(s.cid)
+                try:
+                    fresh_state = fresh.state(s.cid)
+                    control_state = fresh.state(probe.conn.thread_id())
                 finally: fresh.close()
                 raise Block('OBSERVER_CHANNEL_FAILED', dict(
                     fresh_channel_worked=True, remote_running=fresh_state['running'],
+                    control_session_exists=control_state['exists'], control_session_running=control_state['running'],
+                    socket_fds_distinct=s.socket.fileno() != probe.conn._sock.fileno() if probe.conn._sock else True,
+                    mysql_code=error.args[0] if error.args else None,
                     original_timed_out='timed out' in str(error))) from None
             proof = s.abort(); require(proof['verified'])
             return dict(blocked=True, remote_running_after_local_timeout=state['running'], **proof)

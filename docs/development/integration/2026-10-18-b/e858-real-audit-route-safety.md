@@ -64,6 +64,27 @@
 
 **Bの次の技術課題は1件**：固定allowlist/limitsを維持する、同一VERIFY_IDENTITY TLS session内のQ0/Q1→metadata→postflightと異常時remote query/接続終了の検証設計。#796の別client方式やlocal kill成功だけを実session/remote停止の証拠にしない。実接続機能を有効化せず、local fake/隔離環境で先にレビュー可能な設計と負例を用意する。現段階のowner操作はB0〜B4と手続上の再実行保証差の**無接続レビュー1件のみ**。A案authority/store選定をBの必須条件として再要求しない。
 
+### B 隔離TLS transportとremote終了の実証（2026-10-20、実Aivenは対象外）
+
+本節はB1末尾の「次の技術課題」の実装差分。`scripts/ci/e858_tls_host.py` はMySQL系列とclean tooling HEADだけを受け付け、**自分で作成したinternal Docker networkの固定合成hostだけ**へ通信する。endpoint/port/credential/CA入力、実行許可スイッチ、実Aiven connectorはない。#804のオフラインcheckerと旧監査guardは変更しない。
+
+- hostは毎回テスト専用CA・SAN付きserver証明書・期限切れ証明書を作り、秘密鍵はserver側だけへmount。workerにはpublic CA・固定Git blobのSQL・匿名manifestだけを渡す。コンテナは公開portなし、単一internal network、workerはread-only filesystemでDocker socket/host credentialを持たない。依存wheelはhost側TLSで取得して固定SHAを照合し、image内ではnetworkなしでinstallする。認証情報は合成固定値のみ。
+- PyMySQL 1.1.2のSSLContextはCERT_REQUIRED＋hostname検証＋TLS1.2以上。serverのSSL capabilityが無ければpassword送信前に拒否。暗黙/明示の2回目connectを拒否し、同一connection object/socket/CONNECTION_IDでQ0→Q1→固定17処理→postflightを行う。server UUIDやconnection IDだけをTLS証明にしない。
+- metadata SQLは#795の14 blobを無変更で再利用。前後の固定 `SELECT CONNECTION_ID()` と `SET SESSION max_execution_time=10000` は**隔離fixture envelope内の補助SQL**であり、旧bundleへ混ぜない。将来の実運用で制御/観測SQLを使うには、対象・追加接続・操作scopeの別審査が必要。
+- query10秒/収集120秒、cell128KiB/row256KiB/section8MiB/total16MiBと旧行capを維持。パケットを読む前にもrow/total上限を適用する。タイマーはsocketをshutdownして新規収集を止め、結果を破棄して再実行を拒否する。テストでは0.25秒/0.12秒へ短縮し、上限増加を拒否する。緊急終了確認は別のbounded制御処理で、収集期限の延長やmetadata再取得ではない。
+
+**終了の証拠**：クライアント例外/close/SIGKILLだけではremote終了にしない。独立した合成root oracleがserver UUIDとperformance_schemaの対象session有無・実行状態を観測する。終了要求(KILL QUERY/KILL CONNECTION)の失敗フラグと、query終了・connection消滅の観測を分ける。観測失敗・observer切断・権限不足・connection残存は `REMOTE_TERMINATION_UNVERIFIED`。後続のテスト管理cleanupに成功しても、元のUNVERIFIEDをPASSへ戻さない。失敗したSessionは再利用不可で、別Sessionの作成を本物の新承認と扱わない。
+
+**権限境界**：管理rootは隔離環境の試験oracle/合成DDL/最後の掃除専用であり、本番inspectorへPROCESS/CONNECTION_ADMIN等を要求・GRANTしない。REFERENCES schema＋SELECT ledgerだけの同一principal別接続による自身sessionの観測/停止も別fixtureで評価する。別principalに対するKILL権限拒否と、見えないsessionを「不在」と誤認しない負例を含める。実Aivenでの可視性・KILL可否・proxy/運用制約は未検証で、合成MySQLの標準動作から推定しない。
+
+**試験範囲の限界**：3テーブルと94 migration名のledgerはTLS metadata取込用の最小構造fixtureで、旧94→新114の再リハーサルではない。既存referenceとのstrict比較は意図的にBLOCKを要求する。TRIGGER不可視性は解消しない。移行/名前差/独立logical restoreの証拠は既存CIを再利用する。
+
+**MySQL timeoutの限界**：`max_execution_time` は主にread-only SELECTのstatement制限であり、SHOW/SET・全SQL・connection寿命を一括保証しない。長時間SELECTのerror3024と、その後のconnection残存/別途終了を検証する。通信断やclient死亡時は、サーバー側の実状態を独立観測しない限り終了扱いしない。接続timeout fixtureはTCP確立後のMySQL greeting無応答を対象とし、実ネットワークのSYN timeoutやAiven障害の再現とはしない。
+
+検証状態・各engineの件数・CI runと独立tooling SHAはPRとIssue #488へ記録する。合成実通信に成功した場合のレベルは `ISOLATED_MYSQL_TLS_TESTED` / `ISOLATED_REMOTE_TERMINATION_TESTED`。**常に `REAL_AIVEN_UNVERIFIED` / `REAL_OPERATOR_GO_NOT_GRANTED` / `PRODUCTION_NO_GO_HOLD`**。
+
+**実監査までの残作業（接続依頼ではない）**：実principalのまま利用できる独立した同一対象の終了観測/制御経路、control channel故障時の既存認可operatorへの引継ぎ、private対象/CA/本人binding、管理Macでの実行・中断挙動を別審査する。追加control接続やKILLを旧metadata-only承認へ暗黙に含めない。既存権限で成立しない場合はSTOPし、拡権を自動解決策にしない。本番経路は未実装のまま閉じる。B0〜B4の無接続レビューと、実SQL一回の個別GOは分離する。
+
 ## 固定対象と再利用
 
 - 作業base main `7258a02ca3599f4efd3afacbd91d5017caeb9842`。本PRのHEADは独立tooling候補であり、固定監査候補の代わりにしない。
