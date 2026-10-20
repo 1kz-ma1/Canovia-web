@@ -67,7 +67,8 @@ class ClosedBoundaryTests(unittest.TestCase):
     def test_allowlist_rejection_latches_failure_and_refuses_retry(self):
         s = object.__new__(t.Session)
         s.closed = False; s.failed = False; s.lock = threading.Lock(); s.bundle = {'identity': b'SELECT 1'}
-        with self.assertRaisesRegex(t.Block, 'SQL_NOT_ALLOWLISTED'): s.read('identity', b'SELECT SLEEP(30)')
+        with patch.object(s, 'abort'), self.assertRaisesRegex(t.Block, 'SQL_NOT_ALLOWLISTED'):
+            s.read('identity', b'SELECT SLEEP(30)')
         self.assertTrue(s.failed)
         with self.assertRaisesRegex(t.Block, 'NEW_OWNER_GO_REQUIRED'): s.read('identity')
 
@@ -84,6 +85,7 @@ class ClosedBoundaryTests(unittest.TestCase):
         for mysql_code in (1094, 1095):
             observer = object.__new__(t.Observer); observer.fault = None; observer.conn = object()
             with patch.object(t, 'rows', side_effect=t.pymysql.OperationalError(mysql_code, CANARY)), \
+                 patch.object(observer, 'state', return_value=dict(exists=True,running=True)), \
                  patch.object(observer, 'gone', return_value=dict(query_ended=False, connection_ended=False, verified=False)):
                 result = observer.terminate(123)
                 self.assertFalse(result['verified'])

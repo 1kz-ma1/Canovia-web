@@ -86,7 +86,7 @@ def connection(role='inspector', fault=None, sock=None):
 
 def rows(conn, sql, args=None):
     """Private test observer/bootstrap only, never metadata ingress."""
-    with conn.cursor() as cursor:
+    with conn.cursor(pymysql.cursors.Cursor) as cursor:
         cursor.execute(sql, args)
         return cursor.fetchall()
 
@@ -98,6 +98,7 @@ class Observer:
         self.uuid = rows(self.conn, 'SELECT @@server_uuid')[0][0]
         self.fault = fault
         self.role = role
+        self.conn._read_timeout = .5
 
     def state(self, cid):
         if self.fault == 'unobservable' or self.role == 'other':
@@ -124,6 +125,11 @@ class Observer:
 
     def terminate(self, cid):
         result = dict(query_request_failed=False, connection_request_failed=False)
+        try:
+            if not self.state(cid)['exists']:
+                return dict(result, **self.gone(cid))
+        except Exception:
+            return dict(result, requests_not_sent=True, **self.gone(cid))
         for operation, key in [('QUERY', 'query_request_failed'), ('CONNECTION', 'connection_request_failed')]:
             try:
                 if self.fault == 'kill_query' and operation == 'QUERY': raise Block('TEST_REQUEST_FAILED')
@@ -160,6 +166,7 @@ class Session:
         self.ledger = None
         manifest = json.loads(Path('/synthetic/manifest.json').read_text())
         self.order, self.caps = manifest['order'], manifest['caps']
+        self.series = manifest['series']
         self.bundle = {k: (Path('/synthetic/queries') / (k + '.sql')).read_bytes() for k in self.caps}
         actual = {k: hashlib.sha256(v).hexdigest() for k, v in self.bundle.items()}
         seal = hashlib.sha256(json.dumps(actual, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
@@ -228,7 +235,7 @@ class Session:
                 raise Block('SESSION_CHANGED')
             if key == 'identity':
                 fields = value.rstrip('\n').split('\t')
-                if len(fields) != 4 or fields[0] != DB or fields[1] != USER + '@%' or fields[3] != self.observer.uuid:
+                if len(fields) != 4 or fields[0] != DB or fields[1] != USER + '@%' or fields[3] != self.observer.uuid or not fields[2].startswith(self.series + '.'):
                     raise Block('IDENTITY_CHANGED')
                 if self.identity is not None and value != self.identity: raise Block('IDENTITY_CHANGED')
                 self.identity = value
@@ -242,6 +249,7 @@ class Session:
             return value
         except Exception:
             self.failed = True
+            self.abort()
             raise
         finally:
             self.lock.release()
@@ -254,10 +262,13 @@ class Session:
     def finish(self):
         self.closed = True
         self.conn.close()
-        return self.observer.gone(self.cid)
+        self.termination = self.observer.gone(self.cid)
+        return self.termination
 
     def abort(self):
+        if hasattr(self, 'termination'): return self.termination
         self.closed = True; self.failed = True
         try: self.conn.close()
         except Exception: pass
-        return self.observer.terminate(self.cid)
+        self.termination = self.observer.terminate(self.cid)
+        return self.termination

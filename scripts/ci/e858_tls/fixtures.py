@@ -75,7 +75,7 @@ class Relay:
                     if not data: return  # Keep upstream fd open for parent observation.
                     if sock is self.client: self.client_payload += len(data)
                     (self.server if sock is self.client else self.client).sendall(data)
-        except OSError: pass
+        except (OSError, ValueError): pass
 
     def close(self):
         self.stop.set()
@@ -138,7 +138,9 @@ def run():
             elif kind == 'swap':
                 s.read('identity'); replacement = connection(); s.conn = replacement
                 try: s.read('grants')
-                finally: replacement.close(); s.original.close()
+                finally:
+                    if replacement.open: replacement.close()
+                    if s.original.open: s.original.close()
             elif kind == 'postflight':
                 for key in s.order[:15]: s.read(key)
                 rows(s.conn, 'USE information_schema'); s.read('identity')
@@ -243,6 +245,7 @@ def run():
         c = connection(); cid = c.thread_id()
         thread = threading.Thread(target=lambda: swallow(lambda: rows(c, 'SELECT SLEEP(30)')))
         thread.start(); wait_running(admin, cid)
+        if kind == 'observer_disconnect': rows(admin.conn, 'KILL CONNECTION %s', (observer.conn.thread_id(),))
         proof = observer.terminate(cid)
         if kind == 'kill_query': require(proof['query_request_failed'] and proof['verified'])
         else: require(not proof['verified'])
@@ -308,7 +311,7 @@ def run():
         case('CLIENT_SIGKILL', process_kill)
         case('COMMUNICATION_LOSS', relay_disconnect)
         case('CONNECT_GREETING_TIMEOUT', handshake_timeout)
-        for kind in ('kill_query', 'kill_connection', 'unobservable'):
+        for kind in ('kill_query', 'kill_connection', 'unobservable', 'observer_disconnect'):
             case('REMOTE_' + kind.upper(), lambda k=kind: failed_cleanup(k))
         case('REMOTE_PERMISSION_DENIED', permission_denial)
         case('SAME_PRINCIPAL_TERMINATION', same_principal_cleanup)
