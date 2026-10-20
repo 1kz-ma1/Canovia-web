@@ -105,7 +105,14 @@ class Observer:
             raise Block('REMOTE_TERMINATION_UNVERIFIED')
         if rows(self.conn, 'SELECT @@server_uuid')[0][0] != self.uuid:
             raise Block('OBSERVER_SERVER_CHANGED')
-        found = rows(self.conn, 'SELECT COMMAND FROM information_schema.PROCESSLIST WHERE ID=%s', (int(cid),))
+        # The root fixture oracle uses the non-locking performance_schema view.
+        # information_schema.PROCESSLIST can itself wait on a terminating THD.
+        # The separate same-principal probe deliberately retains the limited
+        # user's own-session view; its failure never becomes an absence proof.
+        sql = ('SELECT PROCESSLIST_COMMAND FROM performance_schema.threads WHERE PROCESSLIST_ID=%s'
+               if self.role == 'root' else
+               'SELECT COMMAND FROM information_schema.PROCESSLIST WHERE ID=%s')
+        found = rows(self.conn, sql, (int(cid),))
         return dict(exists=bool(found), running=bool(found and found[0][0] != 'Sleep'))
 
     def gone(self, cid, seconds=2):

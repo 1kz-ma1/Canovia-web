@@ -302,7 +302,7 @@ def run():
         elapsed = time.monotonic() - begin
         state = admin.state(cid)
         require(error_code == 3024 and elapsed < 3 and not state['running'])
-        require(admin.terminate(cid)['verified']); c.close()
+        c.close(); require(admin.gone(cid)['verified'])
         return dict(server_error_3024=True, remote_query_ended=True, connection_required_separate_close=True)
 
     try:
