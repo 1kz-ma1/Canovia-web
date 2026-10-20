@@ -32,7 +32,8 @@ class Block(Exception): pass
 
 
 def run(argv, data=None, timeout=180):
-    proc = subprocess.run(argv, input=data, capture_output=True, timeout=timeout)
+    env = dict(os.environ, DOCKER_BUILDKIT='0') if argv[:2] == ['docker', 'build'] else None
+    proc = subprocess.run(argv, input=data, capture_output=True, timeout=timeout, env=env)
     if proc.returncode:
         if os.environ.get('GITHUB_ACTIONS') != 'true':
             debug = Path('/tmp') / ('canovia-e858-tls-command-' + str(os.getuid()) + '.log')
