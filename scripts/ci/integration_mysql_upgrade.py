@@ -65,6 +65,9 @@ def run(series, artifacts, write_reference=False, proposal_reference=False):
         command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'snapshot', seal])
         baseline = snapshot(sql(metadata_sql))
         old_ledger = parse_full_ledger(sql(ledger_sql))
+        # Prove the actual pre-DDL recovery point before changing this owned DB.
+        command([sys.executable, '-B', 'scripts/ci/integration_disposable_restore.py',
+                 '--series', series, '--expected-ledger', '94', '--artifacts', str(artifacts)])
         command(['php', 'artisan', 'canovia:release-schema-ready'], must_fail=True)
         additions = sorted(set(src['candidate']) - set(src['baseline']))
         for migration in additions[:-1]:
