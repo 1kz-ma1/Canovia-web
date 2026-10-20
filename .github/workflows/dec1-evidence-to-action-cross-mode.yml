@@ -27,6 +27,10 @@ jobs:
           coverage: none
       - name: Install locked PHP dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Create disposable non-secret Laravel env file
+        run: |
+          cp .env.example .env
+          test -f .env
       - name: Syntax check isolated integration test
         run: php -l tests/Feature/Dec1EvidenceToActionCrossModeTest.php
       - name: Exercise recorded Study + Development state and owner separation
