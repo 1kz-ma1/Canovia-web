@@ -143,7 +143,7 @@ def rehearse(series, head):
                     '--require-secure-transport=ON', '--innodb-buffer-pool-size=32M',
                     '--innodb-redo-log-capacity=64M']
                 if suffix == 'server': argv[argv.index('--tmpfs'):argv.index('--tmpfs')] = ['--network-alias', 'mismatch.synthetic.invalid']
-                run(argv); owned.append(name)
+                owned.append(name); run(argv)
                 until = time.monotonic() + 90
                 while True:
                     ready = subprocess.run(['docker', 'exec', '-e', 'MYSQL_PWD=' + ROOT_PASSWORD, name,
@@ -152,8 +152,8 @@ def rehearse(series, head):
                     if time.monotonic() >= until: raise Block('ISOLATED_SERVER_NOT_READY')
                     time.sleep(.25)
                 ssl_state = run(['docker', 'exec', '-e', 'MYSQL_PWD=' + ROOT_PASSWORD, name,
-                    'mysql', '--protocol=socket', '-uroot', '-Nse', "SHOW VARIABLES LIKE 'have_ssl'"])
-                if b'YES' not in ssl_state:
+                    'mysql', '--protocol=socket', '-uroot', '-Nse', "SHOW GLOBAL STATUS LIKE 'Ssl_server_not_after'"])
+                if not ssl_state.strip().split(b'\t')[-1]:
                     logs = run(['docker', 'logs', name])
                     if os.environ.get('GITHUB_ACTIONS') != 'true':
                         info = dict(cert_permission_error=b'Permission denied' in logs,
@@ -213,6 +213,10 @@ def rehearse(series, head):
             if network_created:
                 try: run(['docker', 'network', 'rm', network])
                 except Exception: cleanup = False
+            try:
+                if run(['docker', 'ps', '-aq', '--filter', 'label=' + LABEL + '=' + token]).strip():
+                    cleanup = False
+            except Exception: cleanup = False
             subprocess.run(['docker', 'image', 'rm', image], capture_output=True)
             if not cleanup: raise Block('ISOLATED_CLEANUP_UNVERIFIED')
     result['owned_containers_network_certificates_removed'] = True

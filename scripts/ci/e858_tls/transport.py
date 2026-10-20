@@ -98,7 +98,7 @@ class Observer:
         self.uuid = rows(self.conn, 'SELECT @@server_uuid')[0][0]
         self.fault = fault
         self.role = role
-        self.conn._read_timeout = .5
+        self.conn._read_timeout = 2
 
     def state(self, cid):
         if self.fault == 'unobservable' or self.role == 'other':
