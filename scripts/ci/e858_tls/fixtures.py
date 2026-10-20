@@ -126,6 +126,8 @@ def run():
                 rows(s.conn, 'USE information_schema'); s.read('identity')
             elif kind == 'disconnect':
                 s.read('identity'); rows(admin.conn, 'KILL CONNECTION %s', (s.cid,)); s.read('grants')
+            elif kind == 'reconnect':
+                s.conn.close(); s.conn.ping(reconnect=True)
             elif kind == 'concurrent':
                 s.lock.acquire()
                 try: s.read('identity')
@@ -189,6 +191,7 @@ def run():
         return dict(client_link_lost=True, remote_running_after_disconnect=before['running'], **proof)
 
     def handshake_timeout():
+        before = rows(admin.conn, "SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE USER='e858_tls_inspector'")[0][0]
         relay = Relay(blackhole=True)
         sock = socket.create_connection(('127.0.0.1', relay.port), timeout=1)
         from transport import StrictConnection
@@ -198,6 +201,7 @@ def run():
         try: c.connect(sock=sock)
         except Exception:
             require(time.monotonic() - begin < 2)
+            require(rows(admin.conn, "SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE USER='e858_tls_inspector'")[0][0] == before)
             return dict(blocked=True, phase='MYSQL_GREETING_TIMEOUT', remote_mysql_session_created=False)
         finally: c.close(); relay.close()
         raise Block('HANDSHAKE_TIMEOUT_DID_NOT_BLOCK')
@@ -263,7 +267,7 @@ def run():
             except Block: return dict(blocked_before_connect=True)
             raise Block('WEAK_TLS_ACCEPTED')
         case('TLS_WEAKENING', weak)
-        for fault in ('sql', 'order', 'swap', 'postflight', 'disconnect', 'concurrent', 'cell', 'row'):
+        for fault in ('sql', 'order', 'swap', 'postflight', 'disconnect', 'reconnect', 'concurrent', 'cell', 'row'):
             case('POLICY_' + fault.upper(), lambda f=fault: policy_negative(f))
         for kind in ('excess', 'missing'): case('GRANTS_' + kind.upper(), lambda k=kind: privilege(k))
         case('QUERY_TIMEOUT', lambda: timeout('query'))

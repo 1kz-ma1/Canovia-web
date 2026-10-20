@@ -122,8 +122,15 @@ def rehearse(series, head):
         try:
             run(['docker', 'network', 'create', '--internal', '--label', LABEL + '=' + token, network])
             network_created = True
-            dockerfile = b'FROM python:3.12-slim\nRUN pip install --no-cache-dir PyMySQL==1.1.2\n'
-            run(['docker', 'build', '--label', LABEL + '=' + token, '-t', image, '-'], dockerfile, timeout=300)
+            build = work / 'build'; build.mkdir()
+            run([sys.executable, '-m', 'pip', 'download', '--no-deps', '--only-binary=:all:',
+                 '--dest', str(build), 'PyMySQL==1.1.2'])
+            wheel = build / 'pymysql-1.1.2-py3-none-any.whl'
+            if hashlib.sha256(wheel.read_bytes()).hexdigest() != 'e6b1d89711dd51f8f74b1631fe08f039e7d76cf67a42a323d3178f0f25762ed9':
+                raise Block('ISOLATED_DEPENDENCY_HASH_REJECTED')
+            (build / 'Dockerfile').write_text('FROM python:3.12-slim\nCOPY *.whl /tmp/\nRUN pip install --no-index /tmp/*.whl && rm /tmp/*.whl\n')
+            run(['docker', 'build', '--network=none', '--label', LABEL + '=' + token,
+                 '-t', image, str(build)], timeout=300)
             for suffix, hostname in [('server', 'mysql.synthetic.invalid'), ('expired', 'expired.synthetic.invalid')]:
                 name = stem + '-' + suffix
                 argv = ['docker', 'run', '-d', '--name', name, '--label', LABEL + '=' + token,
