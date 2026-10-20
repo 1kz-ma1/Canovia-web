@@ -1,0 +1,66 @@
+name: E858 Metadata Input Safety
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
+      - 'scripts/ci/p0_mysql_metadata_grants_input.py'
+      - 'tests/ci/test_p0_mysql_metadata_grants*.py'
+      - '.github/workflows/e858-metadata-input-safety.yml'
+      - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  input-safety:
+    name: Private input (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {os: ubuntu-latest, python: '3.9'}
+          - {os: ubuntu-latest, python: '3.12'}
+          - {os: macos-15, python: '3.12'}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Bounded nonblocking file input and secret-free CLI errors
+        run: python3 -B -m unittest discover -s tests/ci -p 'test_p0_mysql_metadata_grants*.py' -v
+
+  pinned-contracts:
+    name: Unchanged 797 synthetic contracts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - name: Reuse immutable synthetic contracts without rebaselining old guards
+        env:
+          APPROVAL_SHA: 9f7d248e87bd54211b76d9b85effd72ee385daed
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse origin/audit/e858-approval-tls-offline-gate)" = "$APPROVAL_SHA"
+          fixture="$RUNNER_TEMP/pinned-797"
+          git clone --quiet --shared "$GITHUB_WORKSPACE" "$fixture"
+          git -C "$fixture" checkout --quiet --detach "$APPROVAL_SHA"
+          test "$(git -C "$fixture" rev-parse HEAD)" = "$APPROVAL_SHA"
+          (cd "$fixture" && python3 -B -m unittest discover -s tests/ci -p test_e858_approval_offline.py -v)
+          test -z "$(git -C "$fixture" status --porcelain)"
+          # Does not run the old packet with moving main refs, adopt its HEAD,
+          # or turn synthetic HMAC / memory nonce / TLS fixtures into real GO.
