@@ -10,10 +10,9 @@ This validator makes NO database connection or permission changes.
 from __future__ import annotations
 
 import argparse
-import os
 import re
-import stat
 import sys
+from pathlib import Path
 
 MAX_BYTES = 16384
 DATABASE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
@@ -59,46 +58,15 @@ def verify_grants(raw: str, database: str) -> bool:
     return "metadata" in found and "ledger" in found
 
 
-class PrivateParser(argparse.ArgumentParser):
-    def error(self, message):
-        # argparse's default diagnostic echoes untrusted argument values.
-        raise ValueError("INPUT_REJECTED")
-
-
-def read_grants(path: str) -> bytes:
-    # Nonblocking open prevents a FIFO from hanging before fstat. NOFOLLOW
-    # protects the final path component; this is not a trusted-directory or
-    # credential loader, and a local file is never evidence of authorization.
-    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_NONBLOCK"):
-        raise ValueError("INPUT_REJECTED")
-    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--database", required=True)
+    parser.add_argument("--input", required=True)
+    args = parser.parse_args()
     try:
-        info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_BYTES:
-            raise ValueError("INPUT_REJECTED")
-        # Also bound the read if the regular file grows after fstat.
-        with os.fdopen(fd, "rb", closefd=False) as stream:
-            raw = stream.read(MAX_BYTES + 1)
-        if len(raw) > MAX_BYTES:
-            raise ValueError("INPUT_REJECTED")
-        return raw
-    finally:
-        os.close(fd)
-
-
-def main(argv=None) -> int:
-    try:
-        parser = PrivateParser(add_help=False, allow_abbrev=False)
-        parser.add_argument("--database", required=True, action="append")
-        parser.add_argument("--input", required=True, action="append")
-        args = parser.parse_args(argv)
-        if len(args.database) != 1 or len(args.input) != 1:
-            raise ValueError("INPUT_REJECTED")
-        if not DATABASE.fullmatch(args.database[0]):
-            raise ValueError("INPUT_REJECTED")
-        raw = read_grants(args.input[0])
-        accepted = verify_grants(raw.decode("ascii", errors="strict"), args.database[0])
-    except (OSError, UnicodeError, ValueError, TypeError, KeyboardInterrupt):
+        raw = Path(args.input).read_bytes()
+        accepted = verify_grants(raw.decode("ascii", errors="strict"), args.database)
+    except (OSError, UnicodeError, ValueError, TypeError):
         accepted = False
     if accepted:
         print("P0_METADATA_GRANTS: ACCEPT_METADATA_ONLY_LEDGER_SELECT")

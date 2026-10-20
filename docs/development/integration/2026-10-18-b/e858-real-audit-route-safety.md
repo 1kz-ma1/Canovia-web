@@ -15,11 +15,11 @@
 
 既存 `p0_mysql_metadata_grants_guard.py` はunknown引数をargparseのstderrへそのまま含め、入力ファイルを16KiB判定前に全読込していた。合成canaryで漏えいを確認した。FIFOではopenが停止する可能性もあった。
 
-同じCLIを修正し、引数不備・重複・省略形・割込は固定BLOCKのみ。最終pathのsymlinkを拒否し、nonblocking open後にregular fileを確認、statのサイズと最大16KiB+1の読込で成長後も制限する。必要なOS機能が無ければBLOCK。親directoryの信頼性・所有者・秘密保管・承認はこのloaderで証明しない。private directoryと保管条件の審査は別に必要。
+独立した `p0_mysql_metadata_grants_input.py` が元の `verify_grants` に委譲し、引数不備・重複・省略形・割込は固定BLOCKのみ。最終pathのsymlinkを拒否し、nonblocking open後にregular fileを確認、statのサイズと最大16KiB+1の読込で成長後も制限する。必要なOS機能が無ければBLOCK。親directoryの信頼性・所有者・秘密保管・承認はこのloaderで証明しない。private directoryと保管条件の審査は別に必要。
 
-REFERENCES schema + SELECT ledger + 任意USAGEという既存判定は変更しない。入力の受理は本人認証・対象確認・実接続許可を意味しない。connector、credential loader、authority、durable nonceは追加しない。旧#795の固定blobへ修正を遡及適用したとは扱わず、将来の実tooling採用時に別のsource/SQL/reference審査が必要。
+REFERENCES schema + SELECT ledger + 任意USAGEという既存判定は変更しない。入力の受理は本人認証・対象確認・実接続許可を意味しない。connector、credential loader、authority、durable nonceは追加しない。初回CIで旧guard変更が既存source pinに拒否されたため、guard本体を元のblobに戻し、入力保護だけ分離した。固定guard/旧CLIは変更せず、旧CLIを秘密情報の入力に使わない。将来の実tooling採用時に別のsource/SQL/reference審査が必要。
 
-追加のCLI/file負例と既存grants testsをLinux3.9/3.12・macOS3.12で実行。#797の既存30件を固定checkoutで再利用し、対象差・期限切れ・取消・replay・同時thread・不足/過剰権限・偽の承認・TLS差を再実装しない。#797の旧source guardはmoving mainに合わせて緩和せず、過去の受入証跡を保持する。既存Schema DiagnosticsのMySQL8.0/8.4もこの変更を検証する。
+追加のCLI/file負例と既存grants testsをLinux3.9/3.12・macOS3.12で実行。#797の既存30件を固定checkoutで再利用し、対象差・期限切れ・取消・replay・同時thread・不足/過剰権限・偽の承認・TLS差を再実装しない。#797の旧source guardはmoving mainに合わせて緩和せず、過去の受入証跡を保持する。既存Release20 Transition Safetyを本PRのHEADで実行し、Schema Diagnostics・全20移行・名前差/衝突/部分DDL・独立logical restoreのMySQL8.0/8.4、関連PHPを再利用検証する。
 
 ## 現ゲート（実環境に対する判定）
 

@@ -11,10 +11,10 @@ import types
 import unittest
 from unittest.mock import patch
 
-from scripts.ci import p0_mysql_metadata_grants_guard as guard
+from scripts.ci import p0_mysql_metadata_grants_input as guard
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "scripts/ci/p0_mysql_metadata_grants_guard.py"
+SCRIPT = ROOT / "scripts/ci/p0_mysql_metadata_grants_input.py"
 CANARY = "SYNTHETIC_PRIVATE_CANARY"
 ROWS = ("GRANT REFERENCES ON `synthetic_ci`.* TO `inspector_ci`@`%`\n"
         "GRANT SELECT ON `synthetic_ci`.`migrations` TO `inspector_ci`@`%`\n")

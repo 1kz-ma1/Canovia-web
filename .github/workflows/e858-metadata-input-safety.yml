@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
+      - 'scripts/ci/p0_mysql_metadata_grants_input.py'
       - 'tests/ci/test_p0_mysql_metadata_grants*.py'
       - '.github/workflows/e858-metadata-input-safety.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
