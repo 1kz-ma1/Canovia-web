@@ -65,6 +65,16 @@ def run(series, artifacts, write_reference=False, proposal_reference=False):
         command(['php', 'scripts/ci/integration_upgrade_fixture.php', 'snapshot', seal])
         baseline = snapshot(sql(metadata_sql))
         old_ledger = parse_full_ledger(sql(ledger_sql))
+        # Prove the actual pre-DDL recovery point before changing this owned DB.
+        command([sys.executable, '-B', 'scripts/ci/integration_disposable_restore.py',
+                 '--series', series, '--expected-ledger', '94', '--artifacts', str(artifacts)])
+        # Artifacts may be unavailable through a reviewer's download transport.
+        # Publish ONLY the child's fixed synthetic verdict, never its private log.
+        restored94 = json.loads((artifacts / (name + '-restore-94.json')).read_text())
+        if (restored94['candidate_sha'] != candidate or restored94['source_ledger'] != 94
+                or restored94['result'] != 'passed' or restored94['release_authorized'] is not False):
+            raise RuntimeError('Pre-DDL synthetic restore receipt rejected')
+        print(json.dumps(restored94), flush=True)
         command(['php', 'artisan', 'canovia:release-schema-ready'], must_fail=True)
         additions = sorted(set(src['candidate']) - set(src['baseline']))
         for migration in additions[:-1]:

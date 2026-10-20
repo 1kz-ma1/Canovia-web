@@ -2,6 +2,59 @@
 
 2026-10-18 JST。正本: [#787](https://github.com/1kz-ma1/Canovia-web/pull/787)、[#488](https://github.com/1kz-ma1/Canovia-web/issues/488)、[統合マスター](../../CANOVIA_INTEGRATION_FREEZE_RELEASE_MASTER_2026_10_16.md)、最新AGENTS/[workflow](../../../CANOVIA_DEVELOPMENT_WORKFLOW.md)。旧A案 #785/#786 は比較資料として保持し、merge/cherry-pick/closeしない。
 
+## 2026-10-20：Free Full記録と独立logical restoreの検証範囲
+
+正本の[owner Console記録](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6282189535)を更新根拠にする。
+**Freeで10/18〜20のFullバックアップ記録あり、Fork & Restore不可。Developer USD5/月もFork非対応**。
+Consoleの記録はowner提出で、こちらは実Aiven/Console/APIに接続していない。
+5ドルへの変更で解消すると案内せず、plan変更/再起動/課金を実行しない。
+[公式Free仕様](https://aiven.io/docs/products/mysql/concepts/mysql-free-tier) /
+[Developer仕様](https://aiven.io/docs/platform/concepts/service-pricing) /
+[論理移行](https://aiven.io/docs/products/mysql/howto/migrate-database-mysqldump)を参照。
+
+最新mainは[#799統合記録](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6281956917)の
+`bb1184f03564611c3c578148cccc049208aa953c`。固定監査候補/releaseはe858のまま、productionは15abdc9d。
+同記録の統合後Render Web/Static main・OFF・旧Live維持は**別sessionのread証拠**として扱う。
+今回の追加テストを固定releaseに直接反映/自動採用しない。#794〜#797/#513は変更しない。
+
+### 何を復元するか（別の証拠）
+
+| 経路 | 現在わかること | 証明できないこと |
+| --- | --- | --- |
+| Aivenが保持するFull/binlog | ownerがFull一覧を確認。Free/DeveloperでForkできない。 | 当該Fullの取得/展開/独立serviceへのrestore/PITR/可用性・復旧時間。mysqldumpを復元してもこのゲートは未達。 |
+| mysqldumpの論理コピー | 承認した時点のDBオブジェクト/行を別MySQLへコピーする別の復旧案。[旧e858 CI](https://github.com/1kz-ma1/Canovia-web/actions/runs/39201955575)は同一server内の別schema・移行後114だけを検証していた。 | provider Full/binlogの使用、PITR、取得時点より後のwrites、DB外ファイル/鍵/設定/IdP、実サービスの災害復旧。 |
+
+既存の全20移行/部分DDL/別名strict BLOCKの証拠は再利用する。
+今回の変更は既存`integration_disposable_restore.py`と呼出元/CI/testだけ：
+
+- 同じimage IDの**別container・別server UUID・空tmpfs datadir**へrestore。外部network/公開port/host mountなし。8.0→同8.0、8.4→同8.4をそれぞれ検証し、8.4→8.0 downgradeや実Aiven互換の証明にしない。同一CIホスト上の独立instanceであり、別ホスト/別provider/転送障害/災害ドメインは未検証。
+- 旧94＋合成user/Plan/Task/Attempt/同意・取消・監査/session seed直後にも復元を実行し、pre-DDL復旧点を追加。従来の114復元を保持。
+- DB全行のdump bytes、ledger、既存metadata SQLの全section＋index方向、trigger DEFINER/SQL mode/charset、実効charset・AUTO_INCREMENT到達値・生成式・row format/CREATE_OPTIONS等を比較。SHOW CREATE TABLEはrestore後に同じcharsetを明示表記する差があるため、その文字列を物理不一致の根拠にしない。既存strict metadata/hash判定は不変。全FKについて複合列順序を保ち、全child非NULLのorphanがないことも検査する。restore時のFOREIGN_KEY_CHECKS=0が遡及検査をしない点を補う。
+- 114ではtriggerが存在してもDEFINER不在で実行時1449となる負例、準備した合成principalでepoch更新・member再割当拒否・Plan UNIQUEを実動確認。DDL定義一致だけで実効性PASSにしない。
+- 最小合成export profile（SELECT/SHOW VIEW/TRIGGER、PROCESS/SUPER/DDL一般権限なし）でdump。data UPDATE/CREATE TABLE拒否を確認。ただし**TRIGGER権限はtrigger作成/削除も可能で、DBのread-only roleではない**。narrow exportでtrigger不可視/欠落があれば拒否する。既存metadata inspectorを流用/拡権しない。
+- 改変dump、mysqlがexit0でも不完全な入力、同件数のデータ差、orphan、FK欠損を拒否。非InnoDB/view/routine/event/不明inventoryは現profile外としてBLOCK。これらの不存在はowned CI adminによる観測であり、実本番の不可視性を解消しない。
+- dumpは合成RAM上だけ、raw SQL/metadata/client errorはstdout/artifactへ出さない。uploadは固定判定JSONだけ。targetとtmpfs破棄・追加した合成export principal削除を確認できない場合はBLOCK。負例間のDB初期化は新しい使い捨てtarget限定で、本番自動retry/rollback手順ではない。
+
+最終HEAD・CI・件数は当該PRとIssue #488に固定して記録する。source seal/SQL/reference/全114 migration/起動policyは変更しない。
+
+### 実論理バックアップを個別承認するための条件（まだ実行不可）
+
+| 条件 | 実行前に確定する内容 / STOP |
+| --- | --- |
+| 対象と権限 | exact service/DB/source SHA/engine8.4/担当operator/期限/対象データ/出口を私的に固定。現在のmetadata inspectorは全userデータSELECT権限を持たない。dump用principalと実行方式を別security reviewし、TRIGGERのDDL能力もowner判断。不可視オブジェクト、必要権限不明、managed policy不適合はSTOP。実GRANTは別承認、inspectorは拡権しない。 |
+| 整合性 | 全対象InnoDB、view/routine/event/trigger/DEFINERと依存を特権を持つ認可operatorが確認。single-transaction＋quick＋skip-lock-tables＋no-tablespaces＋GTID出力OFFは候補profileであり、未知のobjectを無視して走らせない。DDL併走は禁止。pre-DDL復旧点として全HTTP/session/worker/scheduler等のwriter fenceと取得時点を別承認で確定。online dump一般の整合性やABA検出を今回実証したとはしない。 |
+| TLS/秘密/データ保護 | 既存CAでVERIFY_IDENTITY、正しいhost/対象、専用login-path等を認可operatorが確認。password/DSNをargv/env/会話へ置かない。認可済み端末→暗号化stream/保管、owner管理key、0700領域/0600ファイル、保存地域/受取人/容量/期限を決定。raw dump・metadata・PIIをGitHub/CI/ChatGPT/ログへ出さない。dump取得はmetadata auditと別の実データexport承認。 |
+| 復元先 | sourceと別の承認済みMySQL8.4、十分な容量・version/collation/sql_mode/DEFINER権限・暗号化・network deny。外部OAuth/メール/queue/providerはOFF、誤配信や本番書込みを遮断。無料枠・新規有料resourceの可否と費用上限を先に判断。CI root/GRANTを本番へコピーしない。 |
+| 完全性/アプリ | dump checksum・終了status・全schema/行/FK/UNIQUE/trigger実効性・ledger・本人/他人/取消・ログイン/session/履歴を隔離環境で検査。DB system user/grants、APP_KEY、cookie/session設定、private blob、OAuth/外部状態はdumpだけで復元されず、別の鍵/設定/ファイル復旧票が必要。94復元は旧94対応code、114は新114対応code。旧codeを114に戻せるとは断定しない。 |
+| RPO/RTO/復旧 | RPOはFullの表示日やdump完了時刻で決めずsnapshot時点・以後のwrites/失われる操作から算定。RTOはfence→取得/暗号化/転送→復元→検証→app復帰まで実測し許容停止時間をownerが承認。CI秒数やFull約417MiBから推定しない。本番in-place restore/ledger手修正/down/自動retryは禁止。失敗時はtrafficを閉じ個別のforward fix/整合backup復帰を審査。 |
+| 削除 | raw中間・暗号化dump・key copy・restore先・volume/snapshot・端末backup/swap等の所在、保持期限、担当/削除確認を先に固定。実export/restore/破棄は段階別の個別承認。今回のtmpfs破棄は実端末/SSD/クラウド完全消去の証明ではない。秘密なしの固定結果だけIssueへ記録。 |
+
+**承認があれば初めて実行可能**：対象/権限の実確認、real export、受領/隔離restore、writer停止、実復旧時間測定、承認範囲の削除。
+**まだ技術的な準備が必要**：実exportの暗号化stream/manifest/鍵・保管・削除方式、実復元先とcapacity/DEFINER対応、DB外鍵/ファイルを含むapp復旧票。
+このCIは実exportコマンドやcredential loaderを実装しない。Aiven Full自体のrestore手段は引き続き未解決で、Free/DeveloperへのFork承認だけでは実行できない。
+復旧経路をownerが採用してもstrict schema BLOCK、実DB監査、実機、DDL/deploy/公開の別ゲートは解除しない。
+**PRODUCTION_NO_GO_HOLD**。受入済みMac offline作業の再提出や5ドルupgradeの再検討は不要。
+
 ## 2026-10-20：e858収束 / 12月1日C-Light審査（現行の追記）
 
 この節を今回の索引とし、下の10月18日固定在庫を上書きしない。Issue #488が承認の正本。
