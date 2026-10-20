@@ -176,7 +176,7 @@ class CliTests(unittest.TestCase):
     def test_expired_and_private_parse_or_interrupt_error_has_fixed_output(self):
         with patch.object(b, 'integrity', return_value=pins()):
             self.assertEqual('EXPIRED_OR_NOT_YET_VALID', self.run_cli()[1]['code'])
-            for error in (RuntimeError(CANARY), KeyboardInterrupt(), PermissionError(CANARY)):
+            for error in (RuntimeError(CANARY), KeyboardInterrupt(), PermissionError(CANARY), b.Block(CANARY)):
                 with patch.object(b, 'load', side_effect=error):
                     self.assertEqual('OFFLINE_INPUT_OR_SOURCE_REJECTED', self.run_cli()[1]['code'])
 
@@ -209,6 +209,19 @@ class SourceTests(unittest.TestCase):
         facts = b.integrity(self.root, self.head)
         self.assertEqual(b.SOURCE, facts['source_sha'])
         self.assertEqual(self.head, facts['tooling_sha'])
+
+    def test_ambient_git_credentials_or_approved_env_are_not_forwarded_or_authority(self):
+        real_run = subprocess.run
+        calls = []
+        def observed(*args, **kwargs):
+            calls.append(kwargs.get('env', {}))
+            return real_run(*args, **kwargs)
+        with patch.dict(os.environ, {'GIT_DIR': CANARY, 'MYSQL_PWD': CANARY, 'APPROVED': 'true'}), \
+                patch.object(b.subprocess, 'run', side_effect=observed):
+            facts = b.integrity(self.root, self.head)
+        self.assertEqual(self.head, facts['tooling_sha'])
+        self.assertTrue(calls)
+        self.assertTrue(all(CANARY not in env.values() and 'APPROVED' not in env for env in calls))
 
     def test_wrong_head_release_dependency_or_hidden_flags_block(self):
         with self.assertRaisesRegex(b.Block, 'TOOLING_MISMATCH'): b.integrity(self.root, '0' * 40)
