@@ -33,7 +33,12 @@ class Block(Exception): pass
 
 def run(argv, data=None, timeout=180):
     proc = subprocess.run(argv, input=data, capture_output=True, timeout=timeout)
-    if proc.returncode: raise Block('ISOLATED_COMMAND_FAILED')
+    if proc.returncode:
+        if os.environ.get('GITHUB_ACTIONS') != 'true':
+            debug = Path('/tmp') / ('canovia-e858-tls-command-' + str(os.getuid()) + '.log')
+            debug.write_bytes(proc.stdout + proc.stderr); debug.chmod(0o600)
+        stage = {'build': 'BUILD', 'run': 'RUN', 'network': 'NETWORK', 'inspect': 'INSPECT', 'rm': 'CLEANUP'}.get(argv[1], 'OTHER')
+        raise Block('ISOLATED_COMMAND_FAILED_' + stage)
     return proc.stdout
 
 
