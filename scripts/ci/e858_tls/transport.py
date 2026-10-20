@@ -1,6 +1,7 @@
 """Disposable-only transport. Fixed synthetic endpoints; no live target API."""
 import hashlib
 import json
+import os
 from pathlib import Path
 import socket
 import ssl
@@ -19,6 +20,7 @@ CELL = 128 * 1024
 ROW = 256 * 1024
 SECTION = 8 * 1024 * 1024
 TOTAL = 16 * 1024 * 1024
+PREAMBLE = 16 * 1024
 SQL_SHA = '8383bc16fc8b35b8413a2a6a0b0c0784c9fa646ebab119017b97c2bd8d4333d1'
 
 
@@ -41,6 +43,8 @@ class StrictConnection(pymysql.connections.Connection):
     def __init__(self, **kwargs):
         self.wire_bytes = 0
         self.connect_count = 0
+        self.authenticated = False
+        self.preamble_bytes = 0
         super().__init__(defer_connect=True, **kwargs)
 
     def connect(self, sock=None):
@@ -52,9 +56,14 @@ class StrictConnection(pymysql.connections.Connection):
     def _request_authentication(self):
         if not self.server_capabilities & CLIENT.SSL:
             raise Block('TLS_REQUIRED_NO_FALLBACK')
-        return super()._request_authentication()
+        value = super()._request_authentication()
+        self.authenticated = True
+        return value
 
     def _read_bytes(self, count):
+        if not self.authenticated:
+            self.preamble_bytes += count
+            if self.preamble_bytes > PREAMBLE: raise Block('AUTH_PREAMBLE_CAP')
         if count > ROW:
             raise Block('WIRE_ROW_CAP')
         self.wire_bytes += count
@@ -99,6 +108,7 @@ class Observer:
         self.fault = fault
         self.role = role
         self.conn._read_timeout = 2
+        self.conn._write_timeout = 2
 
     def state(self, cid):
         if self.fault == 'unobservable' or self.role == 'other':
@@ -158,12 +168,15 @@ class Session:
         if not 0 < query_seconds <= 10 or not 0 < stream_seconds <= 120:
             raise Block('LIMIT_INCREASE_REJECTED')
         self.observer = observer
+        self.until = time.monotonic() + stream_seconds
         self.conn = connection()
         self.original = self.conn
         self.socket = self.conn._sock
+        # Do not mutate SSLSocket._sslobj concurrently with an active SSL read.
+        # Keep an owned duplicate for raw TCP shutdown; never reuse a closed fd.
+        self.cancel_socket = socket.socket(fileno=os.dup(self.socket.fileno()))
         self.cid = self.conn.thread_id()
         self.query_seconds = query_seconds
-        self.until = time.monotonic() + stream_seconds
         self.lock = threading.Lock()
         self.closed = False
         self.failed = False
@@ -190,7 +203,7 @@ class Session:
         fired = threading.Event()
         def interrupt():
             fired.set()
-            try: self.socket.shutdown(socket.SHUT_RDWR)
+            try: self.cancel_socket.shutdown(socket.SHUT_RDWR)
             except OSError: pass
         timer = threading.Timer(limit, interrupt)
         timer.start()
@@ -211,7 +224,7 @@ class Session:
                     raw.extend(line)
             except Exception:
                 # Do not let SSCursor.close drain an unbounded rejected result.
-                try: self.socket.shutdown(socket.SHUT_RDWR)
+                try: self.cancel_socket.shutdown(socket.SHUT_RDWR)
                 except OSError: pass
                 raise
             if fired.is_set(): raise Block(timeout_code)
@@ -269,6 +282,7 @@ class Session:
     def finish(self):
         self.closed = True
         self.conn.close()
+        self.cancel_socket.close()
         self.termination = self.observer.gone(self.cid)
         return self.termination
 
@@ -277,5 +291,6 @@ class Session:
         self.closed = True; self.failed = True
         try: self.conn.close()
         except Exception: pass
+        self.cancel_socket.close()
         self.termination = self.observer.terminate(self.cid)
         return self.termination

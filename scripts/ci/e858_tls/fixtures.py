@@ -150,7 +150,7 @@ def run():
                 for key in s.order[:15]: s.read(key)
                 rows(s.conn, 'USE information_schema'); s.read('identity')
             elif kind == 'disconnect':
-                s.read('identity'); s.socket.shutdown(socket.SHUT_RDWR); s.read('grants')
+                s.read('identity'); s.cancel_socket.shutdown(socket.SHUT_RDWR); s.read('grants')
             elif kind == 'reconnect':
                 s.conn.close(); s.conn.ping(reconnect=True)
             elif kind == 'concurrent':
@@ -192,7 +192,8 @@ def run():
 
     def timeout(kind):
         probe = Observer()
-        s = Session(probe, query_seconds=.25, stream_seconds=.12 if kind == 'stream' else 120)
+        s = Session(probe, query_seconds=.25)
+        if kind == 'stream': s.until = min(s.until, time.monotonic() + .12)
         require(s.socket is not probe.conn._sock and s.cid != probe.conn.thread_id())
         require(s.socket.fileno() != probe.conn._sock.fileno())
         require(probe.state(s.cid)['exists'])
