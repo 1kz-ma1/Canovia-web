@@ -108,7 +108,9 @@ def run():
     current = ['BOOTSTRAP']
     def case(label, func):
         current[0] = label
+        require(rows(admin.conn, 'SELECT @@server_uuid')[0][0] == admin.uuid)
         value = func()
+        require(rows(admin.conn, 'SELECT @@server_uuid')[0][0] == admin.uuid)
         reports[label] = value or dict(verified=True)
 
     def normal():
@@ -154,7 +156,13 @@ def run():
                 finally: s.lock.release()
             elif kind == 'cell': s._execute('SELECT REPEAT(\'x\',131073)', 1)
             elif kind == 'row': s._execute('SELECT REPEAT(\'x\',131072),REPEAT(\'x\',131072)', 1)
-        except Exception:
+        except Exception as error:
+            expected = dict(sql='SQL_NOT_ALLOWLISTED', order='QUERY_ORDER_REJECTED',
+                swap='SESSION_CHANGED', postflight='IDENTITY_CHANGED', reconnect='RECONNECT_REJECTED',
+                concurrent='CONCURRENT_COMMAND_REJECTED', cell='CELL_CAP')
+            if kind in expected: require(type(error) is Block and str(error) == expected[kind])
+            elif kind == 'row': require(type(error) is Block and str(error) in ('WIRE_ROW_CAP','ROW_CAP'))
+            elif kind == 'disconnect': require(error.args and error.args[0] in (0,2006,2013))
             proof = s.abort(); require(proof['verified'], proof)
             try: s.read('identity')
             except Block: return dict(blocked=True, remote_connection_ended=True)
@@ -169,7 +177,8 @@ def run():
             s = Session(admin)
             try:
                 s.read('identity'); s.read('grants')
-            except Block:
+            except Block as error:
+                require(str(error) == 'MINIMAL_GRANTS_BLOCK')
                 require(s.executions == 1 and s.abort()['verified'])
                 return dict(blocked_before_metadata=True)
             finally: s.abort()
@@ -179,18 +188,22 @@ def run():
             else: rows(admin.conn, "GRANT SELECT ON canovia_p0_ci.migrations TO 'e858_tls_inspector'@'%'")
 
     def timeout(kind):
-        s = Session(admin, query_seconds=.25, stream_seconds=.12 if kind == 'stream' else 120)
+        probe = Observer()
+        s = Session(probe, query_seconds=.25, stream_seconds=.12 if kind == 'stream' else 120)
+        require(s.socket is not probe.conn._sock and s.cid != probe.conn.thread_id())
         try: s._execute('SELECT SLEEP(30)', 1)
-        except Block:
-            state = admin.state(s.cid)
+        except Block as error:
+            require(str(error) == ('STREAM_TIMEOUT' if kind == 'stream' else 'QUERY_TIMEOUT'))
+            state = probe.state(s.cid)
             proof = s.abort(); require(proof['verified'])
             return dict(blocked=True, remote_running_after_local_timeout=state['running'], **proof)
-        finally: s.abort()
+        finally: s.abort(); probe.close()
         raise Block('TIMEOUT_DID_NOT_BLOCK')
 
     def process_kill():
-        parent, child = multiprocessing.Pipe()
-        process = multiprocessing.Process(target=long_client, args=(child,))
+        mp = multiprocessing.get_context('spawn')  # Never inherit another TLS socket.
+        parent, child = mp.Pipe()
+        process = mp.Process(target=long_client, args=(child,))
         process.start(); child.close()
         require(parent.poll(5)); cid = parent.recv(); wait_running(admin, cid)
         process.kill(); process.join(2); require(not process.is_alive())
