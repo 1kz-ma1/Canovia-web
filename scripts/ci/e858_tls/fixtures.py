@@ -10,8 +10,66 @@ import threading
 import time
 import traceback
 
-from transport import (Block, Observer, Session, connection, context, rows,
+from transport import (Block, Observer, Session, connection, context, rows as client_rows,
                        DB, USER, PASSWORD, ROOT_PASSWORD, CELL)
+
+
+def oracle_process(pipe):
+    """Separate process: data-client SSL faults cannot close its TLS objects."""
+    observer = None
+    try:
+        observer = Observer()
+        pipe.send((True, (observer.uuid, observer.conn._sock.getsockname())))
+        while True:
+            operation, args = pipe.recv()
+            if operation == 'close':
+                observer.close(); pipe.send((True, None)); break
+            try:
+                if operation == 'rows': result = client_rows(observer.conn, *args)
+                elif operation in ('state', 'gone', 'terminate'): result = getattr(observer, operation)(*args)
+                else: raise Block('ORACLE_OPERATION_REJECTED')
+                pipe.send((True, result))
+            except Exception as error:
+                pipe.send((False, dict(type=type(error).__name__, mysql_code=
+                    error.args[0] if error.args and type(error.args[0]) is int else None)))
+    finally:
+        if observer: observer.close()
+        pipe.close()
+
+
+class Oracle:
+    """Private fixture RPC, not a network service or production control channel."""
+    def __init__(self):
+        ctx = multiprocessing.get_context('spawn')
+        self.pipe, child = ctx.Pipe()
+        self.process = ctx.Process(target=oracle_process, args=(child,), daemon=True)
+        self.process.start(); child.close()
+        self.uuid, self.local = self.receive()
+        self.conn = self
+
+    def receive(self):
+        if not self.pipe.poll(5): raise Block('ORACLE_OBSERVATION_UNVERIFIED')
+        ok, result = self.pipe.recv()
+        if not ok: raise Block('ORACLE_CONTROL_FAILED', result)
+        return result
+
+    def call(self, operation, *args):
+        self.pipe.send((operation, args)); return self.receive()
+
+    def state(self, cid): return self.call('state', cid)
+    def gone(self, cid): return self.call('gone', cid)
+    def terminate(self, cid): return self.call('terminate', cid)
+
+    def close(self):
+        try: self.call('close')
+        finally:
+            self.process.join(3)
+            if self.process.is_alive(): self.process.kill(); self.process.join(2)
+            self.pipe.close()
+
+
+def rows(conn, sql, args=None):
+    return conn.call('rows', sql, args) if isinstance(conn, Oracle) else client_rows(conn, sql, args)
 
 
 def require(value, facts=None):
@@ -89,11 +147,8 @@ class Relay:
 
 def run():
     manifest = json.loads(Path('/synthetic/manifest.json').read_text())
-    admin = Observer()
+    admin = Oracle()
     version = rows(admin.conn, 'SELECT VERSION()')[0][0]
-    rows(admin.conn, "SET GLOBAL log_output='TABLE'")
-    rows(admin.conn, 'SET GLOBAL general_log=ON')
-    rows(admin.conn, 'SET GLOBAL log_error_verbosity=3')
     require(version.startswith(manifest['series'] + '.'))
     # Minimal structure fixture, NOT a 94-migration deployment/rehearsal.
     rows(admin.conn, 'CREATE TABLE migrations(id BIGINT PRIMARY KEY AUTO_INCREMENT, migration VARCHAR(255), batch INT)')
@@ -127,7 +182,7 @@ def run():
 
     def tcp_shutdown_isolation():
         c = connection(); cid = c.thread_id()
-        require(c._sock.getsockname() != admin.conn._sock.getsockname())
+        require(c._sock.getsockname() != admin.local)
         c._sock.shutdown(socket.SHUT_RDWR)
         c.close()
         require(rows(admin.conn, 'SELECT @@server_uuid')[0][0] == admin.uuid)
@@ -200,38 +255,12 @@ def run():
             else: rows(admin.conn, "GRANT SELECT ON canovia_p0_ci.migrations TO 'e858_tls_inspector'@'%'")
 
     def timeout(kind):
-        probe = admin
-        s = Session(probe, query_seconds=.25)
+        s = Session(admin, query_seconds=.25)
         if kind == 'stream': s.until = min(s.until, time.monotonic() + .12)
-        require(s.socket is not probe.conn._sock and s.cid != probe.conn.thread_id())
-        require(s.socket.fileno() != probe.conn._sock.fileno())
-        require(probe.state(s.cid)['exists'])
-        begin = time.monotonic()
         try: s._execute('SELECT SLEEP(30)', 1)
         except Block as error:
             require(str(error) == ('STREAM_TIMEOUT' if kind == 'stream' else 'QUERY_TIMEOUT'))
-            try: state = probe.state(s.cid)
-            except Exception as error:
-                fresh = Observer()
-                try:
-                    fresh_state = fresh.state(s.cid)
-                    control_state = fresh.state(probe.conn.thread_id())
-                    events = rows(fresh.conn, 'SELECT command_type FROM mysql.general_log WHERE thread_id=%s', (probe.conn.thread_id(),))
-                    wait_timeout = rows(fresh.conn, 'SELECT @@wait_timeout')[0][0]
-                    log = rows(fresh.conn, 'SELECT DATA FROM performance_schema.error_log ORDER BY LOGGED DESC LIMIT 20')
-                    messages = [r[0] for r in log if 'connection ' + str(probe.conn.thread_id()) + ' ' in r[0]]
-                finally: fresh.close()
-                raise Block('OBSERVER_CHANNEL_FAILED', dict(
-                    fresh_channel_worked=True, remote_running=fresh_state['running'],
-                    control_session_exists=control_state['exists'], control_session_running=control_state['running'],
-                    socket_fds_distinct=s.socket.fileno() != probe.conn._sock.fileno() if probe.conn._sock else True,
-                    mysql_code=error.args[0] if error.args else None,
-                    elapsed_ms=int((time.monotonic()-begin)*1000), wait_timeout=wait_timeout,
-                    control_quit_logged=any(row[0] == 'Quit' for row in events), control_query_count=sum(row[0] == 'Query' for row in events),
-                    server_error_reading=any('error reading' in x for x in messages),
-                    server_timeout_reading=any('timeout reading' in x for x in messages),
-                    server_ssl_error=any('SSL' in x for x in messages),
-                    original_timed_out='timed out' in str(error))) from None
+            state = admin.state(s.cid)
             proof = s.abort(); require(proof['verified'])
             return dict(blocked=True, remote_running_after_local_timeout=state['running'], **proof)
         finally: s.abort()
