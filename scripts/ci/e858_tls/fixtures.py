@@ -200,7 +200,7 @@ def run():
             else: rows(admin.conn, "GRANT SELECT ON canovia_p0_ci.migrations TO 'e858_tls_inspector'@'%'")
 
     def timeout(kind):
-        probe = Observer()
+        probe = admin
         s = Session(probe, query_seconds=.25)
         if kind == 'stream': s.until = min(s.until, time.monotonic() + .12)
         require(s.socket is not probe.conn._sock and s.cid != probe.conn.thread_id())
@@ -234,7 +234,7 @@ def run():
                     original_timed_out='timed out' in str(error))) from None
             proof = s.abort(); require(proof['verified'])
             return dict(blocked=True, remote_running_after_local_timeout=state['running'], **proof)
-        finally: s.abort(); probe.close()
+        finally: s.abort()
         raise Block('TIMEOUT_DID_NOT_BLOCK')
 
     def process_kill():
