@@ -25,7 +25,37 @@ class NativeACLObservation(unittest.TestCase):
             with self.assertRaises(Block):
                 acl.inspect_native_acl(self.fd)
             return
-        result = acl.inspect_native_acl(self.fd)
+        try:
+            result = acl.inspect_native_acl(self.fd)
+        except Block:
+            # Diagnostic strictly on this test-created temporary directory FD.
+            import ctypes
+            libc = ctypes.CDLL(None, use_errno=True)
+            get = libc.acl_get_fd_np
+            get.argtypes = [ctypes.c_int, ctypes.c_int]
+            get.restype = ctypes.c_void_p
+            ctypes.set_errno(0)
+            ptr = get(self.fd, acl.ACL_TYPE_EXTENDED)
+            if not ptr:
+                raise AssertionError("SYNTHETIC_MAC_ACL_GET_NULL_ERRNO_" + str(ctypes.get_errno())) from None
+            try:
+                valid = libc.acl_valid
+                valid.argtypes = [ctypes.c_void_p]
+                valid.restype = ctypes.c_int
+                is_valid = valid(ptr)
+                entry = libc.acl_get_entry
+                entry.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p)]
+                entry.restype = ctypes.c_int
+                slot = ctypes.c_void_p()
+                ctypes.set_errno(0)
+                found = entry(ptr, acl.ACL_FIRST_ENTRY, ctypes.byref(slot))
+                raise AssertionError("SYNTHETIC_MAC_ACL_VALID_" + str(is_valid) +
+                    "_FIRST_" + str(found) + "_ERRNO_" + str(ctypes.get_errno())) from None
+            finally:
+                free = libc.acl_free
+                free.argtypes = [ctypes.c_void_p]
+                free.restype = ctypes.c_int
+                free(ptr)
         self.assertEqual(result["result"], "ZERO_EXTENDED_ACL_ENTRIES_OBSERVED")
         self.assertFalse(result["execution_allowed"])
         self.assertFalse(result["real_target_read"])
