@@ -508,6 +508,20 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 状態：`INERT_PARENT_LINK_OBSERVED_ONLY / ANCESTOR_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-22 管理端末のforeground TTY観測候補（INERT・実本人認証ではない）
+
+#822までのprivate-root FD/ACL/直近親子関係の観測と、既存#815〜#817の合成TTY資格情報テストは**実owner本人の操作証明と別**である。本差分は欠けていた「秘密を読む前に前面の端末・process group・現在のセッション状態を観測する」read-onlyの局所境界だけを追加する。
+
+`scripts/ci/e858_phase1/private_operator.py` は、**callerが既に取得済み**のnon-inheritable FDについてDarwin/main thread/FD>2、character TTY、euidとFD owner、前面process group、session ID、termios状態、前後FD identityを参照・照合する。パス指定や `/dev/tty` open、端末read/write、エコー/termios変更、password取得、stdout/stderr、認可スイッチ、接続CLIは一切持たない。異常/非foreground/非Darwin/worker thread/identity変更は固定BLOCK、詳細例外・FD/端末値は返さない。観測FDはcaller所有であり閉じたり貸与したりしない。
+
+返すのは `FOREGROUND_PROCESS_GROUP_OBSERVED_NOT_AUTHENTICATED` に相当する**局所的な状態のみ**で、`operator_identity=UNVERIFIED`、`explicit_owner_gesture=UNVERIFIED`、`ancestor_trust=UNVERIFIED`、`execution_allowed=false`、`real_credential_read=false` を常に維持する。端末のforeground/euid条件だけでは実ownerの意思・認証・管理Macの信頼性を証明できない。通常端末から実passwordを読める機能に自動移行したり、#817の合成gestureを実署名へ昇格しない。
+
+専用`test_e858_private_operator.py`はOSが生成した**使い捨てPTYのみ**、foreground判定はmockし、現実のman-in-the-loop認証や管理Mac受入とは主張しない。Linux Python3.9/3.12・macOS Python3.12で追加テスト＋既存root/ACL/candidate・INERT archive/import closureをCIで検証する。旧#816のMac26件、#817のMac13件、#817隔離MySQL wire、歴史的10/18・10/21 private照合は既存の未変更証拠を再利用。差分には固定Q0/Q1・既存run・TLS/SQL/host/production/releaseは含めない。
+
+**次に必要な実用ゲート**：ユーザー管理Macでの別の信頼済みoperator entry/明示操作、private anchorの祖先とnative ACL（ENOENTの未検証分類）、実用runtime配布lock、実TLS/identity bridge。この技術差分を満たして初めて新tooling完全SHA・P1/R1〜R6個別受入と新Phase1限定GOを別判断する。本PRはそのGOの代理ではない。
+
+状態：`FOREGROUND_TTY_OBSERVATION_ONLY / OWNER_GESTURE_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
