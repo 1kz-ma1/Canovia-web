@@ -80,10 +80,9 @@ class RootPreflight(unittest.TestCase):
         with patch.object(root.os, "get_inheritable", side_effect=[False, True]):
             with self.assertRaises(Block):
                 root.open_private_root(self.anchor)
-        with patch.object(root.os, "O_NOFOLLOW", 0, create=True):
-            # This is deliberately a platform capability test, not a proof
-            # that 0-value flags preserve no-follow behavior.
-            pass
+        with patch.object(root.os, "O_NOFOLLOW", 0):
+            with self.assertRaises(Block):
+                root.open_private_root(self.anchor)
         with patch.object(root.os, "open", side_effect=OSError(CANARY)):
             with self.assertRaises(Block) as cm:
                 root.open_private_root(self.anchor)
