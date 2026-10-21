@@ -39,6 +39,7 @@ def deny(event,args):
 sys.addaudithook(deny)
 from e858_phase1.private_candidate import Candidate, DisabledWire
 from e858_phase1.private_binding import Target
+from e858_phase1.private_root import open_private_root
 from e858_phase1.private_distribution import runtime_components
 print('INERT_IMPORT_CLOSURE_VERIFIED')
 '''
