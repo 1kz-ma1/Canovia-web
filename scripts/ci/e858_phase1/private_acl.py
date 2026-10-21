@@ -21,12 +21,13 @@ def _identity(value):
             value.st_mode, value.st_mtime_ns, value.st_ctime_ns)
 
 
-def _empty_native_acl(fd):
-    """Retrieve native ACL using FD only; accept a valid zero-entry ACL.
+def _acl_observation(fd):
+    """Read Darwin ACL on FD; distinguish absent record from empty ACL.
 
-    Darwin's acl_get_entry uses 0 for a retrieved entry, -1/EINVAL when
-    there is no entry. acl_valid must pass first. A NULL ACL, any other
-    errno, or an acl_free failure is never interpreted as ACL absence.
+    On a synthetic macOS-15 temp directory, acl_get_fd_np returned
+    NULL/ENOENT (observed in CI), but this is NOT a proof of zero ACL
+    entries, nor an authorization. Other NULL/errno values fail closed.
+    A valid ACL with zero entries is separately classified.
     """
     lib = ctypes.CDLL(None, use_errno=True)
     get = lib.acl_get_fd_np
@@ -42,23 +43,28 @@ def _empty_native_acl(fd):
     free.argtypes = [ctypes.c_void_p]
     free.restype = ctypes.c_int
     acl = None
-    ok = False
+    observation = None
     try:
         ctypes.set_errno(0)
         acl = get(fd, ACL_TYPE_EXTENDED)
-        if not acl or valid(acl) != 0:
+        if not acl:
+            if ctypes.get_errno() == errno.ENOENT:
+                return "ACL_RECORD_ENOENT_UNVERIFIED"
+            raise Block()
+        if valid(acl) != 0:
             raise Block()
         first = ctypes.c_void_p()
         ctypes.set_errno(0)
         result = entry(acl, ACL_FIRST_ENTRY, ctypes.byref(first))
-        ok = result == -1 and ctypes.get_errno() == errno.EINVAL
-        if not ok:
+        if result == -1 and ctypes.get_errno() == errno.EINVAL:
+            observation = "ZERO_ACL_ENTRIES_OBSERVED"
+        else:
             raise Block()
     finally:
         if acl:
             if free(acl) != 0:
                 raise Block()
-    return ok
+    return observation
 
 
 def inspect_native_acl(fd):
@@ -71,12 +77,13 @@ def inspect_native_acl(fd):
                 or stat.S_IMODE(before.st_mode) != 0o700
                 or os.get_inheritable(fd)):
             raise Block()
-        if not _empty_native_acl(fd):
+        observed = _acl_observation(fd)
+        if observed not in ("ACL_RECORD_ENOENT_UNVERIFIED", "ZERO_ACL_ENTRIES_OBSERVED"):
             raise Block()
         if _identity(before) != _identity(os.fstat(fd)):
             raise Block()
         return dict(kind="INERT_NATIVE_ACL_OBSERVATION",
-                    result="ZERO_EXTENDED_ACL_ENTRIES_OBSERVED",
+                    result=observed,
                     ancestor_trust="UNVERIFIED",
                     operator_identity="UNVERIFIED",
                     execution_allowed=False,
