@@ -21,7 +21,7 @@ def prepare(work, head, series, pins, old, new, reference):
     receipt = validate(packet, pins, int(time.time()))
     client = work / 'client'
     for name, value in [('facts', dict(baseline=old, candidate=new, migration_seal=reference['migration_seal'])),
-                        ('b_preflight', dict(kind='SYNTHETIC_B1_ONLY', receipt=receipt,
+                        ('b_preflight', dict(kind='SYNTHETIC_B1_ONLY', receipt=receipt, packet=packet, pins=pins,
                             owner_approval_verified=False, execution_allowed=False))]:
         (client / (name + '.json')).write_text(json.dumps(value))
     (client / 'reference.json').write_bytes(h.git(h.ROOT,'show',h.COLLECTOR+':scripts/ci/e858_audit_reference/'+series+'.json'))
@@ -31,6 +31,8 @@ def prepare(work, head, series, pins, old, new, reference):
     contract = json.loads(h.git(h.ROOT, 'show', h.SOURCE + ':resources/release20_pending_schema_contract.json'))
     (client / 'contract.json').write_text(json.dumps({k:v for k,v in contract.items() if k.startswith('absent_')}))
     legacy = client / 'legacy'; (legacy / 'e858_audit').mkdir(parents=True)
+    for name in ('e858_b_offline.py','p0_mysql_metadata_grants_input.py','p0_mysql_metadata_grants_guard.py','release488_runtime_ddl_restore_gate.py'):
+        (legacy / name).write_bytes(h.git(h.ROOT,'show',head+':scripts/ci/'+name))
     files = ['integrated_release20_audit.py','integrated_release20_diagnose.py','integrated_release20_semantics.py',
              'p0_mysql_full_ledger_offline_check.py']
     for name in files:
@@ -79,6 +81,11 @@ def exercise(work, stem, token, network, image, owned, head, series):
         for key,value in env.items(): args += ['-e',key+'='+value]
         h.run(args+[php_image,'php','artisan','migrate','--realpath','--path=/app/'+stage,'--force','--no-interaction'])
     def capture(stage):
+        preflight=json.loads((work/'client/b_preflight.json').read_text())
+        packet=template(preflight['pins'],int(time.time()))
+        packet.update(declarations=DECLARATIONS,engine=series,attempt_id='a'*32)
+        preflight.update(packet=packet,receipt=validate(packet,preflight['pins'],int(time.time())))
+        (work/'client/b_preflight.json').write_text(json.dumps(preflight))
         name=stem+'-full-'+stage; owned.append(name)
         args=['docker','run','--name',name,'--label',h.LABEL+'='+token,'--network',network,
             '--read-only','--tmpfs','/tmp:rw,nosuid,size=64m','--user',str(os.getuid())+':'+str(os.getgid()),

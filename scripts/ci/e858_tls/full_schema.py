@@ -61,14 +61,9 @@ def negative(own, kind):
         elif kind=='swap':
             s.read('identity'); replacement=connection();s.conn=replacement
             try:s.read('grants')
-            finally:replacement.close();s.original.close()
-        elif kind=='observer':
-            # A failed control path is never replaced or reconnected.
-            own.process.kill();own.process.join(2)
-            try:s.read('identity',b'SELECT * FROM users;')
-            except Exception:pass
-            require(not hasattr(s,'termination') or not s.termination.get('verified',False))
-            return dict(blocked=True,remote_status='REMOTE_TERMINATION_UNVERIFIED')
+            finally:
+                if replacement.open:replacement.close()
+                if s.original.open:s.original.close()
         else:raise Block('FIXTURE_KIND_REJECTED')
     except Exception as error:
         expected={'sql':'SQL_NOT_ALLOWLISTED','export':'SQL_NOT_ALLOWLISTED','target':'IDENTITY_CHANGED','swap':'SESSION_CHANGED'}

@@ -2,6 +2,8 @@
 import hashlib
 import json
 from pathlib import Path
+import time
+from e858_b_offline import validate
 
 from transport import Block, Session
 from e858_audit.core import audit, hashed, CANDIDATE, SEAL
@@ -21,6 +23,10 @@ def assets(directory=Path('/synthetic')):
             or preflight['kind']!='SYNTHETIC_B1_ONLY' or preflight['owner_approval_verified'] is not False
             or preflight['execution_allowed'] is not False):
         raise Block('BRIDGE_ASSET_OR_APPROVAL_REJECTED')
+    if (validate(preflight['packet'],preflight['pins'],int(time.time()))!=preflight['receipt']
+            or preflight['pins']['source_sha']!=CANDIDATE
+            or preflight['pins']['reference_sha256'][manifest['series']]!=manifest['reference_sha256']):
+        raise Block('BRIDGE_PREFLIGHT_REJECTED')
     return facts,reference,contract
 
 
