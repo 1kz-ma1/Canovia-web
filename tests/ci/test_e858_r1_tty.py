@@ -113,9 +113,13 @@ class PrivateTTYTests(unittest.TestCase):
         for exception in (OSError(CANARY.decode()), KeyboardInterrupt(CANARY.decode())):
             with self.subTest(kind=type(exception).__name__):
                 attempt = r1.PrivateTTYAttempt()
-                with patch.object(r1.select, 'select', return_value=([self.slave], [], [])), \
-                        patch.object(r1.os, 'read', side_effect=exception):
+                out, err = io.StringIO(), io.StringIO()
+                partial_then_error = [bytes([value]) for value in CANARY] + [exception]
+                with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err), \
+                        patch.object(r1.select, 'select', return_value=([self.slave], [], [])), \
+                        patch.object(r1.os, 'read', side_effect=partial_then_error):
                     result = attempt.capture(self.slave)
+                self.assertEqual(out.getvalue() + err.getvalue(), '')
                 self.assertIn(result, ('R1_INPUT_BLOCKED', 'R1_INTERRUPTED'))
                 self.assertNotIn(CANARY.decode(), result + repr(attempt))
                 self.assertEqual(attempt._password, b'')
