@@ -62,6 +62,7 @@ class ControlBoundaryTests(unittest.TestCase):
         self.assertEqual('STOPPED', value.state)
         self.assertEqual('REMOTE_TERMINATION_UNVERIFIED', value.report()['remote'])
         self.assertFalse(value.report()['execution_allowed'])
+        self.assertFalse(value.report()['query_ended'] or value.report()['connection_ended'])
         return raised.exception
 
     def test_valid_scope_only_returns_non_executable_synthetic_result(self):

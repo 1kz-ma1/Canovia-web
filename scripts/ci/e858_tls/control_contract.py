@@ -102,6 +102,8 @@ class Attempt:
         self.state = 'STOPPED'
         # Never promote an earlier partial observation after a failed check.
         self.remote = 'REMOTE_TERMINATION_UNVERIFIED'
+        self.query_ended = False
+        self.connection_ended = False
         raise Block(code) from None
 
     def _active(self, now):
