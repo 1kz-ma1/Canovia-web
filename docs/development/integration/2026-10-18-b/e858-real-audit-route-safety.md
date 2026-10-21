@@ -206,6 +206,56 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 
 **維持**：`REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 Phase 1：Q0/Q1・観測専用Control（隔離合成のみ）
+
+[オーナー方針6312638759](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6312638759)の実装。`e858_phase1_host.py` は既存のCA生成・固定Git資産照合・所有internal Docker networkを再利用し、`e858_phase1/runtime.py` が単一Data TLSと独立Control TLSを使用する。両方とも固定合成inspectorのみ。endpoint/credential/login-path/実行許可switchは受け付けず、workerは外部network・Docker socket・Git/実秘密を持たない。固定14SQLのhashをoffline照合するが、workerに渡すSQLファイルはQ0/Q1の2本だけで、full17/台帳/構造/app rowを取得しない。
+
+### Phase 1 SQL／protocolの完全な操作一覧
+
+SQLはASCII byte列。Q0/Q1は#795固定Git blobの改行までそのまま、他は下表のliteral（末尾改行なし）。`<CID>` は当該Data接続のhandshakeで得て同じ接続のSQL結果と照合した正の10進整数のみ。任意CIDを受け取るAPIはない。GateがdriverのCOM_QUERY直前に**全SQLのbytes・順序・回数**を検査し、未記載SQLやCOM_INIT_DB/PING/reset等は送信前拒否する。
+
+| ID | exact SQL bytes（`\n` は末尾LF） | role／順序・最大回数 | 用途・権限／対象・STOP |
+|---|---|---|---|
+| I | `SET NAMES ascii` | Data/Controlの接続直後、各1 | PyMySQL1.1.2初期化。自身session設定のみ、失敗/追加初期化SQLはSTOP |
+| Q0 | `SELECT DATABASE(), CURRENT_USER(), VERSION(), @@server_uuid;\n` | Dataの最初とclose前、最大2 | 固定identity、期待DB/user/engine/UUIDとControlを照合。不一致STOP |
+| Q1 | `SHOW GRANTS FOR CURRENT_USER();\n` | Data1、Controlは初回1＋観測毎1、最大12 | own grantsのみ。既存REFERENCES schema＋SELECT migrations＋任意USAGEのvalidatorを再利用。不足/過剰/不明STOP |
+| D | `SELECT CONNECTION_ID();` | DataのQ0後とQ1後、最大2 | handshake CID・同じobject/socket/thread IDとの照合。不一致STOP |
+| C | `SELECT DATABASE(), CURRENT_USER(), VERSION(), @@server_uuid, CONNECTION_ID();` | Control初回1＋観測毎1、最大12 | 同じserver/DB/principal/engine＋Control自身CIDを再照合。切替/再接続STOP |
+| O | `SELECT ID, USER, DB, COMMAND FROM information_schema.PROCESSLIST WHERE ID = <CID>;` | Control、close前1＋close後最大10＝11 | 同一minimal principalの当該Dataだけ。追加PROCESSなし。初見の空/別user/DB/CID/観測断はSTOP。正常close後にだけ継続可視性を前提とした消滅確認 |
+| P | SQLではない `COM_QUIT`（MySQL payload `01`、packet bytes `0100000001`） | Data正常終了1、Control後処理1 | 送信成功とlocal closeを記録。remote終了の証明とは別。書込失敗はSTOP |
+
+**順序**：Control `I,C,Q1` → Data `I,Q0,D,Q1` → Control `C,Q1,O`（Data idleだがconnection存在を独立観測）→ Data `D,Q0,P` → Control `(C,Q1,O)` を最大10回 → 消滅確認後Control `P`。通常post-close1回ならData6 SQL＋Control9 SQL＝15 SQL、最大Data6＋Control36＝42 SQL。handshake/auth/TLSのprotocol packetはSQLではなく、driver認証の後にI以外の暗黙SQLを許さない。autocommit=None、sql_mode/init_commandなしで、`SET AUTOCOMMIT`、`SET sql_mode`、`max_execution_time`等は送らない。
+
+全SQL query10秒/試行120秒、cell128KiB/row256KiB/section8MiB/合計16MiBを維持。#806のbounded readerとStrictConnectionを変更せず再利用し、合計byte予算は両channelで共有。接続2秒、read/writeも残時間以内。Controlのpost-close観測は10回上限、終了を確認できなければSTOP。再接続・自動retry・KILLなし。
+
+### 合成fixtureの管理SQL（Phase 1 scope外・本番へ持ち込まない）
+
+新規owned MySQL内の準備／独立wire検証だけで使用する。rootはbootstrapのData/Controlに渡さず、失敗時fallbackにも使わない。`e858_phase1_host.SETUP` の正確な7 literalは以下：
+
+```sql
+CREATE TABLE migrations (id BIGINT PRIMARY KEY);
+CREATE USER 'e858_tls_inspector'@'%' IDENTIFIED BY 'ci-only-tls-inspector' REQUIRE SSL;
+GRANT REFERENCES ON canovia_p0_ci.* TO 'e858_tls_inspector'@'%';
+GRANT SELECT ON canovia_p0_ci.migrations TO 'e858_tls_inspector'@'%';
+SET GLOBAL log_output='TABLE';
+SET GLOBAL general_log=ON;
+SELECT @@server_uuid;
+```
+
+全て合成名/合成passwordで各1回。root socketでの準備のみで本番ユーザー/DBを変更しない。ready確認は `SELECT @@skip_networking;` をserverごと90秒内・最大360回（2 server）、固定private traceの検査は `SELECT DISTINCT thread_id FROM mysql.general_log WHERE command_type='Query' AND argument='SET NAMES ascii';` 1回、各所有CIDについて `SELECT HEX(argument) FROM mysql.general_log WHERE thread_id=<CID> AND command_type='Query' ORDER BY event_time;` 最大36回。これ以外の管理SQLは使わない。private logの全inspector接続数と全query bytesを照合し、未知SQL/未知接続を拒否。MySQL general_logが末尾delimiterを省く表現差だけ観測比較で正規化し、実行Gateのbytesを緩和しない。raw log/CID/SQL結果は公開せず、所有container/network/image/cert/rawは終了時破棄する。
+
+### 終了・証拠・回帰
+
+PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を明示確認してからlocal socketを閉じる。その後、独立Controlのidentity/own grants/対象可視性を確認してDataのconnection消滅を観測する。query idleはconnection消滅と別。エラー時はlocal dropのみでKILL/QUIT retryをせず、**REMOTE_TERMINATION_UNVERIFIED**。fixtureの破棄を元の失敗の成功証拠にしない。Control自身の正常QUIT送信は確認するが、そのremote消滅の独立証明とは主張しない。
+
+`control_contract.py` は `scope=('OBSERVE',)` のみで再利用し、binding/generationは合成申告である限界を維持。CID再利用競合、server failover、実権限の不可視変化、Mac全停止・両channel断、異常時遠隔停止能力・実owner本人認証は未証明で、実用tooling未採用。**正常closeの成功からKILL能力を推論しない。**
+
+新15単体テストと既存B22/TLS17のoffline回帰、合成MySQL8.0/8.4の18ケースを別CIで検証する。実CA/hostname/期限切れ負例はTLS通信で拒否。CID/server/不可視/remote残存の負例は固定fixtureで観測値を改変する合成負例であり、実failover/CID再利用発生の証拠ではない。query期限は実接続の応答読取をfixture内で遅らせ、stream期限は短縮して検証し、長時間SQL/KILLを混入させない。旧Full94/114/31wireは共有実装を変更していないため証拠を再利用し、CIは旧runtime/input/testsに差分がある場合だけ旧wireを再実行（不明/dispatchなら実行）する。旧固定SQL/Reference/strict/capsや判定条件は変更しない。
+
+10/18権限/旧94・10/21 Host/Port/User/CAの歴史的証拠を再利用し再確認を依頼しない。後続の**Phase1実用tooling採用・操作票・接続直前GO**、KILL能力の別審査、full17の別GO、TRIGGER/移行主体/binlog/実restore/実機/本番公開は独立ゲート。今回のオフライン方針受入は実SQLの許可ではない。
+
+**維持**：`REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
