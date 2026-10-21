@@ -490,7 +490,7 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 ## 2026-10-22 Darwin native ACL観測の限定候補（INERT、合成FDのみ）
 
-#820のprivate root FD事前検査に続く、**macOS native extended ACLが付いていないか**をFDから読み取り拒否するための最小境界。新`scripts/ci/e858_phase1/private_acl.py`は、Darwin上の既存caller-owned directory FDに対して`acl_get_fd_np(fd, ACL_TYPE_EXTENDED)`と`acl_valid`/`acl_get_entry(ACL_FIRST_ENTRY)`、`acl_free`で観測する。無効なACL、entriesあり、取得不可、関数/cleanup失敗、対象FDのmode/所有者/identity変更などは固定BLOCK。OSがDarwinでなければBLOCK。読み取り/参照のみでset/modifyはしない。ACLの生内容・FD番号・詳細エラーをreceiptへ出さない。APIはApple公式BSD acl man pageに従うが、合成macOS上の挙動のCI受入は別途要確認。
+#820のprivate root FD事前検査に続く、**macOS native extended ACLが付いていないか**をFDから読み取り拒否するための最小境界。新`scripts/ci/e858_phase1/private_acl.py`は、Darwin上の既存caller-owned directory FDに対して`acl_get_fd_np(fd, ACL_TYPE_EXTENDED)`と`acl_valid`/`acl_get_entry(ACL_FIRST_ENTRY)`、`acl_free`で観測する。無効なACL、entriesあり、予期しない取得エラー、関数/cleanup失敗、対象FDのmode/所有者/identity変更などは固定BLOCK。macOS-15の合成temp directoryで実測した `acl_get_fd_np` の `NULL/ENOENT` は `ACL_RECORD_ENOENT_UNVERIFIED` として**ACL空の証明から分離**し、認可・実用acceptには昇格しない。正常取得かつvalid後のzero-entry観測だけを別分類とする。OSがDarwinでなければBLOCK。読み取り/参照のみでset/modifyはしない。ACLの生内容・FD番号・詳細エラーをreceiptへ出さない。APIはApple公式BSD acl man pageに従うが、合成macOS上の挙動のCI受入は別途要確認。
 
 これは**ACLがないと観測したFD1つの補助証拠**であり、native ACLなしがpath祖先・実private record・OS管理状態の信頼性やowner本人認証を意味することはない。rootの祖先経路、本人/画面収録/管理端末、実ファイル内容、署名と失効・durable one-shot・native runtimeの完全閉包はすべて未検証。返値には`execution_allowed=false / ancestor_trust=UNVERIFIED / operator_identity=UNVERIFIED`を保持。実password/CA/target、実Aiven、TTY取得、2 TLS、SQL、productionに新しい入口は設けない。
 
