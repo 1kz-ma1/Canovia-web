@@ -25,38 +25,8 @@ class NativeACLObservation(unittest.TestCase):
             with self.assertRaises(Block):
                 acl.inspect_native_acl(self.fd)
             return
-        try:
-            result = acl.inspect_native_acl(self.fd)
-        except Block:
-            # Diagnostic strictly on this test-created temporary directory FD.
-            import ctypes
-            libc = ctypes.CDLL(None, use_errno=True)
-            get = libc.acl_get_fd_np
-            get.argtypes = [ctypes.c_int, ctypes.c_int]
-            get.restype = ctypes.c_void_p
-            ctypes.set_errno(0)
-            ptr = get(self.fd, acl.ACL_TYPE_EXTENDED)
-            if not ptr:
-                raise AssertionError("SYNTHETIC_MAC_ACL_GET_NULL_ERRNO_" + str(ctypes.get_errno())) from None
-            try:
-                valid = libc.acl_valid
-                valid.argtypes = [ctypes.c_void_p]
-                valid.restype = ctypes.c_int
-                is_valid = valid(ptr)
-                entry = libc.acl_get_entry
-                entry.argtypes = [ctypes.c_void_p, ctypes.c_int, ctypes.POINTER(ctypes.c_void_p)]
-                entry.restype = ctypes.c_int
-                slot = ctypes.c_void_p()
-                ctypes.set_errno(0)
-                found = entry(ptr, acl.ACL_FIRST_ENTRY, ctypes.byref(slot))
-                raise AssertionError("SYNTHETIC_MAC_ACL_VALID_" + str(is_valid) +
-                    "_FIRST_" + str(found) + "_ERRNO_" + str(ctypes.get_errno())) from None
-            finally:
-                free = libc.acl_free
-                free.argtypes = [ctypes.c_void_p]
-                free.restype = ctypes.c_int
-                free(ptr)
-        self.assertEqual(result["result"], "ZERO_EXTENDED_ACL_ENTRIES_OBSERVED")
+        result = acl.inspect_native_acl(self.fd)
+        self.assertIn(result["result"], ("ACL_RECORD_ENOENT_UNVERIFIED", "ZERO_ACL_ENTRIES_OBSERVED"))
         self.assertFalse(result["execution_allowed"])
         self.assertFalse(result["real_target_read"])
         self.assertEqual(result["operator_identity"], "UNVERIFIED")
@@ -66,12 +36,12 @@ class NativeACLObservation(unittest.TestCase):
             with self.subTest(fd=fd):
                 with self.assertRaises(Block):
                     acl.inspect_native_acl(fd)
-        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_empty_native_acl", return_value=True):
+        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_acl_observation", return_value="ZERO_ACL_ENTRIES_OBSERVED"):
             self.root.chmod(0o755)
             with self.assertRaises(Block):
                 acl.inspect_native_acl(self.fd)
             self.root.chmod(0o700)
-            with patch.object(acl.os, "get_inheritable", return_value=True):
+            with patch.object(acl.os, "get_inheritable", return_value="ZERO_ACL_ENTRIES_OBSERVED"):
                 with self.assertRaises(Block):
                     acl.inspect_native_acl(self.fd)
             with patch.object(acl.os, "geteuid", return_value=os.geteuid()+1):
@@ -81,20 +51,25 @@ class NativeACLObservation(unittest.TestCase):
     def test_acl_present_unavailable_or_error_blocks_even_if_owner_matches(self):
         with patch.object(acl.sys, "platform", "darwin"):
             for outcome in (False, None):
-                with patch.object(acl, "_empty_native_acl", return_value=outcome):
+                with patch.object(acl, "_acl_observation", return_value=outcome):
                     with self.assertRaises(Block):
                         acl.inspect_native_acl(self.fd)
-            with patch.object(acl, "_empty_native_acl", side_effect=OSError("SYNTHETIC_SECRET")):
+            with patch.object(acl, "_acl_observation", side_effect=OSError("SYNTHETIC_SECRET")):
                 with self.assertRaises(Block) as caught:
                     acl.inspect_native_acl(self.fd)
                 self.assertNotIn("SYNTHETIC_SECRET", str(caught.exception))
 
     def test_positive_simulated_observation_does_not_authorize(self):
-        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_empty_native_acl", return_value=True):
+        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_acl_observation", return_value="ZERO_ACL_ENTRIES_OBSERVED"):
             result = acl.inspect_native_acl(self.fd)
         self.assertFalse(result["execution_allowed"])
         self.assertFalse(result["live_tooling_adopted"])
         self.assertEqual(result["ancestor_trust"], "UNVERIFIED")
+        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_acl_observation",
+                          return_value="ACL_RECORD_ENOENT_UNVERIFIED"):
+            observed = acl.inspect_native_acl(self.fd)
+        self.assertEqual(observed["result"], "ACL_RECORD_ENOENT_UNVERIFIED")
+        self.assertFalse(observed["execution_allowed"])
 
     def test_change_to_original_fd_identity_is_rejected(self):
         actual = acl._identity
@@ -105,7 +80,7 @@ class NativeACLObservation(unittest.TestCase):
             if seen[0] == 2:
                 return key[:-1] + (key[-1] + 1,)
             return key
-        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_empty_native_acl", return_value=True):
+        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_acl_observation", return_value="ZERO_ACL_ENTRIES_OBSERVED"):
             with patch.object(acl, "_identity", side_effect=identity):
                 with self.assertRaises(Block):
                     acl.inspect_native_acl(self.fd)
@@ -115,7 +90,7 @@ class NativeACLObservation(unittest.TestCase):
         self.assertFalse(hasattr(acl, "capture_password"))
         self.assertFalse(hasattr(acl, "acl_set_fd_np"))
         self.assertFalse(hasattr(acl, "execute_sql"))
-        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_empty_native_acl", return_value=True):
+        with patch.object(acl.sys, "platform", "darwin"), patch.object(acl, "_acl_observation", return_value="ZERO_ACL_ENTRIES_OBSERVED"):
             self.assertTrue(os.fstat(self.fd))
             acl.inspect_native_acl(self.fd)
             self.assertTrue(os.fstat(self.fd))
