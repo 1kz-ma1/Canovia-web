@@ -173,18 +173,26 @@ def trial(fault='TTY_ONLY'):
         if value['result']=='BLOCK':raise r.Block('R1_CHILD_BLOCK')
         value.update(driver_refs_cleared=True,owned_buffer_erased=True,controlling_tty_closed=True)
         return value
+    except BaseException:
+        raise r.Block('R1_TRIAL_BLOCK') from None
     finally:
         os.close(read_fd);os.close(master)
         if not exited:
-            # Local owned child only. Never sends MySQL KILL; remote unverified.
-            try: os.kill(pid,signal.SIGKILL)
-            except ProcessLookupError: pass
-            except BaseException: raise r.Block('R1_CHILD_CLEANUP_UNVERIFIED') from None
-            until=time.monotonic()+2
-            while time.monotonic()<until:
-                if os.waitpid(pid,os.WNOHANG)[0]==pid:break
-                time.sleep(.01)
-            else: raise r.Block('R1_CHILD_CLEANUP_UNVERIFIED')
+            # Reconfirm unreaped child ownership before signalling. A PID from
+            # a child already reaped on an interrupted path must never be killed.
+            try: done,_=os.waitpid(pid,os.WNOHANG)
+            except ChildProcessError: done=pid
+            if done!=pid:
+                # Local child only; never MySQL KILL. Remote remains unverified.
+                try: os.kill(pid,signal.SIGKILL)
+                except ProcessLookupError: pass
+                except BaseException: raise r.Block('R1_CHILD_CLEANUP_UNVERIFIED') from None
+                until=time.monotonic()+2
+                while time.monotonic()<until:
+                    if os.waitpid(pid,os.WNOHANG)[0]==pid:break
+                    time.sleep(.01)
+                else: raise r.Block('R1_CHILD_CLEANUP_UNVERIFIED')
+
 
 
 def run():

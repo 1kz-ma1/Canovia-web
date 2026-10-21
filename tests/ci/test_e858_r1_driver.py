@@ -2,6 +2,7 @@
 import contextlib
 import hashlib
 import io
+import os
 from pathlib import Path
 import socket
 import ssl
@@ -47,6 +48,20 @@ class DriverBoundaryTests(unittest.TestCase):
         self.assertTrue(value['owned_buffer_erased'] and value['controlling_tty_closed'])
         self.assertEqual(out.getvalue()+err.getvalue(),'')
         self.assertFalse(value['execution_allowed'] or value['owner_approval_verified'])
+
+    def test_parent_interruption_is_sanitized_and_only_owned_child_reaped(self):
+        owned=[]
+        original_fork=f.pty.fork
+        def fork_fixture():
+            child,master=original_fork()
+            if child:owned.append(child)
+            return child,master
+        with patch.object(f.pty,'fork',side_effect=fork_fixture), \
+                patch.object(f.select,'select',side_effect=KeyboardInterrupt(CANARY)):
+            with self.assertRaises(r.Block) as raised:f.trial('TTY_ONLY')
+        self.assertNotIn(CANARY,str(raised.exception))
+        self.assertEqual(len(owned),1)
+        with self.assertRaises(ChildProcessError):os.waitpid(owned[0],os.WNOHANG)
 
     def test_nonchild_cannot_open_callers_controlling_terminal(self):
         with patch.object(f.os,'getsid',return_value=-1),patch.object(f.os,'open') as opened:
