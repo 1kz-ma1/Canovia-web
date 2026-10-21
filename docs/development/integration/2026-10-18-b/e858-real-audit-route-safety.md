@@ -87,6 +87,32 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 
 **実監査までの残作業（接続依頼ではない）**：実principalのまま利用できる独立した同一対象の終了観測/制御経路、control channel故障時の既存認可operatorへの引継ぎ、private対象/CA/本人binding、管理Macでの実行・中断挙動を別審査する。追加control接続やKILLを旧metadata-only承認へ暗黙に含めない。既存権限で成立しない場合はSTOPし、拡権を自動解決策にしない。本番経路は未実装のまま閉じる。B0〜B4の無接続レビューと、実SQL一回の個別GOは分離する。
 
+## 2026-10-21 B実Aiven監査前・無接続停止経路レビュー
+
+**範囲と証拠**：2026-10-21、オーナー提供Mac結果はMySQL 8.0.46・8.4.11の合成隔離31/31ケースずつ `ISOLATED_SYNTHETIC_VERIFIED`、後片付け・残存session0、fixed tooling `68768e08cc198898a27e1e497d7c021ddd6367de`。正本は[Issue #488のMac受入記録](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305069582)。これは提供JSONの検査結果であって、owner端末への独立アクセス・実Aiven上の受入ではない。本節ではGitHub資料と公開の[Aiven Current queries手順](https://aiven.io/docs/products/mysql/howto/mysql-long-running-queries)、[MySQL 8.4 KILL仕様](https://dev.mysql.com/doc/refman/8.4/en/kill.html)を無接続で照合した。Aiven Consoleログイン、Aiven API/SQL、production/Render/Auth0変更なし。
+
+### 結論：最小権限を維持したまま、観測経路を2系統として扱う
+
+| 経路 | 既知の仕様と役割 | 実Aivenの判定・制約 |
+| --- | --- | --- |
+| **第1候補：既存inspectorと同じprincipalの独立control session** | MySQLの標準仕様ではPROCESSなしで自己sessionが見え、CONNECTION_ADMINなしで自己sessionのKILL QUERY/CONNECTIONを要求可能。#806隔離8.0/8.4で同一minimal principalによる観測・停止を合成実証済み。 | **UNVERIFIED**：実Aivenのuser/host同一視、接続上限、proxy/経路、performance_schema/PROCESSLIST visibility、自分のsessionの帰属、KILL拒否・failover・終了観測を証明しない。単独のtest結果で実privilegeをPASSにしない。 |
+| **補助手段：Aiven ConsoleのObserve → Current queries** | Aiven公式は長時間queryの表示とTerminate UIを案内する。owner/既存認可DBAの介入経路候補。 | **UNVERIFIED**：現service/plan/roleで表示・操作可能か、停止対象を同一sessionと識別できるか、実connectionが消滅したかは未確認。`Terminate`を押せることやUIの空表示だけで`REMOTE_TERMINATION_VERIFIED`に昇格しない。 |
+| **双方不能・障害・異なる観測** | 認可operatorがoperationを隔離し、既存Aiven管理責任者へprivateに引き継ぐ。 | **BLOCK / REMOTE_TERMINATION_UNVERIFIED**：同じGOで再接続・再監査しない。primary/control両方失われた場合に継続query終了を保証したとしない。 |
+
+### B0/B1 実行前の必要条件（ここでは実操作・確認を実施しない）
+
+1. **private target binding**：固定e858 source/releaseとtooling・SQL/reference/clean checkoutを照合した後、既存Aiven Consoleの特定の1 service/1 DB、endpoint/port、検証するCA chainとhostname/SAN、現在のinspectorの最小grants、`CURRENT_USER()`、engine/version/server identity、時刻窓、operatorをオーナーが非公開で照合。実値・権限出力をGitHubへ貼らない。未知のserver UUIDを採取する接続は別途許可が必要。`main`や合成toolingを実Aiven用connectorへ自動転用しない。
+2. **独立観測・停止の最小scope審査**：observerはcollectorとは別セッションかつ同じ認証済みtarget、同じ既存minimal principalを第一候補とする。ただし新たな`PROCESS`、`CONNECTION_ADMIN`、`TRIGGER`、全DB `SELECT`、admin/user生成はしない。観測のための追加接続と、異常時の`KILL QUERY/CONNECTION`は**metadata-only readとは別のcontrol操作**なので、既存Q0/Q1/17固定SQLのallowlistへ混ぜず、別途scope/owner GOに明記する。control用SQLの内容・上限・失効・接続障害時の安全性は個別受入までBLOCK。
+3. **観測の健全性**：対象sessionのCID、identity、server UUID、観測権限・対象帰属が開始前に成立することを確かめる。`KILL`の受理だけで成功とせず、同一server上で対象query終了とconnection消滅を区別して確認。見えないCID、古いCID、CID再利用・別ユーザー対象、observer途中切断・誤service観測は不明としてBLOCK。Console UIやprocesslistが空であることだけで『終了した』とはしない。
+4. **端末/停止経路の限界**：Mac Docker隔離でSIGKILL・通信断・timeoutを合成受入したが、Mac全停止・controlとdata双方断・Aiven failover/プロキシ切替・管理画面停止時に遠隔処理を確実に終了させる保証はない。MySQL `KILL`は終了flagで非同期に進む。server `max_execution_time`も全SQL・接続寿命を保証しない。残余リスクとfail-closed中断の責任者を明記し、オーナーが別途受入するまで実Aiven GOは禁止。
+5. **個別GOの境界**：今回の『進もう』は無接続レビューの承認のみ。監査対象、二次control接続、限定KILL、実行者、time window、1回限定、失敗時停止、private結果処理を確定した別の操作票への**実行直前の新しいGO**が必要。新規接続・KILLは技術準備なしに実行しない。A案のdurable nonce/独立authorityを追加しない代わりに、手続による再実行防止の弱さを隠さない。
+
+### 次の最小オーナー確認（無接続）
+
+オーナーが**既存Aiven Consoleで対象MySQLサービスの管理権限を持ち、`Observe → Current queries`で緊急操作を担当できるか**を、まず権限・責任分担として「担当可能／別の既存管理者が担当／不明」の1つで回答する。実サービスの現在のquery一覧を開く、Terminateする、実SQLを試す、資格情報やhostを共有する必要はない。これは停止手段の候補選定にすぎず、実Aivenで使用可能な証拠とはしない。詳細未確認の場合は`UNVERIFIED`を維持。
+
+**判定**：`OWNER_MAC_ISOLATED_TRANSPORT_ACCEPTED_FROM_USER_OUTPUT` / `REAL_AIVEN_OBSERVER_AND_KILL_UNVERIFIED` / `CONSOLE_TERMINATION_CAPABILITY_UNVERIFIED` / `B_OWNER_OPERATOR_PACKET_UNACCEPTED` / `REAL_OPERATOR_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。追加tooling・migration/DDL・GRANT・backup/restore・実接続・有料resource操作なし。
+
 ## 固定対象と再利用
 
 - 作業base main `7258a02ca3599f4efd3afacbd91d5017caeb9842`。本PRのHEADは独立tooling候補であり、固定監査候補の代わりにしない。
