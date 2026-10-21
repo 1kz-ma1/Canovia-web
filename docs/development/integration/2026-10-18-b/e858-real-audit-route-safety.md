@@ -113,6 +113,28 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 
 **判定**：`OWNER_MAC_ISOLATED_TRANSPORT_ACCEPTED_FROM_USER_OUTPUT` / `REAL_AIVEN_OBSERVER_AND_KILL_UNVERIFIED` / `CONSOLE_TERMINATION_CAPABILITY_UNVERIFIED` / `B_OWNER_OPERATOR_PACKET_UNACCEPTED` / `REAL_OPERATOR_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。追加tooling・migration/DDL・GRANT・backup/restore・実接続・有料resource操作なし。
 
+## 2026-10-21 B1 単発監査・無接続最終操作票（オーナー用）
+
+> **この表は安全条件の確認票であり、実接続・KILL・公開・本番移行の許可ではない。** 運用責任者はオーナー本人（本人申告）。本人が提供したAiven Console画面で `Current queries` の一覧と `Terminate` ボタンの**表示のみ**確認。実権限・停止結果・同一対象のserver-side証明は未検証。画像・接続元IP・service/DB名・接続IDをpublic GitHub/ChatGPTへ転記しない。対象の実識別子や秘密はオーナーの非同期・非共有の私的記録のみ。
+
+| B1確認欄 | オーナーが接続前に私的に照合する内容 | この時点の判定 |
+| --- | --- | --- |
+| **B0 固定監査資産** | 監査対象は固定source/release `e858b9c855970fbe73f37a2d60c9db6525b132d6`。#795 `be89af9a`→#796 `5e63b7db`→#797 `9f7d248e`の14固定SQL・17実行・2 reference、caps・strict BLOCKを維持。#804 checker・#806隔離transportは実collectorの認可ではなく、実接続に使う**独立toolingの確定SHA/レビュー**は別。最新mainの変更を黙って監査sourceへ混入しない | **固定source/SQL/refはofflineで検証済み／実tooling未採用** |
+| **B1 operator・対象** | owner=operator（申告確認）。既存Aiven Consoleで、私的に限定した**1 service／1 DB**のregion/endpoint/port/expected host/SAN/CA fingerprintとログインidentity・engineを照合。実値はpublicに出さない。事前に未知の`CURRENT_USER()`やUUIDを得るためにも**無承認の接続はしない** | **管理担当申告済み／private binding・実identity未確認** |
+| **B1 限定権限** | 既存metadata inspectorの実効権限が既存基準（REFERENCES schema／SELECT migration ledger／任意USAGE）を超えず不足もないか。role/mandatory role・default schema・TRIGGER不可視性は独立確認。不明ならSTOP。ユーザー行・dump・DDL・GRANT・全DB SELECTは対象外 | **実権限UNVERIFIED** |
+| **B1 data session** | VERIFY_IDENTITYの単一TLS接続でQ0/Q1→allowlist固定metadata→postflight、暗黙再接続禁止。query10秒／全体120秒、cell128KiB・row256KiB・section8MiB・total16MiB等の既存上限を維持。#806のMac両系列31/31隔離実測は本番TLS/Proxyの保証ではない | **Mac合成受入済み／実Aiven未検証** |
+| **B1 control session** | metadata readとは別の**監視・停止操作scope**として、同一対象の既存inspector自身のsessionを別TLS接続で観測できるか・自身のCIDだけに限定しKILL QUERY/CONNECTIONできるか、scope/SQL/timeout/監督者を事前レビュー。追加`PROCESS`/`CONNECTION_ADMIN`/`TRIGGER`はしない。同一Macの別接続だけではhost・network全障害への耐性はない | **合成確認済み／実Aiven観測・停止経路はBLOCK** |
+| **B1 emergency fallback** | ownerのConsoleにCurrent queriesとTerminateの表示あり。ただし実操作なし。使う場合は対象CID・DB/host/ownerの照合、UIの権限・停止結果・接続消滅の別観測が必要。画面が空になることやKILL受理を終了証明にしない。対象不明・observer断・Console障害なら`REMOTE_TERMINATION_UNVERIFIED`、同じ承認で再実行しない | **UI表示PASS／実能力UNVERIFIED** |
+| **B1 Mac・保管・失敗時** | operator Macのclean/full-history checkout、固定tooling hash・時刻窓、private非同期0700領域とraw0600/限時削除、試行開始/終了/中断を記録。Mac全停止・両control/data断やAiven failoverではremote終了を保証できない残余リスクを別途確認。停止・不明時は既存管理責任者へ私的引継ぎ、復旧としてDDL/GRANTしない | **合成Mac検証済み／実行前受入未完了** |
+| **B2 個別GO（現時点では禁止）** | 将来、固定source+採用tooling/SQL/ref、private target identity、実行者、read/controlの分離されたscope、限定KILL、UTC開始/満了、1回限り・自動retry禁止・失敗後再GO・生結果の保管/廃棄・残余リスクを明示して**接続直前に別のオーナー承認**。チェック済みJSON、GitHub comment、B方式採用、CI、現在の「進もう」はGOではない | **NOT_GRANTED** |
+| **B3/B4 実行・結果** | 実AivenのSELECT/SHOW、独立観測、停止、sanitize receipt、INDEX/FK名・M08・TRIGGER別証拠、migration principal/binlog・restoreは全て実測前。正確な実証なしにPASSとしない。実監査PASSもproduction/release GOではない | **NOT_RUN** |
+
+**機械的な状態区別**：`B1_REVIEW_SHEET_PREPARED` ≠ `B1_PRIVATE_TARGET_ACCEPTED` ≠ `B2_FRESH_OWNER_GO` ≠ `REAL_AIVEN_AUDIT_COMPLETED`。現状は**最初の状態のみ**。#804のsynthetic receiptは一回限り承認のauthorityでも、実施済みの独立証跡でもない。人的再実行防止はA案のdurable atomic anti-replayと同等ではない。
+
+**次の1件（接続なし）**：オーナーはAiven Consoleの既存MySQLサービスに**監査専用read-only principalが今も管理対象として存在するか**を、設定/UIまたは手元の既存私的運用資料だけで確認し、**「存在を確認／不明／見つからない」**のいずれかのみ返信する。実ユーザー名、接続先、権限一覧、認証情報、query結果を送らない。read-only principalの実効grantsの検証はまだUNVERIFIEDとする。新規user/GRANT、実SQL、Aiven接続を依頼しない。
+
+**維持**：`B1_REVIEW_SHEET_PREPARED` / `REAL_AIVEN_CONTROL_UNVERIFIED` / `B2_OWNER_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。
+
 ## 固定対象と再利用
 
 - 作業base main `7258a02ca3599f4efd3afacbd91d5017caeb9842`。本PRのHEADは独立tooling候補であり、固定監査候補の代わりにしない。
