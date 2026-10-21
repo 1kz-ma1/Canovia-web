@@ -256,6 +256,80 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 **維持**：`REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 Phase 1実用tooling採用審査・実行票（無接続）
+
+[独立受入6313307628](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6313307628)を反映。#813の検証HEAD `69515dc413e4c5dc6f93882b0feb71621e51c337`／main `2bd95c9cf1ff83b756ea618dbd512c256ea60272` と既存CIを再利用する。本節は**実行方式の条件付き推奨と将来の操作票**であり、実接続tooling・credential loader・GO発行を実装しない。操作票の空欄は未達であり、チェックの記入だけで現在の合成コードが実接続可能になることもない。
+
+### 資格情報方式の比較と推奨候補
+
+**条件付き推奨R1：#813と同じPyMySQL 1.1.2を基礎に、将来オーナー本人が管理Macのprivate TTYへ既存inspector passwordを一度だけ非表示入力し、既存CAと過去に照合済みの対象設定を使う方式。** 既存のlogin-pathは残し、10/21の対象照合の出典として再利用するが、**その保存passwordをPyMySQLへ転送する方式ではない**。login-pathを直接再利用できると説明してはならない。オーナーが既存passwordを私的に用意できない／TTY再入力を認めない場合はR1をBLOCKし、復号・表示・別方式への自動fallbackをしない。今回passwordの用意・取得・入力は求めない。
+
+| 候補 | 既存login-path／CAの利用 | 採用審査 |
+|---|---|---|
+| **R1 PyMySQL＋将来のprivate TTY入力** | login-pathのcredentialは読まない。既存CA・対象の歴史的照合を再利用。秘密は将来のowner入力後、同一プロセスの2接続にだけ保持 | **条件付き推奨・未採用**。#813の同一TLS/Gate/caps/COM_QUIT送信検査を再利用でき、最小の差分。credential方式へのowner判断と後述の実装・審査が必要 |
+| native MySQL CLIを2本持続起動 | MySQL自身が既存 `.mylogin.cnf` の選択login-pathを読み、既存CAを明示する。PyMySQLへの秘密移送は不要 | 今回は非推奨・未採用。永続stdin/result framing、初期SQL/2接続上限、timeout/caps、再接続禁止とQUIT送信確認を新たに証明する必要。CLIの終了codeだけでは#813のQUIT write成功に代えられない。既定SIGINT処理には**別接続からKILL QUERYを送る経路**があり、Phase1へそのまま使えない |
+| SQLごとにMySQL CLI起動 | login-path／CAは使える | **不採用**。Dataの同一TLS/CIDと2接続・回数上限を維持できない |
+| PyMySQLにlogin-path名／`.mylogin.cnf` を直接指定、設定を平文へexportして読込 | 非対応／秘密の新たな複製が必要 | **不採用**。PyMySQLの `read_default_file` は通常のoption-file parserで、MySQLのobfuscated login-path readerではない。password引数・環境変数・平文一時INI・print/defaults出力・復号bridgeも採用しない |
+
+根拠：[MySQL公式login-path仕様](https://github.com/mysql/mysql-server/blob/mysql-8.4.0/man/mysql_config_editor.1)（obfuscationであり強固な秘密保管の保証ではない）、[MySQL CLIのSIGINT/KILL経路](https://github.com/mysql/mysql-server/blob/mysql-8.4.0/client/mysql.cc)、[PyMySQL 1.1.2 option-file/接続処理](https://github.com/PyMySQL/PyMySQL/blob/v1.1.2/pymysql/connections.py)。当該実装をsourceで確認した。operator Macの実際のclient binary/version・秘密は今回取得していない。
+
+### 実用採用前に必要な実装差分（今回は実装・有効化しない）
+
+1. **credential境界**：R1をownerが選定した後にだけ、private TTY専用の非echo入力・非TTY/echo復帰失敗時の中止・`getpass`の表示fallback拒否を設計する。秘密をargv/env/file/clipboard/ログ/traceback/receiptへ渡さず、core dumpやdebug/local変数収集を抑止。2接続で同じ既存principalを使い、失敗時に再入力・再接続しない。Python/driverのimmutable文字列やOSメモリの完全消去は保証できないことを受け入れ、終了時の参照破棄を完全消去と表現しない。新しい認証authority/Keychain連携やpassword変更は作らない。
+2. **合成と実用の分離**：現runtimeの固定合成host/DB/user/password/CA、`/synthetic`、fixture oracleを置換するswitchを既存CLIへ足さない。別審査の単一用途adapter候補として、private対象設定の読取境界・許可対象1件・既存CA・期待identityの出典を固定する。環境や通常option-fileからの黙示override／任意endpoint／SQL／admin fallbackを拒否。今回はそのadapter/config/credential loaderを作らない。
+3. **実toolingの固定と差分受入**：選定adapterの完全SHA、PyMySQL/Python/SSL依存・配布物hashを固定し、#813から変わる境界だけを合成・Mac無接続環境で検証する。既存15単体/18合成wire結果は同一部分に再利用し、全面再実装・旧94/CAの再調査をしない。実用SHAは現時点で**未定・未採用**。#813や本docs PRのSHAを実用tooling採用済みと記入しない。
+4. **未知の実値を扱うbootstrap**：実UUIDや現在のgrantsを事前の実接続で採取しておくことを必須にしない。後述の明示GO内の最初のControl identityでUUID/`CURRENT_USER()`/engineを**観測値**として受け、既知のprivate対象/論理principal/DB/許可engineと照合する。Data Q0および以後のControlで同じ完全identityを要求。未知のhost grant部分等を勝手に `%` と仮定せず、対応を安全に判断できなければSTOP。UUIDやQ0自己申告だけを独立したtarget承認にしない。現在の実効権限/roleがQ1だけでは確定できない場合もSTOPし、追加SQLやGRANTで補わない。
+
+### Phase 1専用実行票 P1（私的記入用／現在NOT_EXECUTABLE）
+
+**操作一覧の審査結果**：直前の「Phase 1 SQL／protocolの完全な操作一覧」を変更せず採用条件とする。Q0/Q1以外も同じ票のscopeに含める。Data6＋Control9＝通常15 SQL／最大42、同一最小principalの**2 TLS接続のみ**、各1回の正常COM_QUIT（SQLではない）。Controlは対象Data CIDだけの観測、query idleとconnection消滅を区分。query10秒／全体120秒／既存cell・row・section・total caps。fixture管理SQL・KILL・full17・ledger/app rowsは**実行scopeに含めない**。adapterが1つでも別SQL/再接続/回数超過を必要とするなら採用を止め、票・コード・差分証拠を別レビューする。上限を黙って増やさない。
+
+以下のprivate欄に実値を記入する場所はGitHub/ChatGPTではない。共有用は末尾の固定分類receiptだけとする。`未記入/未承認` がある間は接続しない。
+
+| P1欄 | 私的に束縛する内容／合格条件 | 現在 |
+|---|---|---|
+| 票ID・版・試行ID | 本票の確定版と非秘密の一意試行ID、接続前に試行開始を記録。新プロセス/別票コピーで許可を再利用しない | 未記入 |
+| source／release | `e858b9c855970fbe73f37a2d60c9db6525b132d6`／`release/2026-10-19-e858b9c8`。main移動で更新しない | 固定・不変 |
+| 実用tooling | 将来採用する完全SHA／配布物・依存hash／#813との差分レビュー・受入証拠／clean full-history checkout | **未実装・未採用** |
+| SQL seal | #795 `be89af9a…` の原本Q0 SHA256 `092b3b57f2cc33abe4857da34d50dbefc316e61c9b3073bb575233b7569e7a89`、Q1 `0923d34edf5c4d241e7ba853045e7443943ebeee81153a6c49ed8c5b080ebc24`（末尾LFを含む）。14 bundle `8383bc16fc8b35b8413a2a6a0b0c0784c9fa646ebab119017b97c2bd8d4333d1` とreference hashはB0の既存manifest照合を再利用。Phase1は物理Reference比較を実行しない | 原本確認済み／実行前bytes照合は将来 |
+| operator・端末 | owner=operatorの本人・管理Mac・ローカル実行責任者。debug/画面共有/端末録画・秘密の収集を避け、private保管責任者を指定 | 私的記入待ち |
+| 対象1件 | 10/21の既存service/DB/Host/Port/User照合記録を参照し、今回の対象1件を束縛。実値を公開しない。変更/失効根拠なしにConsole照合をやり直させない | 歴史的照合を再利用 |
+| CA／SAN／TLS | 10/21の既存CA fingerprint・hostname記録を期待値に使う。将来の実行前にtoolingが現在のCA file bytesと期待値を比較、TLSはCERT_REQUIRED＋hostname/SAN検証＋TLS1.2以上。既存ファイルの存在/Console照合を改めて依頼する作業ではない | 歴史的照合あり／実TLSは未検証 |
+| 資格情報方式 | **R1選定の可否**。ownerが将来private TTYで同じ既存inspectorのpasswordを入力すること、login-pathのpasswordは転送しないことに同意。用意できない/入力不可ならBLOCK | **owner判断待ち** |
+| 最小権限 | 10/18 validatorの歴史的受入を根拠として再利用。現在値はGO内Q1で検査。不足/過剰/未知roleならSTOP、拡権・別loginなし | 現在値は未知・取得は将来GO内のみ |
+| identity／Control CID | 既知のprivate対象・論理principalと、最初のControl identity→Data Q0→継続観測を照合。Data CIDはhandshake＋同じDataのCID SQL由来。未知のUUIDを事前probeしない、他CID探索不可 | 実観測NOT_RUN |
+| UTC窓 | 新しいGOの記録時刻、接続開始/満了epoch、0<窓≤120秒。待ち時間超過/時計不明/終了期限超過は中止。秘密入力や接続の失敗・中断も試行消費として記録 | 未記入 |
+| 実行scope | 直前のexact SQL/protocol表の確定版、15/42 SQL、2 TLS、normal QUIT・観測のみを対象にする。Q0/Q1だけと略記して補助SQLを隠さない | 表を審査済み／実用adapter同等性は未検証 |
+| 保管・削除 | Git/同期/CI外のprivate0700領域、必要最小のraw0600、保存期限/削除担当/中断残骸確認。passwordは保存しない。rawを原則メモリ内に留め、OS crash/swap/完全消去の限界も認識 | 私的記入待ち |
+| 障害時の引継ぎ | 当該対象の既存認可責任者と連絡方法、対象/UTC窓/既知CID等のprivate引継ぎ先。追加のSQL/Console操作は本票の自動fallbackではない | 私的記入待ち |
+| 残余リスク受入 | 下記R欄をownerが私的に個別受入。受入は技術証明ではない | **未承認** |
+| 実行直前GO | 実用tooling採用・全欄成立後にownerが本人監督で、固定対象・SHA・全SQL scope・窓・1回・再試行不可を確認し、新しい明示GOを記録。JSON/env/comment/CIだけをauthorityにしない | **NOT_GRANTED** |
+
+### 残余リスクのowner承認欄（R欄、未承認が既定）
+
+| 欄 | 受け入れる限界（PASSへ昇格しない） | 私的署名／UTC／受入・拒否 |
+|---|---|---|
+| R1 | private TTYでの秘密再入力とプロセス内平文保持。端末の侵害/録画/メモリ・swap・core等を完全排除/完全消去できない | 未承認 |
+| R2 | 同一Macの2 TLSは独立した災害ドメインではない。Mac全停止/通信断ではremote終了を観測できず、再起動して同じGOで再実行しない | 未承認 |
+| R3 | failover/proxy/server切替/CID再利用疑義はSTOP。CIDやUUIDだけでは真正性・世代/連続性を証明できない | 未承認 |
+| R4 | 正常QUIT/local closeは異常時強制停止能力ではない。Phase1ではKILLなし、Control自身のremote消滅も独立証明しない | 未承認 |
+| R5 | 最小権限の観測不能/未知role/同意撤回/期限切れはHOLD。人的1回運用は耐再起動・rollbackの暗号学的anti-replayではない | 未承認 |
+| R6 | 限定bootstrapの合成/実結果はfull17・物理schema/TRIGGER・移行主体/binlog・restore・実機・production公開の承認ではない | 未承認 |
+
+### STOP・再承認・private引継ぎ（本票の運用順序）
+
+1. **接続前**：上記固定資産・既存対象記録・credential方式・実用SHA・残余リスク・責任者・UTC窓を無接続でレビュー。未採用tooling／未承認欄／不一致／秘密を安全に入力できない状態なら**NO_CONNECT**。歴史的な94/権限/CA検査を追加接続で埋めない。実行票の採用と実GOを分離する。
+2. **将来のGO後だけ**：開始をprivate記録し1試行を消費、資格情報を私的に入力、Control→Dataの既定順序で実行。2接続以外を作らず、current identity/grants等の未知値は許可されたQ0/Q1/Control内でだけ得る。正常時はQUIT write/local closeとDataのserver-side query/connection終了を別判定し、最後にControlをcloseする。
+3. **一度でも不明/異常なら**：未送信SQLを止め、現在のlocal handleを追加SQLなしでdrop。許可されたControlが健全な範囲の既定観測以外を足さず、再接続/別host/TLS弱化/admin login/GRANT/KILL/Console Terminate/別CID探索をしない。観測断・server差・CID疑義・timeout・QUIT失敗・remote終了不明は **REMOTE_TERMINATION_UNVERIFIED / HOLD**。要求受理/CLI終了/空画面をremote終了証明にしない。
+4. **Mac停止・復帰を含む引継ぎ**：既存責任者へ、対象のprivate参照、試行ID、source/tooling、UTC開始/期限、最後の正常段階、既知CID/UUID（不明なら不明）、local close結果・remote終了未確認を私的に渡す。password/token/raw grantsを送らない。今回の作業では連絡やConsole操作を実行しない。本票は責任者へのSQL/KILL等の権限を新たに与えない。
+5. **終了後**：成功/失敗/中断/期限切れの全てで同じGOは終端。private残骸と保存期限を確認し、将来の再試行は原因と対象/時刻窓/状態を再審査した**新票・新GO**にする。後のcleanup/管理者確認を元の失敗のPASSへ書き換えない。
+
+共有可能なreceiptは**固定source/tooling SHA、SQL整合可否、開始/終了UTC、段階の固定分類、接続/SQL回数、QUIT write/local close/query終了/connection消滅の各boolまたはUNVERIFIED、cleanup区分、fresh GO必要**のみ。接続先/DB/CA path・fingerprint/内部principal/CID/UUID/秘密/raw/詳細エラーはGitHub・CI・ChatGPTへ出さない。ownerの実GOが存在しない現在の合成receiptは常に `execution_allowed=false` / `owner_approval_verified=false`。
+
+**直後の次作業＝オーナー判断（R1資格情報方式の選定。秘密入力も実接続GOも不要）** → 選定後の**必要最小の無接続実装・差分受入** → 実用tooling/票/残余リスクの最終owner審査 → 新しいPhase1限定GO → そのGO内だけの**実環境検証**。現時点から実環境検証へ直接進まない。R1が不採用ならHOLDして方式審査へ戻り、native CLI等へ無断切替しない。
+
+**維持**：`LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
