@@ -348,6 +348,25 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 **維持**：`R1_DESIGN_SELECTED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 R1 adapter境界（合成専用・無接続）
+
+[#815独立レビュー6314307552](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6314307552)に対する限定差分。`scripts/ci/e858_phase1/r1_adapter.py` は**内部生成の合成PTYと固定mock driverだけ**を束縛し、#815の `PrivateTTYAttempt`、#813のruntime/host/protocolを変更しない。実用tooling、実 `/dev/tty` opener、実endpoint/CA/password入力、login-path読込、credential loader/接続switchは作らない。
+
+| 境界 | 今回の実装・検証 | 実用採用まで残ること |
+|---|---|---|
+| TTY取得・操作 | 明示的な `SYNTHETIC_OPERATOR_GESTURE` とsealed contractの成立後だけ、内部でPTYを生成。main thread・非継承FD・character device/TTY・作成時FD identityを検査し、標準/未知/置換FD、stdin fallbackを拒否。復元は#815を再利用し、所有FDを終了時にclose、不明はcleanup未確認 | 合成gestureは本人認証・オーナー承認ではない。管理Macのtrusted controlling TTY取得・端末/録画/本人確認は未実装・別審査。実password入力は求めない |
+| 受渡し・寿命 | 入力は固定合成passwordだけ。context内でcapture→control→dataの順に各1回だけ同じbytearrayのreadonly memoryviewを固定 `SyntheticDriver` に貸与。任意driver/factoryの注入なし。入力開始から同じ120秒窓を消費し、入力後に期限をリセットせず期限切れhandoffを拒否。SQL拒否・driver作成失敗・割込でも両mockを停止し、全leaseをrelease→driver参照破棄→bufferゼロ化/破棄→TTY close。close不明は `R1_CLEANUP_UNVERIFIED` | Python private属性/readonly viewはtrusted callerを隔離しない。将来PyMySQLのimmutable内部コピー・寿命、debug/core/swap、例外context/local変数のprivate閲覧・完全消去は保証しない。mockのcopyなし検証をdriver実用検証にしない |
+| 対象・CA・seal | service/DB/Host/Port/principal・SAN・VERIFY_IDENTITY/certificate/hostname/TLS1.2・source/release・独立reviewed tooling SHA・Q0/Q1/bundle hash・既存上限をfrozen contractと型も含め完全一致で照合。変更は入力前/driver作成時/SQL claim時に拒否。環境/option-file override/admin fallbackなし | CA bytes/hashは明記した**合成marker**でありX509証明書ではない。実CA file/既存private対象記録のbindingは未実装。tooling引数同士の一致は承認/checkout真正性ではなく、既存source-bound integrity/clean checkoutを別途再利用する。seal変更を許可しない |
+| Phase1同等性 | 新mockは固定Q0/Q1 bytesをhash照合し既存 `Gate` を使う。既存 `Bootstrap.run()` をテスト側のmock Channelでそのまま実行し、15 SQL/2 channel・Control観測・normal QUIT marker・query終了とconnection不在の分離を比較。free SQL/追加接続/順序違反/期限延長/中断/観測不能はSTOPし同じattemptで再実行しない | mockのQUIT/不在はserver/TLSの観測証明ではない。実TLS/COM_QUIT/remote消滅の合成通信証拠は既存Phase1 MySQL8.0/8.4各18-case CIを再利用し、新TTY秘密が実wireへ渡ったとは主張しない。real session/UUID/grants/CIDはGO内でのみ検証 |
+
+**新26テスト**：全contract項目変更、tooling/Q0/Q1改変、非TTY/未知FD・取得失敗・非継承/復元/close、actionなし、同一readonly bufferの2貸与・releaseと参照破棄、writer/driver作成/TTY・driver close失敗、割込/例外の固定出力、再入力・再開/期限切れ受渡し拒否、環境override無効、runtime変更なしの両engine mock受入、観測不能/割込の `REMOTE_TERMINATION_UNVERIFIED`、Gate改変/free SQL拒否後の再試行拒否、実接続/CLI/loader経路なし。既存#815 21＋Phase1 15＋B1 22＋TLS offline17を同じLinux3.9/3.12・Mac3.12 CIで回帰する。既存Full94/114/full17/KILL wireは共有差分がないため再実行しない。historical 10/18・10/21の照合を再依頼しない。
+
+**管理Mac無接続受入へ進める条件**：このPRの固定HEADで上記CI・差分レビューが成功した後、管理Macの新しいclean checkoutから合成adapter/TTYテストだけを実行できる（具体的な固定HEAD/CI Run/コマンドはPR・Issue #488に記録）。実passwordも実CA file/接続先も入力しない。実fixture外への通信が必要、依存不一致、テスト失敗、cleanup不明ならSTOPし、実接続で解決しない。この受入はP1実行票やR欄の署名・実接続GOではない。
+
+**次工程**：管理Macのこの合成無接続受入→別レビューの実用adapter候補（trusted TTY取得・private対象/既存CAのseal・PyMySQL受渡し/内部copy・単一principal/2接続・既存Gate/capsの保持）→完全実用SHA/配布物/依存固定とowner採用→P1票/R1〜R6の個別受入→新しいPhase1限定GO。現時点ではどの実用connectorも有効化しておらず、実接続GOまでの技術差分は残る。プロセス再起動をまたぐanti-replay/remote強制停止/実用principalの権限/実バックアップ復元も証明しない。
+
+**維持**：`R1_DESIGN_SELECTED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
