@@ -13,11 +13,11 @@ from transport import (Block, Observer, Session, connection, context, rows as cl
                        DB, USER, PASSWORD, ROOT_PASSWORD, CELL)
 
 
-def oracle_process(pipe):
+def oracle_process(pipe, role, fault):
     """Separate process: data-client SSL faults cannot close its TLS objects."""
     observer = None
     try:
-        observer = Observer()
+        observer = Observer(role=role, fault=fault)
         pipe.send((True, (observer.uuid, observer.conn._sock.getsockname())))
         while True:
             operation, args = pipe.recv()
@@ -38,10 +38,11 @@ def oracle_process(pipe):
 
 class Oracle:
     """Private fixture RPC, not a network service or production control channel."""
-    def __init__(self):
+    def __init__(self, role='root', fault=None):
+        if role not in ('root', 'inspector') or fault not in (None,'unobservable','kill_query','kill_connection'): raise Block('ORACLE_ROLE_REJECTED')
         ctx = multiprocessing.get_context('spawn')
         self.pipe, child = ctx.Pipe()
-        self.process = ctx.Process(target=oracle_process, args=(child,), daemon=True)
+        self.process = ctx.Process(target=oracle_process, args=(child, role, fault), daemon=True)
         self.process.start(); child.close()
         self.uuid, self.local = self.receive()
         self.conn = self

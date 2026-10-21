@@ -1,0 +1,53 @@
+name: E858 Full94 Single TLS Bridge
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/e858_full94_tls.py'
+      - 'scripts/ci/e858_tls/**'
+      - 'scripts/ci/e858_tls_host.py'
+      - 'scripts/ci/e858_b_offline.py'
+      - 'scripts/ci/p0_mysql_metadata_grants_input.py'
+      - 'tests/ci/test_e858_full94_tls.py'
+      - '.github/workflows/e858-full94-tls.yml'
+      - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  full-schema:
+    name: Full94 TLS (MySQL ${{ matrix.series }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        series: ['8.0','8.4']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Install pinned test dependencies without app startup
+        run: |
+          python3 -m pip install PyMySQL==1.1.2 cryptography==46.0.3
+          composer install --prefer-dist --no-interaction --no-progress --no-scripts
+      - name: Bridge offline negative tests
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_full94_tls.py -v
+      - name: Full94 and114 on-wire fixed reference acceptance
+        env:
+          SERIES: ${{ matrix.series }}
+        run: python3 -I -B scripts/ci/e858_full94_tls.py --series "$SERIES" --tooling-sha "$(git rev-parse HEAD)"
+      - name: Source stays clean
+        run: test -z "$(git status --porcelain)"

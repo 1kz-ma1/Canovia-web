@@ -135,6 +135,26 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 
 **維持**：`B1_REVIEW_SHEET_PREPARED` / `REAL_AIVEN_CONTROL_UNVERIFIED` / `B2_OWNER_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
+
+[Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
+
+**監査経路**：#804のsource/tooling/SQL/reference integrityとB1 validateを利用。各stageの合成B票は `SYNTHETIC_B1_ONLY` / `execution_allowed=false` / `owner_approval_verified=false` であり、receiptは実承認ではない。workerもB票の期限・pins・receiptと、固定source manifest/期待migration集合/contract/ref hashを照合してからSessionを作る。#795の14 SQL/17順序とpure `audit/model/compare` を固定Git blobからそのまま使用する。旧#795の限定scope boundaryや `--collect` BLOCKは緩和せず、新しいB integrityがmoving-mainと固定監査資産を分離する。
+
+**data/control分離**：dataは従来と同一のVERIFY_IDENTITY TLS connection/socket/CIDで全17処理を実行。別spawnプロセスの**同一最小principal**が自身sessionを観測/停止する。REFERENCES schema＋SELECT ledgerの権限は広げない。管理rootは合成schema構築・独立fixture証拠・緊急cleanupに限定し、inspectorのTRIGGER権限などに置換しない。失敗後の同一Collector/Session再実行を拒否し、終了未確認は `REMOTE_TERMINATION_UNVERIFIED`、後続cleanupで昇格しない。
+
+| 合成受入 | 必須の判定 |
+| --- | --- |
+| 全94件・最小権限のon-wire stream | 91table/1154column/604index行/181FK行等の固定baseline94へ厳密一致、`EXACT94_PENDING20_METADATA_REVIEW_ONLY` / `REVIEW_REQUIRED`。総合判定は依然 `BLOCK_REAL_GATES_UNVERIFIED` |
+| 意図的なINDEX名差 | `NAME_ONLY_DIFFERENCE` でもstrict `BLOCK`。aliasを元に戻し固定114件へ進む |
+| 全114件・最小権限stream | TRIGGER 3件が不可視となる `TRIGGER_ABSENT_OR_NOT_VISIBLE` / `BLOCK`。他区分一致を確認し、不可視性を0件の完全証明にしない |
+| 全114件・管理fixtureの構造証拠 | #795 candidate114 referenceに厳密一致すること。これは独立した試験用証拠で、inspector収集結果へ混入・本番GOへの昇格をしない |
+| SQL/権限/session/control負例 | 自由SQL・export・別target/session・過剰/不足grants・observer不可視・停止要求失敗を拒否。成功captureの実server query logをprivateにallowlist/envelopeと照合し、application-row SELECTが0件であることを検査 |
+
+旧#806のMac31ケース、#795〜#797、既存移行/復元監査を目的なく再実行しない。共有runtime/Oracleに変更があるため、その31ケースを今回の回帰CIとしてのみ実行し、新規full94/114受入は別workflowの8.0/8.4で実施。CI run/tooling固定HEAD・main統合状態はPRとIssue #488へ集約する。新しい正本や本番connector、host/CA/login-path/credential入力、live実行スイッチは増やさない。
+
+**実環境の次ゲート**：オーナーが既存1 service/DB、期待CA/SAN/identity、管理Mac、独立control scope、期限/1回を私的に照合する。秘密や生grants/metadataは共有しない。その後に初めてQ0/Q1/control可視性だけの狭いlive bootstrapを別提案・別GOで審査する。今回の実装/合成成功はそのGOでもfull17実読取許可でもない。現時点で新しいowner probeを依頼しない。実physical INDEX/FK/TRIGGER、migration principal/binlog、実backup復元・device・本番昇格は別ゲートで **REAL_AIVEN_E858_NOT_RUN / PRODUCTION_NO_GO_HOLD**。
+
 ## 固定対象と再利用
 
 - 作業base main `7258a02ca3599f4efd3afacbd91d5017caeb9842`。本PRのHEADは独立tooling候補であり、固定監査候補の代わりにしない。

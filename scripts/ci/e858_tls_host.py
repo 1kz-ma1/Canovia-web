@@ -106,7 +106,8 @@ def assets(directory, head, series):
     return facts, old, new, reference
 
 
-def rehearse(series, head):
+def rehearse(series, head, profile='minimal'):
+    if profile not in ('minimal', 'full94'): raise Block('ISOLATED_PROFILE_REJECTED')
     token = uuid.uuid4().hex
     stem = 'canovia-e858-tls-' + token[:12]
     network, image = stem + '-network', stem + '-client'
@@ -118,6 +119,9 @@ def rehearse(series, head):
         work = Path(temp).resolve(); work.chmod(0o700)
         certificate_material(work)
         facts, old, new, reference = assets(work / 'client', head, series)
+        if profile == 'full94':
+            from e858_full94_tls import prepare
+            prepare(work, head, series, facts, old, new, reference)
         output = work / 'out'; output.mkdir(mode=0o700)
         try:
             run(['docker', 'network', 'create', '--internal', '--label', LABEL + '=' + token, network])
@@ -131,7 +135,9 @@ def rehearse(series, head):
             (build / 'Dockerfile').write_text('FROM python:3.12-slim\nCOPY *.whl /tmp/\nRUN pip install --no-index /tmp/*.whl && rm /tmp/*.whl\n')
             run(['docker', 'build', '--network=none', '--label', LABEL + '=' + token,
                  '-t', image, str(build)], timeout=300)
-            for suffix, hostname in [('server', 'mysql.synthetic.invalid'), ('expired', 'expired.synthetic.invalid')]:
+            servers = [('server', 'mysql.synthetic.invalid')]
+            if profile == 'minimal': servers.append(('expired', 'expired.synthetic.invalid'))
+            for suffix, hostname in servers:
                 name = stem + '-' + suffix
                 argv = ['docker', 'run', '-d', '--name', name, '--label', LABEL + '=' + token,
                     '--network', network, '--network-alias', hostname,
@@ -168,40 +174,11 @@ def rehearse(series, head):
                         or not net['Internal'] or net['Labels'].get(LABEL) != token
                         or set(state['NetworkSettings']['Networks']) != {network}):
                     raise Block('ISOLATION_OWNERSHIP_REJECTED')
-            name = stem + '-worker'
-            owned.append(name)
-            proc = subprocess.run(['docker', 'run', '--name', name, '--label', LABEL + '=' + token,
-                '--network', network, '--read-only', '--tmpfs', '/tmp:rw,nosuid,size=64m',
-                '--user', str(os.getuid()) + ':' + str(os.getgid()),
-                '-v', str(ROOT / 'scripts/ci/e858_tls') + ':/code:ro',
-                '-v', str(work / 'client') + ':/synthetic:ro', '-v', str(output) + ':/out:rw',
-                '-e', 'PYTHONPATH=/synthetic:/code', image, 'python', '-B', '/code/fixtures.py'],
-                capture_output=True, timeout=180)
-            if proc.returncode:
-                # Private, fixed diagnostic frames only, never SQL/error strings.
-                debug = output / 'private-error.json'
-                if debug.exists() and os.environ.get('GITHUB_ACTIONS') != 'true':
-                    dest = Path('/tmp') / ('canovia-e858-tls-debug-' + str(os.getuid()) + '.json')
-                    dest.write_bytes(debug.read_bytes()); dest.chmod(0o600)
-                try: failure = json.loads(proc.stdout)
-                except Exception: failure = {}
-                raise Block('ISOLATED_WORKER_FAILED_' + failure.get('case', 'BOOTSTRAP'))
-            result = json.loads(proc.stdout)
-            if result['result'] != 'ISOLATED_SYNTHETIC_VERIFIED' or result['real_aiven_connected']:
-                raise Block('ISOLATED_REPORT_REJECTED')
-            data = json.loads((output / 'snapshot.json').read_text())
-            raw = data['engine'] + ''.join(data[k] for k in ('table','column','index','foreign_key','check','trigger'))
-            legacy = dict(kind='DISPOSABLE_SOURCE_REFERENCE_ONLY', baseline_sha=BASE,
-                migration_seal=reference['migration_seal'], engine=series,
-                baseline94=reference['baseline94']['physical'], candidate114=reference['candidate114']['physical'])
-            strict = compare(dict(baseline=old, candidate=new, migration_seal=reference['migration_seal']),
-                             parse_full_ledger(data['ledger']), snapshot(raw), legacy)
-            if strict['result'] != 'BLOCK': raise Block('MINIMAL_FIXTURE_MUST_STRICT_BLOCK')
-            result.update(tooling_sha=head, source_sha=SOURCE, series=series,
-                strict_schema_result='BLOCK_EXPECTED_MINIMAL_STRUCTURE_FIXTURE',
-                trigger_visibility='UNVERIFIED', ledger_fixture_only=True,
-                evidence=['STATIC_REVIEWED','SYNTHETIC_TESTED','ISOLATED_MYSQL_TLS_TESTED',
-                          'ISOLATED_REMOTE_TERMINATION_TESTED','REAL_AIVEN_UNVERIFIED'])
+            if profile == 'full94':
+                from e858_full94_tls import exercise
+                result = exercise(work, stem, token, network, image, owned, head, series)
+            else:
+                result = minimal_worker(work, stem, token, network, image, owned, output, head, series, facts, old, new, reference)
         finally:
             for name in reversed(owned):
                 state = subprocess.run(['docker', 'inspect', name], capture_output=True)
@@ -227,7 +204,45 @@ def rehearse(series, head):
     return result
 
 
-def main():
+def minimal_worker(work, stem, token, network, image, owned, output, head, series, facts, old, new, reference):
+    name = stem + '-worker'
+    owned.append(name)
+    proc = subprocess.run(['docker', 'run', '--name', name, '--label', LABEL + '=' + token,
+        '--network', network, '--read-only', '--tmpfs', '/tmp:rw,nosuid,size=64m',
+        '--user', str(os.getuid()) + ':' + str(os.getgid()),
+        '-v', str(ROOT / 'scripts/ci/e858_tls') + ':/code:ro',
+        '-v', str(work / 'client') + ':/synthetic:ro', '-v', str(output) + ':/out:rw',
+        '-e', 'PYTHONPATH=/synthetic:/code', image, 'python', '-B', '/code/fixtures.py'],
+        capture_output=True, timeout=180)
+    if proc.returncode:
+        # Private, fixed diagnostic frames only, never SQL/error strings.
+        debug = output / 'private-error.json'
+        if debug.exists() and os.environ.get('GITHUB_ACTIONS') != 'true':
+            dest = Path('/tmp') / ('canovia-e858-tls-debug-' + str(os.getuid()) + '.json')
+            dest.write_bytes(debug.read_bytes()); dest.chmod(0o600)
+        try: failure = json.loads(proc.stdout)
+        except Exception: failure = {}
+        raise Block('ISOLATED_WORKER_FAILED_' + failure.get('case', 'BOOTSTRAP'))
+    result = json.loads(proc.stdout)
+    if result['result'] != 'ISOLATED_SYNTHETIC_VERIFIED' or result['real_aiven_connected']:
+        raise Block('ISOLATED_REPORT_REJECTED')
+    data = json.loads((output / 'snapshot.json').read_text())
+    raw = data['engine'] + ''.join(data[k] for k in ('table','column','index','foreign_key','check','trigger'))
+    legacy = dict(kind='DISPOSABLE_SOURCE_REFERENCE_ONLY', baseline_sha=BASE,
+        migration_seal=reference['migration_seal'], engine=series,
+        baseline94=reference['baseline94']['physical'], candidate114=reference['candidate114']['physical'])
+    strict = compare(dict(baseline=old, candidate=new, migration_seal=reference['migration_seal']),
+                     parse_full_ledger(data['ledger']), snapshot(raw), legacy)
+    if strict['result'] != 'BLOCK': raise Block('MINIMAL_FIXTURE_MUST_STRICT_BLOCK')
+    result.update(tooling_sha=head, source_sha=SOURCE, series=series,
+        strict_schema_result='BLOCK_EXPECTED_MINIMAL_STRUCTURE_FIXTURE',
+        trigger_visibility='UNVERIFIED', ledger_fixture_only=True,
+        evidence=['STATIC_REVIEWED','SYNTHETIC_TESTED','ISOLATED_MYSQL_TLS_TESTED',
+                  'ISOLATED_REMOTE_TERMINATION_TESTED','REAL_AIVEN_UNVERIFIED'])
+    return result
+
+
+def main(profile='minimal'):
     class PrivateParser(argparse.ArgumentParser):
         def error(self, message): raise Block('ARGUMENTS_REJECTED')
     try:
@@ -236,7 +251,7 @@ def main():
         parser.add_argument('--tooling-sha', required=True, action='append')
         args = parser.parse_args()
         if len(args.series) != 1 or len(args.tooling_sha) != 1: raise Block('ARGUMENTS_REJECTED')
-        result = rehearse(args.series[0], args.tooling_sha[0])
+        result = rehearse(args.series[0], args.tooling_sha[0], profile)
         code = 0
     except (Exception, SystemExit, KeyboardInterrupt) as error:
         # Public failure identifies a fixed fixture stage only.
