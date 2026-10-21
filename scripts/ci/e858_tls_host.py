@@ -135,7 +135,9 @@ def rehearse(series, head, profile='minimal'):
             (build / 'Dockerfile').write_text('FROM python:3.12-slim\nCOPY *.whl /tmp/\nRUN pip install --no-index /tmp/*.whl && rm /tmp/*.whl\n')
             run(['docker', 'build', '--network=none', '--label', LABEL + '=' + token,
                  '-t', image, str(build)], timeout=300)
-            for suffix, hostname in [('server', 'mysql.synthetic.invalid'), ('expired', 'expired.synthetic.invalid')]:
+            servers = [('server', 'mysql.synthetic.invalid')]
+            if profile == 'minimal': servers.append(('expired', 'expired.synthetic.invalid'))
+            for suffix, hostname in servers:
                 name = stem + '-' + suffix
                 argv = ['docker', 'run', '-d', '--name', name, '--label', LABEL + '=' + token,
                     '--network', network, '--network-alias', hostname,

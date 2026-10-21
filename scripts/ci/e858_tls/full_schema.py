@@ -48,7 +48,9 @@ def capture(admin, own, expected_stage, strict):
     allowed={(Path('/synthetic/queries')/(k+'.sql')).read_text().strip() for k in json.loads(Path('/synthetic/manifest.json').read_text())['caps']}
     allowed.update(('SET NAMES ascii','SELECT CONNECTION_ID()','SET SESSION max_execution_time=10000'))
     log=rows(admin.conn,"SELECT argument FROM mysql.general_log WHERE thread_id=%s AND command_type='Query'",(collector._data_cid,))
-    require(len(log)>17 and all(row[0].strip() in allowed for row in log))
+    logged=[r[0].decode('ascii') if isinstance(r[0],bytes) else r[0] for r in log]
+    require(len(log)>17 and all(text.strip() in allowed for text in logged),
+            dict(statement_count=len(log),unknown_statement_count=sum(text.strip() not in allowed for text in logged)))
     proof.update(data_sql_allowlist_observed=True,application_select_count=0)
     try: collector.capture()
     except Block as error: require(str(error)=='NEW_OWNER_GO_REQUIRED')
