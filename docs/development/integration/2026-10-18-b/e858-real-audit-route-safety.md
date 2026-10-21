@@ -367,6 +367,23 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 **維持**：`R1_DESIGN_SELECTED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 R1実PyMySQL境界（owned Dockerのみ）
+
+[#816管理Mac26件受入6315407327](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6315407327)を**オーナー報告として再利用**。旧26件・10/18・10/21照合の再実行を依頼しない。以下は実用connector採用ではなく、mock後の新しいdriver境界だけを観測する。
+
+- `e858_r1_driver_host.py` は既存Phase1 host/parserを固定 `r1-driver` profileで呼ぶ。series/SHA以外のtarget/CA/password/driver入力はない。既存fixture・CA生成・source-bound integrity・内部Docker network・最小principal・private trace/oracle・cleanupを再利用し、新しいGRANT/DDL/管理権限は追加しない。同じserver/workerで新8ケース→既存18ケースを1回ずつ実行し、Full94/114/full17/KILLを実行しない。
+- `r1_driver_fixtures.py` は `pty.fork()` で**新しい合成controlling TTY**を作り、子session leader/parent/foreground pgrp・所有slaveと非継承FDを確認して固定 `/dev/tty` をopen。generic `/dev/tty` のinode/uidをslaveと同一と誤認せず、同じforeground pgrp/termiosと親が作った新sessionを照合する。既存#815非echo入力/復元を再利用し、parentはecho-off後に固定合成passwordだけを一度入力。通常のstdin読取fallbackや実Macのpassword promptはない。入力後はowned FDをcloseし、PTY stdout/stderrの1 byteでもあればBLOCK。parent timeout/子終了未確認はBLOCK/remote未確認、ローカル子cleanupをMySQL KILLと混同しない。
+- `r1_driver.py` は固定source/release/tooling/SQL/Q0/Q1、fixture target/CA bytes hash/SAN・TLS1.2/CERT_REQUIRED/hostname、DNSと**認証前の実TCP peer**を照合。CAは読み取り専用fixtureの固定pathのみ、symlink/改変・debug logging・PyMySQL version不一致を拒否。owned内部IP/固定hostname以外、任意SQL/再接続/追加接続/権限fallbackは許可しない。source/Reference/strict判定は無変更。
+- PyMySQL **1.1.2** の実constructorへ同じ合成bytearrayを渡し、`Connection.password is captured_buffer` を2接続で検査（constructorで新しいbytes/strへ変換しない）。`caching_sha2_password`認証完了/失敗直後に `password=b''` としてdriverの保持参照を外し、全wire（部分構築を含む）のclose・bufferゼロ化/参照破棄をfinallyで確認。新input・自動retryなし、秘密や原例外をreceiptへ入れない。
+- **完全消去の限界**：1.1.2のbytearray受入はこの固定版での実測であり、将来版の公開API保証にしない。full TLS authの `password + NUL`、`write_packet` のimmutable bytes、認証hash/SSL/OS buffer等の一時コピーは生じる。fresh serverの最初のControlでfull TLS auth packetの存在を**内容を複製・出力せずboolだけ**観測する。driver保持参照とowned bufferの破棄から、Python/driver/SSL/OS/swap/coreの完全消去を主張しない。合成fixture定数自体の残留も実secret消去の証明ではない。
+- 継承する既存 `Wire` のSQL Gate/上限/COM_QUITと `Bootstrap` のQ0/Q1・Control・通常15/最大42 SQL・2 TLS・query10秒/全体120秒・query/connection分離は変更しない。normal実通信は2TLS/15SQL、同じprincipal、TLS chain/SAN、driver alias、full auth、Dataのserver-side消滅、独立general_logによる全SQL/接続照合を検査。異常時にremote消滅を推測しない。
+
+**差分検証**：新13 offlineテストをLinux3.9/3.12・Mac3.12へ追加（fresh controlling PTY、実constructor alias/破棄、seal/CA/symlink/debug/依存/peer/DNS/constructor失敗/親中断の子所有確認・回収/実CLI引数拒否）。MySQL8.0/8.4は新8ケース：normal、Data認証失敗、割込、QUIT write失敗、CA/target/tooling seal違反、TLS弱化。既存18-case baselineは同じfixtureで1回、旧101単体も回帰し、結果は固定HEAD/CIとともにPR/Issue #488へ記録。Macの既存26件は受入済みを保持し、必要なのは**新13件だけの無接続差分受入**（実TLS通信はLinux Docker証拠）。
+
+**最終採用審査へ提出する材料**：この新driver境界の両MySQL版CIとMac差分受入、既存source-bound証拠、完全SHA/依存/配布物と#813からの差分、R1コピー限界、P1実行票/R1〜R6をまとめる。ただし今回のcontrolling TTY/target/CA/credentialsは合成に固定されており、実用private設定を受け取るconnectorは有効化しない。管理Mac/実用target/CA/同一principalの本番binding、owner本人/P1リスク受入、採用する実用SHAと**新しい限定Phase1 GO**は別審査のまま。未知の実UUID/grants/CIDの事前probeを要求せずGO内のみ。異常時remote停止/実TRIGGER/移行権限/binlog/backup復元/full17/本番昇格は別ゲート。
+
+**維持**：`LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。

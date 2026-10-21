@@ -26,7 +26,8 @@ SETUP = (
 )
 
 
-def rehearse(series, head):
+def rehearse(series, head, profile='phase1'):
+    if profile not in ('phase1', 'r1-driver'): raise h.Block('ISOLATED_PROFILE_REJECTED')
     token=uuid.uuid4().hex;stem='canovia-phase1-'+token[:12]
     network=stem+'-network';image=stem+'-client';owned=[];created=False
     with tempfile.TemporaryDirectory(prefix='canovia-phase1-') as temp:
@@ -80,12 +81,18 @@ def rehearse(series, head):
                     server_uuid=server_uuid,principal='e858_tls_inspector@%',
                     ca=hashlib.sha256((work/'client/ca.pem').read_bytes()).hexdigest(),
                     san=hashlib.sha256(b'mysql.synthetic.invalid').hexdigest())))
+            if profile == 'r1-driver':
+                config['r1'] = dict(kind='OWNED_DOCKER_R1_ONLY', host='mysql.synthetic.invalid', port=3306,
+                    database='canovia_p0_ci', principal='e858_tls_inspector', san='mysql.synthetic.invalid',
+                    source_sha=h.SOURCE, release_ref=pins['release_ref'], tooling_sha=head, sql_sha256=pins['sql_sha256'],
+                    ca_sha256=config['expected']['binding']['ca'],
+                    ipv4=json.loads(h.run(['docker','inspect',server]))[0]['NetworkSettings']['Networks'][network]['IPAddress'])
             (work/'client/phase1.json').write_text(json.dumps(config))
             name=stem+'-worker';owned.append(name)
             args=['docker','run','--name',name,'--label',h.LABEL+'='+token,'--network',network,'--read-only',
                 '--tmpfs','/tmp:rw,nosuid,size=64m','--user',str(os.getuid())+':'+str(os.getgid()),
                 '-v',str(h.ROOT/'scripts/ci')+':/code:ro','-v',str(work/'client')+':/synthetic:ro',
-                '-v',str(output)+':/out:rw','-e','PYTHONPATH=/synthetic/legacy:/code',image,'python','-B','-m','e858_phase1.fixtures']
+                '-v',str(output)+':/out:rw','-e','PYTHONPATH=/synthetic/legacy:/code',image,'python','-B','-m',('e858_phase1.r1_driver_fixtures' if profile == 'r1-driver' else 'e858_phase1.fixtures')]
             try:raw=h.run(args)
             except Exception:
                 debug=output/'error.json'
@@ -127,7 +134,7 @@ def mysql(server, sql):
                   '--database=canovia_p0_ci','--batch','--raw','--skip-column-names','-e',sql])
 
 
-def main():
+def main(profile='phase1'):
     class Parser(argparse.ArgumentParser):
         def error(self,message):raise h.Block('ARGUMENTS_REJECTED')
     try:
@@ -136,7 +143,7 @@ def main():
         p.add_argument('--tooling-sha',required=True,action='append')
         a=p.parse_args()
         if len(a.series)!=1 or len(a.tooling_sha)!=1:raise h.Block('ARGUMENTS_REJECTED')
-        value=rehearse(a.series[0],a.tooling_sha[0]);code=0
+        value=rehearse(a.series[0],a.tooling_sha[0],profile);code=0
     except BaseException as error:
         if os.environ.get('GITHUB_ACTIONS')!='true':
             import traceback
