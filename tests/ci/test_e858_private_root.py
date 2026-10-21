@@ -115,6 +115,45 @@ class RootPreflight(unittest.TestCase):
             if replacement != fd:
                 os.close(replacement)
 
+    def test_reverse_link_from_child_matches_original_parent(self):
+        with root.open_private_root(self.anchor) as entry:
+            self.assertTrue(stat.S_ISDIR(os.fstat(entry.descriptor()).st_mode))
+            self.assertEqual(entry.assessment()["ancestor_trust"], "UNVERIFIED")
+            self.assertFalse(entry.assessment()["execution_allowed"])
+
+    def test_reverse_link_to_unrelated_owned_parent_is_blocked(self):
+        alternate = self.parent / "unrelated"
+        alternate.mkdir(mode=0o700)
+        alt_fd = os.open(alternate, os.O_RDONLY | os.O_DIRECTORY)
+        self.addCleanup(os.close, alt_fd)
+        original_open = os.open
+        def open_checked(name, flags, *args, **kwargs):
+            if name == "..":
+                return os.dup(alt_fd)
+            return original_open(name, flags, *args, **kwargs)
+        with patch.object(root.os, "open", side_effect=open_checked):
+            with self.assertRaises(Block):
+                root.open_private_root(self.anchor)
+        self.assertTrue(os.fstat(self.anchor))
+
+    def test_reverse_link_failure_closes_temporary_child(self):
+        original_open = os.open
+        child = []
+        def open_checked(name, flags, *args, **kwargs):
+            if name == "..":
+                raise OSError(CANARY)
+            fd = original_open(name, flags, *args, **kwargs)
+            child.append(fd)
+            return fd
+        with patch.object(root.os, "open", side_effect=open_checked):
+            with self.assertRaises(Block) as raised:
+                root.open_private_root(self.anchor)
+        self.assertNotIn(CANARY, str(raised.exception))
+        self.assertEqual(len(child), 1)
+        with self.assertRaises(OSError):
+            os.fstat(child[0])
+        self.assertTrue(os.fstat(self.anchor))
+
     def test_no_password_tty_sql_or_network_capability(self):
         self.assertFalse(hasattr(root, "connect"))
         self.assertFalse(hasattr(root, "capture_password"))
