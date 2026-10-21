@@ -12,6 +12,7 @@ on:
       - 'scripts/ci/e858_b_offline.py'
       - 'tests/ci/test_e858_phase1.py'
       - 'tests/ci/test_e858_r1_tty.py'
+      - 'tests/ci/test_e858_r1_adapter.py'
       - '.github/workflows/e858-phase1.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
   workflow_dispatch:
@@ -42,6 +43,7 @@ jobs:
       - run: python3 -m pip install PyMySQL==1.1.2 cryptography==46.0.3
       - name: Phase1 SQL privacy and close contracts with unchanged B and TLS guards
         run: |
+          python3 -B -m unittest discover -s tests/ci -p test_e858_r1_adapter.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_r1_tty.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_phase1.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b_control.py -v
