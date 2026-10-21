@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import sys
 import tarfile
+import tempfile
 import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -96,7 +97,7 @@ def exercise(work, stem, token, network, image, owned, head, series):
         except Exception:
             debug=work/'out/private-error.json'
             if debug.exists() and os.environ.get('GITHUB_ACTIONS')!='true':
-                dest=Path('/workspace/.onboarding/full94-tls/private-error.json')
+                dest=Path(tempfile.gettempdir())/('canovia-e858-full94-debug-'+str(os.getuid())+'.json')
                 dest.write_bytes(debug.read_bytes());dest.chmod(0o600)
             raise h.Block('ISOLATED_FULL_SCHEMA_FAILED_'+stage.upper()) from None
         if value.get('result')!='FULL_SCHEMA_STAGE_VERIFIED': raise h.Block('ISOLATED_FULL_REPORT_REJECTED')
