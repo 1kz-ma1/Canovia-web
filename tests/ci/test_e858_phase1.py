@@ -113,6 +113,16 @@ class NormalCloseTests(unittest.TestCase):
             with self.assertRaises(r.Block):r.Wire(gate,'real_endpoint')
             ca.assert_not_called()
 
+    def test_wire_byte_budget_is_shared_between_both_channels(self):
+        budget=r.SharedBudget();budget.wire_bytes=r.TOTAL
+        wire=self.wire();wire.gate=self.gate_for_budget(budget)
+        with patch.object(r.StrictConnection,'_read_bytes') as read:
+            with self.assertRaisesRegex(r.Block,'WIRE_TOTAL_CAP'):wire._read_bytes(1)
+            read.assert_not_called()
+
+    def gate_for_budget(self,budget):
+        gate=Gate('data',Q0,Q1,budget.until);gate.budget=budget;return gate
+
     def test_unknown_real_cli_modes_never_echo_inputs(self):
         for args in (['--host',CANARY],['--credential',CANARY],['--login-path',CANARY],['--ca',CANARY],
                      ['--sql',CANARY],['--collect'],['--execute'],['--kill'],['--full17']):

@@ -36,8 +36,10 @@ def rehearse(series, head):
         digests={p.stem:hashlib.sha256(p.read_bytes()).hexdigest() for p in (work/'client/queries').iterdir()}
         for p in (work/'client/queries').iterdir():
             if p.stem not in ('identity','grants'):p.unlink()
+        legacy=work/'client/legacy';legacy.mkdir()
+        shutil.move(str(work/'client/p0_mysql_metadata_grants_guard.py'),str(legacy/'p0_mysql_metadata_grants_guard.py'))
         for name in ('e858_b_offline.py','p0_mysql_metadata_grants_input.py','release488_runtime_ddl_restore_gate.py'):
-            (work/'client'/name).write_bytes(h.git(h.ROOT,'show',head+':scripts/ci/'+name))
+            (legacy/name).write_bytes(h.git(h.ROOT,'show',head+':scripts/ci/'+name))
         output=work/'out';output.mkdir(mode=0o700)
         build=work/'build';build.mkdir()
         try:
@@ -83,7 +85,7 @@ def rehearse(series, head):
             args=['docker','run','--name',name,'--label',h.LABEL+'='+token,'--network',network,'--read-only',
                 '--tmpfs','/tmp:rw,nosuid,size=64m','--user',str(os.getuid())+':'+str(os.getgid()),
                 '-v',str(h.ROOT/'scripts/ci')+':/code:ro','-v',str(work/'client')+':/synthetic:ro',
-                '-v',str(output)+':/out:rw','-e','PYTHONPATH=/synthetic:/code',image,'python','-B','-m','e858_phase1.fixtures']
+                '-v',str(output)+':/out:rw','-e','PYTHONPATH=/synthetic/legacy:/code',image,'python','-B','-m','e858_phase1.fixtures']
             try:raw=h.run(args)
             except Exception:
                 debug=output/'error.json'
@@ -135,7 +137,11 @@ def main():
         a=p.parse_args()
         if len(a.series)!=1 or len(a.tooling_sha)!=1:raise h.Block('ARGUMENTS_REJECTED')
         value=rehearse(a.series[0],a.tooling_sha[0]);code=0
-    except BaseException:
+    except BaseException as error:
+        if os.environ.get('GITHUB_ACTIONS')!='true':
+            import traceback
+            p=Path(tempfile.gettempdir())/('canovia-phase1-host-'+str(os.getuid())+'.json')
+            p.write_text(json.dumps(dict(type=type(error).__name__,frames=[(Path(f.filename).name,f.lineno) for f in traceback.extract_tb(error.__traceback__)])));p.chmod(0o600)
         value=dict(result='BLOCK',code='ISOLATED_PHASE1_BLOCK',real_aiven_connected=False,execution_allowed=False);code=2
     print(json.dumps(value,sort_keys=True));return code
 

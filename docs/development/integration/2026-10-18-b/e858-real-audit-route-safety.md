@@ -250,7 +250,7 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 `control_contract.py` は `scope=('OBSERVE',)` のみで再利用し、binding/generationは合成申告である限界を維持。CID再利用競合、server failover、実権限の不可視変化、Mac全停止・両channel断、異常時遠隔停止能力・実owner本人認証は未証明で、実用tooling未採用。**正常closeの成功からKILL能力を推論しない。**
 
-新14単体テストと既存B22/TLS17のoffline回帰、合成MySQL8.0/8.4の18ケースを別CIで検証する。実CA/hostname/期限切れ負例はTLS通信で拒否。CID/server/不可視/remote残存の負例は固定fixtureで観測値を改変する合成負例であり、実failover/CID再利用発生の証拠ではない。query期限は実接続の応答読取をfixture内で遅らせ、stream期限は短縮して検証し、長時間SQL/KILLを混入させない。旧Full94/114/31wireは共有実装を変更していないため証拠を再利用し、CIは旧runtime/input/testsに差分がある場合だけ旧wireを再実行（不明/dispatchなら実行）する。旧固定SQL/Reference/strict/capsや判定条件は変更しない。
+新15単体テストと既存B22/TLS17のoffline回帰、合成MySQL8.0/8.4の18ケースを別CIで検証する。実CA/hostname/期限切れ負例はTLS通信で拒否。CID/server/不可視/remote残存の負例は固定fixtureで観測値を改変する合成負例であり、実failover/CID再利用発生の証拠ではない。query期限は実接続の応答読取をfixture内で遅らせ、stream期限は短縮して検証し、長時間SQL/KILLを混入させない。旧Full94/114/31wireは共有実装を変更していないため証拠を再利用し、CIは旧runtime/input/testsに差分がある場合だけ旧wireを再実行（不明/dispatchなら実行）する。旧固定SQL/Reference/strict/capsや判定条件は変更しない。
 
 10/18権限/旧94・10/21 Host/Port/User/CAの歴史的証拠を再利用し再確認を依頼しない。後続の**Phase1実用tooling採用・操作票・接続直前GO**、KILL能力の別審査、full17の別GO、TRIGGER/移行主体/binlog/実restore/実機/本番公開は独立ゲート。今回のオフライン方針受入は実SQLの許可ではない。
 

@@ -12,7 +12,7 @@ import traceback
 
 import pymysql
 from e858_tls.transport import (Block, StrictConnection, Session, context,
-    HOST, DB, USER, PASSWORD, SQL_SHA)
+    HOST, DB, USER, PASSWORD, SQL_SHA, TOTAL)
 from e858_tls.control_contract import Attempt, Binding, ExpectedTarget, Observation, Block as ContractBlock
 from e858_b_offline import validate, outcome, canonical, SOURCE, RELEASE, COLLECTOR, TRANSPORT, CONTRACT
 from p0_mysql_metadata_grants_guard import verify_grants
@@ -45,6 +45,8 @@ class Wire(StrictConnection):
     def _read_bytes(self,count):
         remaining=self.gate.deadline-time.monotonic()
         if remaining<=0:raise Block('STREAM_TIMEOUT')
+        self.gate.budget.wire_bytes+=count
+        if self.gate.budget.wire_bytes>TOTAL:raise Block('WIRE_TOTAL_CAP')
         self._read_timeout=min(10,remaining)
         return super()._read_bytes(count)
 
@@ -83,6 +85,7 @@ class SharedBudget:
     def __init__(self):
         self.until = time.monotonic()+120
         self.used = 0
+        self.wire_bytes = 0
 
 
 class Channel:
@@ -92,6 +95,7 @@ class Channel:
         self.until = budget.until
         self.query_seconds = 10
         self.gate = Gate(role, config['q0'], config['q1'], self.until)
+        self.gate.budget = budget
         self.conn = Wire(self.gate, fault)
         try: self.conn.connect()
         except BaseException:
@@ -220,6 +224,7 @@ class Bootstrap:
             control.normal_close();self.control_close=True
             return self.report(True)
         except BaseException as error:
+            self.stop_code=str(error) if type(error) is Block and str(error) in ('QUERY_TIMEOUT','STREAM_TIMEOUT','PHASE1_CLOSE_UNVERIFIED','MINIMAL_GRANTS_BLOCK') else 'PHASE1_REJECTED'
             original=getattr(error,'original_exception',error)
             self.certificate_failure=None
             if isinstance(original,ssl.SSLCertVerificationError):
@@ -234,7 +239,7 @@ class Bootstrap:
             for channel in reversed(self.channels):channel.drop()
 
     def report(self, success):
-        return dict(phase1='ISOLATED_PHASE1_VERIFIED' if success else 'BLOCK',
+        return dict(stop_code=getattr(self,'stop_code',None),phase1='ISOLATED_PHASE1_VERIFIED' if success else 'BLOCK',
             data_close_written=self.data_close, control_close_written=self.control_close,
             query_ended=self.query_end, data_connection_absent=self.absence,
             remote_termination='SYNTHETIC_NORMAL_CLOSE_OBSERVED' if success else 'REMOTE_TERMINATION_UNVERIFIED',

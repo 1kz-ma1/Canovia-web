@@ -75,6 +75,8 @@ def run():
             else:
                 require(result['phase1']=='BLOCK' and result['remote_termination']=='REMOTE_TERMINATION_UNVERIFIED')
                 require(not result['data_connection_absent'] and not result['query_ended'])
+            if fault in ('QUERY_TIMEOUT','STREAM_TIMEOUT','QUIT_WRITE_FAILURE'):
+                require(result['stop_code']=={'QUERY_TIMEOUT':'QUERY_TIMEOUT','STREAM_TIMEOUT':'STREAM_TIMEOUT','QUIT_WRITE_FAILURE':'PHASE1_CLOSE_UNVERIFIED'}[fault])
             if fault in ('WRONG_CA','WRONG_HOST','EXPIRED_CERT'):
                 require(result['certificate_failure']=={'WRONG_CA':'CHAIN','WRONG_HOST':'HOSTNAME','EXPIRED_CERT':'EXPIRED'}[fault])
             try:last.run()
