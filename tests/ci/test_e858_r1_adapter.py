@@ -10,6 +10,7 @@ from pathlib import Path
 import sys
 import termios
 import time
+from types import SimpleNamespace
 import traceback
 import unittest
 from unittest.mock import patch
@@ -242,6 +243,24 @@ class AdapterTests(unittest.TestCase):
                 value.capture(ACTION)
                 value.open_mock('control').close()
                 value.open_mock('data')
+        self.assert_disposed(value)
+
+    def test_input_time_consumes_same_window_and_late_handoff_is_refused(self):
+        value = adapter()
+        clock = [1000]
+        original_capture = value._input.capture
+        def capture_then_advance(fd):
+            result = original_capture(fd)
+            clock[0] = 1010
+            return result
+        with patch.object(a, 'time', SimpleNamespace(monotonic=lambda: clock[0])):
+            with value:
+                with patch.object(value._input, 'capture', side_effect=capture_then_advance):
+                    value.capture(ACTION)
+                until = value._until
+                clock[0] = 1121
+                with self.assertRaises(a.Block): value.open_mock('control')
+        self.assertEqual(until, 1120)
         self.assert_disposed(value)
 
     def test_contract_change_after_capture_refused(self):

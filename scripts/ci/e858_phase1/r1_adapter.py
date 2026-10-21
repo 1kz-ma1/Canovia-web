@@ -199,6 +199,7 @@ class SyntheticAdapter:
         self._used = True  # failure consumes this in-process attempt too
         if action is not InputAction.SYNTHETIC_OPERATOR_GESTURE or not self._sealed():
             self._block()
+        self._until = time.monotonic() + 120  # one window, including input
         stop = threading.Event()
         writer = None
         try:
@@ -235,7 +236,8 @@ class SyntheticAdapter:
             if writer.is_alive() or self._status != 'R1_CAPTURED_OFFLINE':
                 self._block()
             self._tty.check()
-            self._until = time.monotonic() + 120
+            if time.monotonic() >= self._until:
+                self._block()
             self._ready = True
             return self.report()
         except BaseException:
@@ -246,7 +248,8 @@ class SyntheticAdapter:
                 writer.join(1)
 
     def open_mock(self, role):
-        if (not self._ready or self._closed or type(role) is not str
+        if (not self._ready or self._closed or time.monotonic() >= self._until
+                or type(role) is not str
                 or len(self._drivers) >= 2 or any(d.closed for d in self._drivers)
                 or role != ('control', 'data')[len(self._drivers)]
                 or not self._sealed()):
