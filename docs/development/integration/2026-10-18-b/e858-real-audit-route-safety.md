@@ -448,7 +448,7 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 ### Trusted TTY・資格情報・未知identity
 
-`private_candidate.Candidate` はsource固定Q0/Q1 bytesとPyMySQL1.1.2/debug無効を要求し、既存 `SharedBudget` と `Gate` を使用する。入力開始前から同じ120秒窓を消費し、expiry/timeout後に受渡ししない。enumやprivate recordは本人認証・実GOではない。
+`private_candidate.Candidate` はsource固定Q0/Q1 bytesとPyMySQL1.1.2/debug無効を要求し、既存 `SharedBudget` と `Gate` を使用する。入力開始前から同じ120秒窓を消費し、expiry/timeout後に受渡ししない。`WindowedTTY` は#815のcapture/echo/復元を継承し、read hookだけを元のattempt残時間でclampする（新しい120秒へリセットしない）。hookの上限/EOF/制御文字/期限を新差分テストで確認する。enumやprivate recordは本人認証・実GOではない。
 
 - `capture_synthetic_ctty()` は**fresh pty.fork child/session leaderに限定**。明示合成action・parent・foreground pgrp・所有slave/euid・character TTY・非継承FDを確認してfixed `/dev/tty` をopen、#815非echo/復元を再利用。固定合成passwordだけを受け付け、通常の管理Macから実passwordを入力する入口は作らない。標準入力fallback/再入力/ログ/保存/環境/argv/login-path抽出なし。実owner管理Macのtrusted TTY取得・明示操作・native ACL/親directory bindingを有効化するentryは**未実装・別審査**で、合成のparent/gesture検査をその代用にしない。
 - `prepare_pair()` は同じprincipal/CA/targetと同じmutable bufferを、Control→Dataの**実PyMySQL constructor**へ各1回だけ渡す。`DisabledWire` は既存Wire/StrictConnectionの契約を継承しつつ、connect/auth/SQL/normal QUIT要求を無条件拒否してattemptをcloseする。**実接続数0／送信SQL0／TLS0**。2つのdeferred objectを2 TLS成功と呼ばない。任意factory/endpoint switch/接続許可flagはない。
@@ -468,7 +468,7 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 ### 差分受入・採用審査への判定
 
-新23 offlineテスト＋CI archive/import閉包1件。private形式/seal/CA/TLS弱化/期限/型、mode/FD/symlink/hardlink/FIFO/巨大file/途中変更、環境無効、秘密非出力、fresh合成ctty→実constructor2個のalias/破棄、部分失敗/割込/reentry/close不明、identity/grants/CID切替、接続要求拒否、archive改変/余剰member/重複/link/圧縮、runtime component不一致を検証する。既存#81521・Phase1 15・B1 22・TLS17・review6を必要範囲の回帰とする。
+新25 offlineテスト＋CI archive/import閉包1件。private形式/seal/CA/TLS弱化/期限/型、mode/FD/symlink/hardlink/FIFO/巨大file/途中変更、環境無効、秘密非出力、fresh合成ctty→実constructor2個のalias/破棄、部分失敗/割込/reentry/close不明、identity/grants/CID切替、接続要求拒否、archive改変/余剰member/重複/link/圧縮、runtime component不一致を検証する。既存#81521・Phase1 15・B1 22・TLS17・review6を必要範囲の回帰とする。
 
 旧#81626/#81713は固定基盤・そのtestが無変更なら再実行せずowner受入/CIを再利用。MySQL8.0/8.4も旧wire profileの既存基盤に差分がないため**NOT_RUN**、#817を再利用。新private libraryを既存wire profileへ黙って注入しない。該当基盤/test変更、base不明、dispatchでは従来の回帰を実行。旧94/114/full17/KILLのwireも今回対象外。
 

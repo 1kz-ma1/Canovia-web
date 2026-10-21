@@ -286,6 +286,26 @@ class PrivateCandidate(unittest.TestCase):
         with self.assertRaises(b.Block):candidate.observe_identity('control',self.identity(),91,GRANTS)
         self.assertTrue(candidate.closed)
 
+    def test_input_wait_is_clamped_to_original_attempt_window(self):
+        reader=c.WindowedTTY(time.monotonic()+0.02)
+        with patch.object(c.select,'select',return_value=([],[],[])) as select:
+            self.assertEqual(reader._read_hidden(99),'R1_INPUT_TIMEOUT')
+            self.assertLessEqual(select.call_args.args[3],0.02)
+        expired=c.WindowedTTY(0)
+        with patch.object(c.select,'select') as select:
+            self.assertEqual(expired._read_hidden(99),'R1_INPUT_TIMEOUT');select.assert_not_called()
+
+    def test_bounded_read_hook_preserves_oversize_eof_empty_controls(self):
+        reader=c.WindowedTTY(time.monotonic()+1)
+        with patch.object(c.select,'select',return_value=([99],[],[])),patch.object(c.os,'read',return_value=b'x'):
+            self.assertEqual(reader._read_hidden(99),'R1_OVERSIZE')
+            self.assertEqual(len(reader._password),c.MAX_PASSWORD_BYTES)
+        reader.discard()
+        for value,expected in ((b'', 'R1_EOF'),(b'\x04','R1_EOF'),(b'\n','R1_EMPTY'),(b'\x01','R1_INPUT_BLOCKED')):
+            reader=c.WindowedTTY(time.monotonic()+1)
+            with patch.object(c.select,'select',return_value=([99],[],[])),patch.object(c.os,'read',return_value=value):
+                self.assertEqual(reader._read_hidden(99),expected)
+
 
 class Distribution(unittest.TestCase):
     def inputs(self):

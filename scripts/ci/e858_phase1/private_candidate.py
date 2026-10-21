@@ -8,6 +8,7 @@ import hashlib
 from importlib.metadata import version
 import os
 import re
+import select
 import stat
 import termios
 import time
@@ -15,7 +16,7 @@ import time
 import pymysql
 from pymysql import connections, _auth
 from .private_binding import Target, Block
-from .r1_tty import PrivateTTYAttempt
+from .r1_tty import PrivateTTYAttempt, MAX_PASSWORD_BYTES, INPUT_TIMEOUT_SECONDS
 from .r1_adapter import SYNTHETIC_PASSWORD, Q0_SHA, Q1_SHA
 from .runtime import Wire, StrictConnection, SharedBudget
 from .protocol import Gate
@@ -24,6 +25,29 @@ from p0_mysql_metadata_grants_guard import verify_grants, GRANT_LINE
 
 class Action(Enum):
     SYNTHETIC_OWNER_GESTURE = 'SYNTHETIC_ONLY_NOT_REAL_APPROVAL'
+
+
+class WindowedTTY(PrivateTTYAttempt):
+    """Reuse capture/echo/restore unchanged; bound waiting by the same budget.
+
+    The immutable #815 reader has its own 120s clock. This small read hook
+    clamps that clock so an earlier attempt start cannot extend the window.
+    """
+    def __init__(self, until):
+        super().__init__()
+        self.until = until
+
+    def _read_hidden(self, descriptor):
+        deadline = min(self.until,time.monotonic()+INPUT_TIMEOUT_SECONDS)
+        while True:
+            remaining = deadline-time.monotonic()
+            if remaining<=0 or not select.select([descriptor],[],[],remaining)[0]: return 'R1_INPUT_TIMEOUT'
+            value=os.read(descriptor,1)
+            if not value or value==b'\x04': return 'R1_EOF'
+            if value==b'\n': return 'R1_CAPTURED_OFFLINE' if self._password else 'R1_EMPTY'
+            if value[0]<32 or value[0]==127: return 'R1_INPUT_BLOCKED'
+            if len(self._password)>=MAX_PASSWORD_BYTES: return 'R1_OVERSIZE'
+            self._password.append(value[0])
 
 
 class DisabledWire(Wire):
@@ -56,11 +80,11 @@ class Candidate:
     """One inert attempt; no factory injection, target override or retry."""
     def __init__(self, target, q0, q1):
         self.target = target
-        self.captured = PrivateTTYAttempt()
         self.wires = []
         self.used = False
         self.closed = False
         self.budget = SharedBudget()  # The same 120s budget includes input.
+        self.captured = WindowedTTY(self.budget.until)
         self.q0, self.q1 = q0, q1
         self.identity = None
         self.data_cid = None
