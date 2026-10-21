@@ -155,6 +155,40 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 
 **維持**：`B1_HISTORICAL_EVIDENCE_REUSED` / `B1_OFFLINE_TARGET_CA_MATCH_OWNER_REPORTED` / `REAL_AIVEN_CONTROL_UNVERIFIED` / `LIVE_TOOLING_NOT_ADOPTED` / `B2_OWNER_GO_NOT_GRANTED` / `REAL_AIVEN_E858_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 B1 control CID拘束／STOP契約（無接続・実用未採用）
+
+この節は#810で再利用可能とした証拠に対して**未解決のcontrol境界だけを追加**する。以前のB1表の「監査ユーザーが存在するか」等はオーナーにより既に確認済みで、引継ぎで再依頼しない。#809の`scripts/ci/e858_tls/transport.py` の `Observer.terminate(cid)` は**隔離合成専用**であり、引数のCIDが承認済み監査sessionだけであることを実環境の信頼境界で検証するlive APIではない。実運用toolingには採用しない。
+
+### 分離する操作scope（仕様のみ／実接続GOではない）
+
+| 操作 | 許可候補の最小範囲 | 常時禁止 |
+| --- | --- | --- |
+| B1 private/offline | 固定e858 source/release・SQL/refと将来採用する独立tooling、単一service/DB・expected CA/SAN・既存principal、operator Mac、UTC開始/満了、試行ID、停止責任者、private保管を結合。既存証跡を再利用し不明はHOLD | 新接続probe、秘密や生metadataの共有、synthetic receiptを実GOへ昇格 |
+| 限定bootstrap DATA（将来の別GO） | 検証済みの**単一**VERIFY_IDENTITY TLS sessionで固定Q0 identity／Q1 own grantsだけ。対象DB・engine・server UUID・`CURRENT_USER()`を事前期待値と照合し不一致はSTOP | full17、migration/schema追加read、自由SQL、ユーザーデータ |
+| 限定bootstrap CONTROL（DATAとは別GO内scope） | DATAと独立したTLS接続、同一target／**既存の同一minimal principal**。DATAの**当該試行**に属するCID、server UUID、identityの対応と継続可視性を事前確認 | 他人や不明なCID、特権login・追加`PROCESS`/`CONNECTION_ADMIN`/`TRIGGER`、管理者権限へのfallback |
+| 緊急停止（さらに明示的なcontrol scopeが必要） | 実証済みの当該試行CIDのみを停止候補とする。KILLを承認scopeに明記した場合だけ `KILL QUERY`／`KILL CONNECTION` を検討。直前の同一性・観測の再照合と、query終了／connection消滅の**個別**server-side証拠を要求 | 任意CIDのKILL、Consoleのボタン表示やKILL受理・local closeをremote終了証明にすること |
+| full17 DATA（将来のさらに別GO） | bootstrapとcontrol/終了可能性の受入後にのみ、固定14SQLの17順・caps・strict comparatorを別承認で実行 | bootstrap承認の使い回し、合成PASSだけで実環境PASS認定 |
+
+**重要な限界**：CID照合からKILLまでの競合、CID再利用、proxy/failover、Macとcontrolの同時障害を、単なる「同じユーザー名」やUIの表示だけで解消できない。**当該試行のセッションであることを連続して証明できなければKILLしない**。終了確認不能なら結果を `REMOTE_TERMINATION_UNVERIFIED` とし、既存の認可された管理者へprivate引継ぎする。後のcleanupを元の失敗に対するPASSへ読み替えない。
+
+### STOP条件と証拠判定
+
+| 発生事象 | 必須判定 |
+| --- | --- |
+| source/tooling/SQL/ref、対象service・DB、CA/SAN、expected identity、既存grantsが不明／不一致 | **BLOCK_BEFORE_CONNECT**。無承認接続を始めず別審査 |
+| controlが同一principal／server UUID／対象CIDを証明できない、CID再利用の疑義、初見の空表示 | **CONTROL_SCOPE_UNVERIFIED / BLOCK**。CIDを変えて探索しない |
+| KILL要求失敗、observer断、server切替、query/connection消滅が確認できない | **REMOTE_TERMINATION_UNVERIFIED / STOP**。同じGOで再試行しない |
+| query10秒・全体120秒、cell128KiB・row256KiB・section8MiB・total16MiB等を超過、期限切れ、通信断 | **STOP**。部分データを監査合格としない |
+| 成功・失敗・中断・結果不明のいずれかで1試行が終端 | **TERMINAL**。同じ承認で再接続・retry禁止。改めて別scope・別GO |
+
+### B1実務上の決定
+
+**ここで合意候補として明文化したもの**：既存minimal principal維持、read/control別scope、CID束縛、独立のserver-side終了観測、異常時STOPとfresh GO。これは**設計レビュー結果**であり、実環境の動作証明でも承認でもない。
+
+**次の技術的差分**：実接続できない状態を維持して、future live-tooling候補の事前拒否契約（許可外CID／任意SQL／対象・CA切替・過剰grants、observer喪失、失敗後retry、秘密漏えいを拒否）をコード／試験計画に落とすかをレビューする。**現時点ではlive connector、credentials入口、real bootstrapコマンドを作らない**。必要なときに限定bootstrapとfull17をそれぞれ**別の明示承認**へ進める。
+
+**状態**：`B1_CONTROL_SCOPE_SPECIFIED_OFFLINE` / `REAL_TOOLING_NOT_ADOPTED` / `REAL_AIVEN_CONTROL_UNVERIFIED` / `B2_FRESH_OWNER_GO_NOT_GRANTED` / `PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
