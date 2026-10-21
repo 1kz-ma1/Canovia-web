@@ -295,7 +295,7 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 | operator・端末 | owner=operatorの本人・管理Mac・ローカル実行責任者。debug/画面共有/端末録画・秘密の収集を避け、private保管責任者を指定 | 私的記入待ち |
 | 対象1件 | 10/21の既存service/DB/Host/Port/User照合記録を参照し、今回の対象1件を束縛。実値を公開しない。変更/失効根拠なしにConsole照合をやり直させない | 歴史的照合を再利用 |
 | CA／SAN／TLS | 10/21の既存CA fingerprint・hostname記録を期待値に使う。将来の実行前にtoolingが現在のCA file bytesと期待値を比較、TLSはCERT_REQUIRED＋hostname/SAN検証＋TLS1.2以上。既存ファイルの存在/Console照合を改めて依頼する作業ではない | 歴史的照合あり／実TLSは未検証 |
-| 資格情報方式 | **R1選定の可否**。ownerが将来private TTYで同じ既存inspectorのpasswordを入力すること、login-pathのpasswordは転送しないことに同意。用意できない/入力不可ならBLOCK | **owner判断待ち** |
+| 資格情報方式 | ownerが将来private TTYで同じ既存inspectorのpasswordを入力するR1を選定。login-pathのpasswordは転送しない。用意できない/入力不可ならBLOCK | **R1選定済み（6313769942）／実用採用・実入力は未承認** |
 | 最小権限 | 10/18 validatorの歴史的受入を根拠として再利用。現在値はGO内Q1で検査。不足/過剰/未知roleならSTOP、拡権・別loginなし | 現在値は未知・取得は将来GO内のみ |
 | identity／Control CID | 既知のprivate対象・論理principalと、最初のControl identity→Data Q0→継続観測を照合。Data CIDはhandshake＋同じDataのCID SQL由来。未知のUUIDを事前probeしない、他CID探索不可 | 実観測NOT_RUN |
 | UTC窓 | 新しいGOの記録時刻、接続開始/満了epoch、0<窓≤120秒。待ち時間超過/時計不明/終了期限超過は中止。秘密入力や接続の失敗・中断も試行消費として記録 | 未記入 |
@@ -326,9 +326,27 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 共有可能なreceiptは**固定source/tooling SHA、SQL整合可否、開始/終了UTC、段階の固定分類、接続/SQL回数、QUIT write/local close/query終了/connection消滅の各boolまたはUNVERIFIED、cleanup区分、fresh GO必要**のみ。接続先/DB/CA path・fingerprint/内部principal/CID/UUID/秘密/raw/詳細エラーはGitHub・CI・ChatGPTへ出さない。ownerの実GOが存在しない現在の合成receiptは常に `execution_allowed=false` / `owner_approval_verified=false`。
 
-**直後の次作業＝オーナー判断（R1資格情報方式の選定。秘密入力も実接続GOも不要）** → 選定後の**必要最小の無接続実装・差分受入** → 実用tooling/票/残余リスクの最終owner審査 → 新しいPhase1限定GO → そのGO内だけの**実環境検証**。現時点から実環境検証へ直接進まない。R1が不採用ならHOLDして方式審査へ戻り、native CLI等へ無断切替しない。
+**#814時点の次作業＝オーナー判断（R1資格情報方式の選定）**。その後の選定と無接続実装は次節を参照。以後は**必要最小の無接続実装・差分受入** → 実用tooling/票/残余リスクの最終owner審査 → 新しいPhase1限定GO → そのGO内だけの**実環境検証**。現時点から実環境検証へ直接進まない。R1が不採用ならHOLDして方式審査へ戻り、native CLI等へ無断切替しない。
 
 **維持**：`LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
+## 2026-10-21 R1 private TTY入力境界（無接続実装）
+
+[owner方針6313769942](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6313769942)により**R1の設計とオフライン実装だけを選定**。上の#814の方式選定待ちを解消するが、R欄のリスク受入、実用tooling採用、実password入力、接続GOは解消しない。
+
+- `scripts/ci/e858_phase1/r1_tty.py` の `PrivateTTYAttempt.capture(terminal_fd)` は、明示されたprivate TTY descriptorだけを検査する独立library。SIGINTを処理するmain thread以外は拒否する。標準descriptor 0/1/2・非TTYは拒否し、stdin fallback・prompt CLI・`/dev/tty`自動open・login-path/option-file読込・secret export/handoff API・接続機能はない。将来adapterが信頼したprivate TTYを開く境界は**未実装・別審査**。単なるTTY判定は本人・端末の真正性証明ではない。
+- 所有するdup上で元のtermiosを保存し、`ECHO/ECHONL`を無効化してreadback一致後だけ入力。noncanonical byte単位・最大1,024 bytes・120秒の入力上限で端末行バッファの切詰めを避ける。改行を除く空入力、制御文字、EOF、上限超過、timeout、入出力/設定失敗、SIGINT/KeyboardInterruptは拒否。最小の境界として編集キーも拒否し、再入力しない。この入力期限はSQL/接続の新しい実行許可・時間窓ではない。
+- 成否・中断に関係なく、未読suffixを`TCSAFLUSH`で破棄してから元の全termiosを復元・readback検査し、dupをclose。復元/cleanup不明は `R1_TERMINAL_RESTORE_UNVERIFIED` / `R1_TERMINAL_CLEANUP_UNVERIFIED` とし秘密を破棄、成功にしない。復元がOSに拒否された場合の復元成功やSIGKILL・OS/端末全停止後の復元を保証しない。端末状態不明ならその端末で秘密を再入力せずSTOP、後の復旧は当該試行をPASSにしない。
+- 同じattemptは入力前に消費し、成功/失敗後・同時要求を `R1_RETRY_REFUSED` にする。これはプロセス内だけの入力制約で、オブジェクト再生成・再起動をまたぐanti-replay/owner承認ではない。B案の新票・新GO規則は別に維持。
+- 戻り値は固定分類のみ、repr/strも固定。秘密はprivateなmutable bytearrayだけに保持し、`discard()`/失敗時にbest-effortでゼロ化・参照を破棄。argv/env/file/clipboard/ログ/例外/receiptへ書く経路はない。Pythonのprivate属性はアクセス制御ではなく、trusted caller/debuggerはメモリを読める。`os.read`の一時bytes、Python/将来driverのimmutable文字列、OSメモリ/swap/core/端末監視の完全消去・機密性は保証しない。live統合時のdebug/traceback-local収集・core抑止、secret寿命・handoff/driver複製の審査は未完了。
+
+**差分受入**：合成passwordだけを使う21テスト（実PTYで非echo/復元・正常/空/最大/過大/EOF、実SIGINT、read/setup/restore/close失敗、秘密非露出、同時/再入力拒否、network/CLI/secret exportのないimport境界）。既存Phase1 15・B1 control 22・TLS offline 17を回帰し、既存CIのLinux Python3.9/3.12・Mac Python3.12へ追加。Phase1の合成MySQL8.0/8.4は既存18-case CIを再利用する。CI結果・固定検証HEADはPR/Issue #488に記録し、管理Mac本人の受入成功へ昇格しない。
+
+**変更しないもの**：`e858_phase1_host.py` / `runtime.py` / 固定合成TLS/資格情報、Q0/Q1 bytes・15/42 SQL・2 TLS・caps/STOP・source/SQL/reference seal、#795〜#797の親子関係。旧94/114/full17/remote KILLのwireは無関係な共有差分がないため再実行しない。10/18・10/21の歴史的証拠も再確認不要。
+
+**次工程＝実装**：別審査の最小adapter候補でprivate対象/CA固定・TTY取得と秘密handoff/lifetime・2接続同一principal・unknown UUID/grantsのGO内bootstrapを無接続で具体化する。新しい実endpoint入力/credential loader/実接続switchは今回追加しない。その差分・Mac無接続受入・固定実用SHAが揃ってから、ownerのP1/R欄受入と新しい限定GOへ進む。現時点で実接続もpassword入力も依頼しない。
+
+**維持**：`R1_DESIGN_SELECTED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
