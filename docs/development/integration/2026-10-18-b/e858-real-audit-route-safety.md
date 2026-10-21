@@ -488,6 +488,16 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 状態：`INERT_ROOT_PREFLIGHT_ONLY / OWNER_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-22 Darwin native ACL観測の限定候補（INERT、合成FDのみ）
+
+#820のprivate root FD事前検査に続く、**macOS native extended ACLが付いていないか**をFDから読み取り拒否するための最小境界。新`scripts/ci/e858_phase1/private_acl.py`は、Darwin上の既存caller-owned directory FDに対して`acl_get_fd_np(fd, ACL_TYPE_EXTENDED)`と`acl_valid`/`acl_get_entry(ACL_FIRST_ENTRY)`、`acl_free`で観測する。無効なACL、entriesあり、予期しない取得エラー、関数/cleanup失敗、対象FDのmode/所有者/identity変更などは固定BLOCK。macOS-15の合成temp directoryで実測した `acl_get_fd_np` の `NULL/ENOENT` は `ACL_RECORD_ENOENT_UNVERIFIED` として**ACL空の証明から分離**し、認可・実用acceptには昇格しない。正常取得かつvalid後のzero-entry観測だけを別分類とする。OSがDarwinでなければBLOCK。読み取り/参照のみでset/modifyはしない。ACLの生内容・FD番号・詳細エラーをreceiptへ出さない。APIはApple公式BSD acl man pageに従うが、合成macOS上の挙動のCI受入は別途要確認。
+
+これは**ACLがないと観測したFD1つの補助証拠**であり、native ACLなしがpath祖先・実private record・OS管理状態の信頼性やowner本人認証を意味することはない。rootの祖先経路、本人/画面収録/管理端末、実ファイル内容、署名と失効・durable one-shot・native runtimeの完全閉包はすべて未検証。返値には`execution_allowed=false / ancestor_trust=UNVERIFIED / operator_identity=UNVERIFIED`を保持。実password/CA/target、実Aiven、TTY取得、2 TLS、SQL、productionに新しい入口は設けない。
+
+新規`test_e858_private_acl.py`はsynthetic temp directoryのみで、macOS時はreal native FD読み取り、他OSではBLOCK、他にACL present/error/FD無効/変更時STOPとreport非認可を検証。#820の旧7、#819旧25、#816 Mac26/#817 Mac13、旧MySQL通信証拠は変更された境界だけ必要に応じて再利用し、新しいarchive member・shaを旧18件に流用しない。最終SHA/CIと新archive SHAはPR・Issue #488へ記録し、実用tooling採用には転用しない。
+
+残ゲート：実owner trusted entry、親祖先path/OS管理状態の検証、native runtime lock、実TLS/identity bridge、P1/R1〜R6と独立新GO。状態：`INERT_NATIVE_ACL_OBSERVER_ONLY / OPERATOR_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
