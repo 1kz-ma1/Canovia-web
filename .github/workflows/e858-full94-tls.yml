@@ -48,7 +48,20 @@ jobs:
         run: |
           python3 -B -m unittest discover -s tests/ci -p test_e858_full94_tls.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b_control.py -v
+      - name: Reuse unchanged legacy wire evidence
+        id: wire-scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          # Docs/new isolated profiles do not authorize a legacy full17/KILL run.
+          if [ -n "$BASE_SHA" ] && git diff --quiet "$BASE_SHA" HEAD -- scripts/ci/e858_tls scripts/ci/e858_tls_host.py scripts/ci/e858_full94_tls.py scripts/ci/e858_b_offline.py scripts/ci/p0_mysql_metadata_grants_input.py tests/ci/test_e858_isolated_tls.py tests/ci/test_e858_full94_tls.py tests/ci/test_e858_b_control.py; then
+            echo 'run=false' >> "$GITHUB_OUTPUT"
+            echo 'LEGACY_WIRE_UNCHANGED_NOT_RUN'
+          else
+            echo 'run=true' >> "$GITHUB_OUTPUT"
+          fi
       - name: Full94 and114 on-wire fixed reference acceptance
+        if: steps.wire-scope.outputs.run == 'true'
         env:
           SERIES: ${{ matrix.series }}
         run: python3 -I -B scripts/ci/e858_full94_tls.py --series "$SERIES" --tooling-sha "$(git rev-parse HEAD)"
