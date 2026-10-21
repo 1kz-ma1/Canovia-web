@@ -217,9 +217,17 @@ class SyntheticAdapter:
                             os.write(self._tty.master, SYNTHETIC_PASSWORD + b'\n')
                             return
                 except BaseException:
-                    # Fixture failure unblocks the slave; no exception logging.
-                    try: os.close(self._tty.master)
-                    except BaseException: pass
+                    # Unblock only a still-owned master. Never close a reused
+                    # descriptor after concurrent/error cleanup.
+                    try:
+                        fd = self._tty.master
+                        expected = self._tty._owned.get(fd)
+                        if expected is not None and _fd_identity(fd) == expected:
+                            os.close(fd)
+                            del self._tty._owned[fd]
+                            self._tty._created.remove(fd)
+                    except BaseException:
+                        self._tty._cleanup = False
             writer = threading.Thread(target=send_fixture, daemon=True)
             writer.start()
             self._status = self._input.capture(self._tty.slave)

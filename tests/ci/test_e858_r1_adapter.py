@@ -139,6 +139,12 @@ class AdapterTests(unittest.TestCase):
         self.assertEqual(hashlib.sha256(Q0).hexdigest(), a.Q0_SHA)
         self.assertEqual(hashlib.sha256(Q1).hexdigest(), a.Q1_SHA)
 
+    def test_synthetic_writer_failure_stops_and_closes_owned_tty(self):
+        value = adapter()
+        with patch.object(a.os, 'write', side_effect=OSError(CANARY)):
+            self.blocked_capture(value)
+        self.assertEqual(value._tty._owned, {})
+
     def test_owned_tty_noninheritance_restoration_and_close(self):
         value = adapter()
         with value:
@@ -182,6 +188,21 @@ class AdapterTests(unittest.TestCase):
                     value.open_mock('control')
             self.assert_disposed(value)
             self.assertTrue(os.isatty(0) or os.fstat(0))  # stdin was never closed
+
+    def test_tty_close_failure_never_becomes_verified_cleanup(self):
+        value = adapter()
+        real_close = os.close
+        with value:
+            value.capture(ACTION)
+            owned = set(value._tty._owned)
+            def ambiguous_close(fd):
+                real_close(fd)
+                if fd in owned: raise OSError(CANARY)
+            with patch.object(a.os, 'close', side_effect=ambiguous_close):
+                result = value.close()
+        self.assertEqual(result['status'], 'R1_CLEANUP_UNVERIFIED')
+        self.assertFalse(result['cleanup_verified'])
+        self.assert_disposed(value)
 
     def test_input_failure_does_not_reach_driver(self):
         with patch.object(a.PrivateTTYAttempt, 'capture', return_value='R1_TERMINAL_RESTORE_UNVERIFIED'), \
@@ -233,13 +254,15 @@ class AdapterTests(unittest.TestCase):
         self.assert_disposed(value)
 
     def test_driver_creation_failure_releases_inflight_lease(self):
-        value = adapter()
-        with self.assertRaises(a.Block):
-            with value:
-                value.capture(ACTION)
-                with patch.object(a, 'SyntheticDriver', side_effect=OSError(CANARY)):
-                    value.open_mock('control')
-        self.assert_disposed(value)
+        for failed_role in ('control', 'data'):
+            value = adapter()
+            with self.assertRaises(a.Block):
+                with value:
+                    value.capture(ACTION)
+                    if failed_role == 'data': value.open_mock('control')
+                    with patch.object(a, 'SyntheticDriver', side_effect=OSError(CANARY)):
+                        value.open_mock(failed_role)
+            self.assert_disposed(value)
 
     def test_mock_close_failure_does_not_preserve_secret(self):
         value = adapter()
