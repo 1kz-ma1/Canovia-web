@@ -45,6 +45,11 @@ def capture(admin, own, expected_stage, strict):
     require(result['stage']==expected_stage and result['strict_result']==strict,dict(stage=result['stage'],strict=result['strict_result'],code=result['strict_code'],sections=result['sections']))
     require(proof==dict(statements=17,tls_session_count=1,query_ended=True,connection_ended=True))
     require(not result['release_authorized'] and not result['strict_block_waived'])
+    allowed={(Path('/synthetic/queries')/(k+'.sql')).read_text().strip() for k in json.loads(Path('/synthetic/manifest.json').read_text())['caps']}
+    allowed.update(('SET NAMES ascii','SELECT CONNECTION_ID()','SET SESSION max_execution_time=10000'))
+    log=rows(admin.conn,"SELECT argument FROM mysql.general_log WHERE thread_id=%s AND command_type='Query'",(collector._data_cid,))
+    require(len(log)>17 and all(row[0].strip() in allowed for row in log))
+    proof.update(data_sql_allowlist_observed=True,application_select_count=0)
     try: collector.capture()
     except Block as error: require(str(error)=='NEW_OWNER_GO_REQUIRED')
     else: raise Block('SECOND_CAPTURE_ACCEPTED')
@@ -91,7 +96,14 @@ def run():
         case('STRICT_ROOT_REFERENCE',lambda:summary(root_reference(admin),expected,'REVIEW_REQUIRED'))
         # Log only in the disposable server; inspect privately per data CID.
         rows(admin.conn,"SET GLOBAL log_output='TABLE'");rows(admin.conn,'SET GLOBAL general_log=ON')
-        case('FULL_NARROW_SINGLE_TLS',lambda:summary(capture(admin,own,expected,'REVIEW_REQUIRED' if stage=='old94' else 'BLOCK')[0],expected,'REVIEW_REQUIRED' if stage=='old94' else 'BLOCK'))
+        def narrow():
+            strict='REVIEW_REQUIRED' if stage=='old94' else 'BLOCK'
+            result,proof=capture(admin,own,expected,strict)
+            if stage=='all114':
+                require(result['strict_code']=='TRIGGER_ABSENT_OR_NOT_VISIBLE')
+                require(all(r['classification']=='MATCH' for r in result['sections'] if r['section']!='trigger'))
+            return dict(summary(result,expected,strict),**proof)
+        case('FULL_NARROW_SINGLE_TLS',narrow)
         if stage=='old94':
             for kind in ('sql','export','target','swap'):case('DENY_'+kind.upper(),lambda k=kind:negative(own,k))
             def alias():
@@ -125,12 +137,36 @@ def run():
                 finally:s.abort()
                 raise Block('TIMEOUT_ACCEPTED')
             case('SAME_PRINCIPAL_REMOTE_TERMINATION',timeout)
+            def invisible():
+                control=Oracle(role='inspector',fault='unobservable')
+                try:
+                    try:Collector(control).capture()
+                    except Block as error:
+                        require(str(error)=='REMOTE_VISIBILITY_UNPROVEN')
+                        return dict(blocked_before_metadata=True,remote_status='REMOTE_TERMINATION_UNVERIFIED')
+                    raise Block('INVISIBLE_CONTROL_ACCEPTED')
+                finally:control.close()
+            case('OBSERVER_INVISIBLE',invisible)
+            for fault in ('kill_query','kill_connection'):
+                def failed_stop(f=fault):
+                    control=Oracle(role='inspector',fault=f)
+                    c=connection();cid=c.thread_id()
+                    thread=threading.Thread(target=lambda:swallow(lambda:client_rows(c,'SELECT SLEEP(30)')))
+                    thread.start();wait_running(admin,cid)
+                    try:
+                        proof=control.terminate(cid)
+                        require(proof['query_request_failed' if f=='kill_query' else 'connection_request_failed'])
+                        if f=='kill_connection':require(not proof['verified'] and proof['status']=='REMOTE_TERMINATION_UNVERIFIED')
+                        return dict(audit_result='BLOCK',original_control_proof=proof,cleanup_is_not_a_waiver=True)
+                    finally:
+                        close_client(c,thread);require(admin.terminate(cid)['verified']);control.close()
+                case('REMOTE_'+fault.upper(),failed_stop)
         # Return only fixed classifier/counts, never raw values or error text.
         require(not any(r.get('release_authorized',False) for r in reports.values()))
         return dict(result='FULL_SCHEMA_STAGE_VERIFIED',fixture_stage=stage,version=version,cases=reports,
             source_sha='e858b9c855970fbe73f37a2d60c9db6525b132d6',real_aiven_connected=False,
             production_modified=False,release_authorized=False,owner_approval_verified=False,
-            trigger_visibility='UNVERIFIED',inspector_privileges_added=False)
+            trigger_visibility='UNVERIFIED',inspector_privileges_added=False,synthetic_b1_only=True)
     except BaseException as error:
         private_error(error)
         return dict(result='BLOCK',case=current,real_aiven_connected=False,release_authorized=False)

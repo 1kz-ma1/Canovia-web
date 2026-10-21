@@ -26,7 +26,7 @@ def prepare(work, head, series, pins, old, new, reference):
         (client / (name + '.json')).write_text(json.dumps(value))
     (client / 'reference.json').write_bytes(h.git(h.ROOT,'show',h.COLLECTOR+':scripts/ci/e858_audit_reference/'+series+'.json'))
     manifest = json.loads((client / 'manifest.json').read_text())
-    manifest.update(reference_sha256=pins['reference_sha256'][series], source_sha=h.SOURCE)
+    manifest.update(reference_sha256=pins['reference_sha256'][series], source_sha=h.SOURCE, tooling_sha=head)
     (client / 'manifest.json').write_text(json.dumps(manifest))
     contract = json.loads(h.git(h.ROOT, 'show', h.SOURCE + ':resources/release20_pending_schema_contract.json'))
     (client / 'contract.json').write_text(json.dumps({k:v for k,v in contract.items() if k.startswith('absent_')}))
