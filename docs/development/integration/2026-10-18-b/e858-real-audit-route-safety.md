@@ -196,11 +196,11 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 - 試行のDataとControlを別Bindingに分離。同一target/server UUID/principal/CA/SAN、VERIFY_IDENTITY・検証済みTLS・EXACT_MINIMALを要求。別CID・別generationと、事前期待targetとの一致を検査する。管理者fallbackなし。Controlは当該試行のBindingだけを保持し、任意CID/自由SQLを受け取る操作口や `Observer.terminate` callbackを持たない。
 - `NEW → ACTIVE → COMPLETED/STOPPED`。最初のbindで試行を消費し、不一致・期限切れ・中断・終了後は同一objectを再利用不可。毎回のControl判定に新しい連番・現在時刻・同じData/Control・継続可視性を要求。観測不能・observer断・server/generation切替・消滅後のCID再出現はSTOP。
 - idleはquery終了だけでconnection消滅ではない。両方を独立観測でき、停止要求失敗もない場合だけ **SYNTHETIC_REMOTE_TERMINATION_OBSERVED**。KILL受理・local exit・Console表示では昇格しない。不明なら **REMOTE_TERMINATION_UNVERIFIED**、後のfixture cleanupでもSTOPを解除しない。
-- 結果は固定状態/分類/boolのみ。CID・principal・target hash・SQL・raw/例外本文を出力しない。`execution_allowed=false` / `owner_approval_verified=false` / `fresh_owner_go_required=true` を常に維持。metadataの許可digest以外・export・scope外Controlを拒否する。
+- 結果は固定状態/分類/boolのみ。CID・principal・target hash・SQL・raw/例外本文を出力しない。`execution_allowed=false` / `owner_approval_verified=false` / `fresh_owner_go_required=true` を常に維持。metadataは固定digestに加えて当該試行のData scopeへ限定する（既定はidentity/grantsのみ）。allowlist内でもscope外のfull metadata・export・scope外Controlを拒否する。
 
 **証明の限界**：Binding/Observationは合成fixtureの申告であり、実対象の認証・実GO・実session証拠ではない。generationはfixtureが所有する接続object由来の識別子で、MySQLのCID世代証明ではない。実環境の観測→KILL間の競合、CID再利用、failover、Mac全停止を解消したとは扱わない。新しいobject/プロセスの再生成は防止せず、Bの人的再実行禁止をdurable anti-replayへ昇格しない。実行可能permitを返さないため、このモデルを通しても実操作は開始できない。旧合成Observerは変更せず本番インターフェースに採用しない。
 
-**差分検証**：`test_e858_b_control.py` の21単体テスト（複数負例はsubtest）をLinux Python3.9/3.12・Mac Python3.12の既存B CIへ追加。旧input/権限/B契約は既存試験を再利用。#809 Full94の既存MySQL8.0/8.4に、実同一principalのidle→消滅をモデルへ渡す正常系と、CID置換・generation変更・observer実切断・server置換を拒否して元sessionが保持される4負例を追加する。これらは **ISOLATED_MYSQL_TLS_TESTED** の補助証拠であり、実環境のTLS/観測/停止をPASSにしない。Full94/114の旧15ケースはfixture差分の回帰、固定SQL/ref/strict/capsは不変。#806の旧31・既存Mac受入を重複実装しない。
+**差分検証**：`test_e858_b_control.py` の22単体テスト（複数負例はsubtest）をLinux Python3.9/3.12・Mac Python3.12の既存B CIへ追加。旧input/権限/B契約は既存試験を再利用。#809 Full94の既存MySQL8.0/8.4に、実同一principalのidle→消滅をモデルへ渡す正常系と、CID置換・generation変更・observer実切断・server置換を拒否して元sessionが保持される4負例を追加する。これらは **ISOLATED_MYSQL_TLS_TESTED** の補助証拠であり、実環境のTLS/観測/停止をPASSにしない。Full94/114の旧15ケースはfixture差分の回帰、固定SQL/ref/strict/capsは不変。#806の旧31・既存Mac受入を重複実装しない。
 
 **次工程・歴史証拠**：#810の10/18権限/旧94・10/21 CA/Host/Port/Userの既存報告を再利用し、再確認を依頼しない。実接続用toolingは未採用。実CID帰属・観測継続性・停止競合/失効・既存最小principalでのControl実能力・Mac障害時責任者の審査を残す。限定Q0/Q1/control bootstrapとfull17は、それぞれ実行仕様・STOP・新しい明示GOが必要。現在は新probe/秘密共有を求めず、実connectorを有効化しない。
 

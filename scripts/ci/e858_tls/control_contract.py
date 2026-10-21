@@ -112,7 +112,7 @@ class Attempt:
         if type(now) is not int or now < self.last_time or now >= self.expires:
             self._stop('WINDOW_REJECTED')
 
-    def bind(self, data, control, initial, now, scope=('OBSERVE',)):
+    def bind(self, data, control, initial, now, scope=('OBSERVE',), metadata_scope=('identity', 'grants')):
         if self.state != 'NEW':
             self._stop('NEW_OWNER_GO_REQUIRED')
         self.state = 'STOPPED'  # Consume the attempt before validating bindings.
@@ -138,6 +138,10 @@ class Attempt:
         if (type(scope) is not tuple or not scope or any(type(k) is not str for k in scope) or len(scope) != len(set(scope))
                 or 'OBSERVE' not in scope or any(k not in ('OBSERVE', 'KILL_QUERY', 'KILL_CONNECTION') for k in scope)):
             self._stop('CONTROL_SCOPE_UNVERIFIED')
+        if (type(metadata_scope) is not tuple or any(type(k) is not str for k in metadata_scope)
+                or len(metadata_scope) != len(set(metadata_scope)) or any(k not in self.sql for k in metadata_scope)):
+            self._stop('DATA_SCOPE_REJECTED')
+        self.data_scope = metadata_scope
         self.data, self.control, self.scope = data, control, scope
         self.state = 'ACTIVE'
         self.observe(initial, now)
@@ -179,7 +183,7 @@ class Attempt:
         self._active(now)
         if self.connection_ended:
             self._stop('CONTROL_SCOPE_UNVERIFIED')
-        if (export is not False or type(key) is not str or key not in self.sql
+        if (export is not False or type(key) is not str or key not in self.sql or key not in self.data_scope
                 or type(digest) is not str or digest != self.sql[key]):
             self._stop('SQL_OR_EXPORT_REJECTED')
         self.last_time = now

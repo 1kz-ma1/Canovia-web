@@ -20,7 +20,9 @@ NOW = 1000
 TARGET = ExpectedTarget('1'*64, '11111111-1111-1111-1111-111111111111', CANARY, '2'*64, '3'*64)
 DATA = Binding(TARGET.target, TARGET.server_uuid, TARGET.principal, 123, '4'*64, TARGET.ca, TARGET.san)
 CONTROL = replace(DATA, cid=124, generation='5'*64)
-SQL = {str(k): hashlib.sha256(str(k).encode()).hexdigest() for k in range(14)}
+SQL = {k: hashlib.sha256(k.encode()).hexdigest() for k in (
+    'identity','grants','ledger','engine','table','column','index','foreign_key',
+    'check','trigger','semantic_version','semantic_index','semantic_foreign_key','column_extra')}
 PINS = dict(source_sha=SOURCE, release_ref=RELEASE, tooling_sha='a'*40,
             sql_sha256=digest(SQL), reference_sha256={'8.0':'b'*64,'8.4':'c'*64})
 
@@ -71,7 +73,7 @@ class ControlBoundaryTests(unittest.TestCase):
         self.assertFalse(result['execution_allowed'] or result['owner_approval_verified'])
         self.assertNotIn('cid', result)
         self.assertNotIn('sql', result)
-        value.check_metadata('1', SQL['1'], NOW)
+        value.check_metadata('identity', SQL['identity'], NOW)
         result = value.finish(obs(3, exists=False, running=False), NOW)
         self.assertEqual('COMPLETED', result['state'])
         self.assertTrue(result['query_ended'] and result['connection_ended'])
@@ -163,7 +165,7 @@ class ControlBoundaryTests(unittest.TestCase):
             elif ending=='interrupt':self.blocked(value,value.interrupt)
             else:self.blocked(value,lambda:value.observe(obs(2,visible=False),NOW))
             self.blocked(value,lambda:value.bind(DATA,CONTROL,obs(),NOW))
-            self.blocked(value,lambda:value.check_metadata('1',SQL['1'],NOW))
+            self.blocked(value,lambda:value.check_metadata('identity',SQL['identity'],NOW))
 
     def test_same_go_packet_reuse_and_interrupted_prior_attempt_rejected(self):
         for prior in ('COMPLETED','INTERRUPTED','BLOCK'):
@@ -174,10 +176,20 @@ class ControlBoundaryTests(unittest.TestCase):
         self.assertFalse(trial().report()['execution_allowed'])
 
     def test_metadata_scope_free_sql_export_and_secret_leak_rejected(self):
-        for key, sha, export in [(CANARY,SQL['1'],False),('1',CANARY,False),('1',SQL['1'],True)]:
+        for key, sha, export in [(CANARY,SQL['identity'],False),('identity',CANARY,False),('identity',SQL['identity'],True)]:
             value=active();self.blocked(value,lambda:value.check_metadata(key,sha,NOW,export=export))
         value=active();self.blocked(value,lambda:value.check_control(CANARY,obs(2),NOW))
         for obj in (DATA,CONTROL,TARGET,obs()):self.assertNotIn(CANARY,repr(obj))
+
+    def test_bootstrap_scope_rejects_even_a_frozen_full_metadata_query(self):
+        value=active()
+        self.blocked(value,lambda:value.check_metadata('ledger',SQL['ledger'],NOW))
+        for scope in (('identity','unknown'),('identity','identity'),('identity',[])):
+            value=trial()
+            self.blocked(value,lambda:value.bind(DATA,CONTROL,obs(),NOW,metadata_scope=scope))
+        value=trial()
+        value.bind(DATA,CONTROL,obs(),NOW,metadata_scope=tuple(SQL))
+        self.assertFalse(value.check_metadata('ledger',SQL['ledger'],NOW)['execution_allowed'])
 
     def test_pin_or_bundle_tampering_and_forged_scope_rejected(self):
         for key in ('source_sha','tooling_sha','sql_sha256','reference_sha256','release_ref'):
@@ -185,7 +197,7 @@ class ControlBoundaryTests(unittest.TestCase):
             with self.assertRaises(Block):trial(pins=changed)
             p=packet();p['pins']=changed
             with self.assertRaises(Block):trial(packet=p)
-        changed=dict(SQL);changed['1']='0'*64
+        changed=dict(SQL);changed['identity']='0'*64
         with self.assertRaises(Block):trial(sql_digests=changed)
         for declaration in ('operator','scope','tls','grants'):
             p=packet();p['declarations']=dict(DECLARATIONS,**{declaration:CANARY})
@@ -196,7 +208,7 @@ class ControlBoundaryTests(unittest.TestCase):
         with self.assertRaises(Block):trial(packet=p)
         with self.assertRaises(Block):trial(now=NOW+120)
         for now in (NOW-1,NOW+120,True):
-            value=active();self.blocked(value,lambda:value.check_metadata('1',SQL['1'],now))
+            value=active();self.blocked(value,lambda:value.check_metadata('identity',SQL['identity'],now))
 
     def test_model_has_no_network_executor_or_cli_surface(self):
         import ast
