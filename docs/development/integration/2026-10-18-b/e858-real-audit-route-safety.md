@@ -112,6 +112,7 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 オーナーが**既存Aiven Consoleで対象MySQLサービスの管理権限を持ち、`Observe → Current queries`で緊急操作を担当できるか**を、まず権限・責任分担として「担当可能／別の既存管理者が担当／不明」の1つで回答する。実サービスの現在のquery一覧を開く、Terminateする、実SQLを試す、資格情報やhostを共有する必要はない。これは停止手段の候補選定にすぎず、実Aivenで使用可能な証拠とはしない。詳細未確認の場合は`UNVERIFIED`を維持。
 
 **判定**：`OWNER_MAC_ISOLATED_TRANSPORT_ACCEPTED_FROM_USER_OUTPUT` / `REAL_AIVEN_OBSERVER_AND_KILL_UNVERIFIED` / `CONSOLE_TERMINATION_CAPABILITY_UNVERIFIED` / `B_OWNER_OPERATOR_PACKET_UNACCEPTED` / `REAL_OPERATOR_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。追加tooling・migration/DDL・GRANT・backup/restore・実接続・有料resource操作なし。
+
 ## 固定対象と再利用
 
 - 作業base main `7258a02ca3599f4efd3afacbd91d5017caeb9842`。本PRのHEADは独立tooling候補であり、固定監査候補の代わりにしない。
