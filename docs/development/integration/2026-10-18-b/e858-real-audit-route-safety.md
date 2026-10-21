@@ -135,6 +135,26 @@ CIで既存 `StudyAdaptiveActionV536Test` の1件がJSTの日付境界後に失�
 
 **維持**：`B1_REVIEW_SHEET_PREPARED` / `REAL_AIVEN_CONTROL_UNVERIFIED` / `B2_OWNER_GO_NOT_GRANTED` / `REAL_AIVEN_METADATA_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 B1 既存証拠再利用と再確認禁止の引継ぎ（#809後／接続なし）
+
+> **証拠の分類を維持する。** 本節は既存[Issue #488 10/18証跡再発見](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305738797)、[B1オーナー確認](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305648880)、[Full94 TLS #809](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6306272111)と、10/21の後続オーナー自己申告を整理するもの。実Aivenに再接続した証拠ではない。先のB1表の作成時点の未確認事項は消さず、差分だけ追跡する。
+
+| 証拠 | 再利用できる範囲 | なお未証明 |
+| --- | --- | --- |
+| 10/18 owner報告の `P0_METADATA_GRANTS: ACCEPT_METADATA_ONLY_LEDGER_SELECT` | 当時の `SHOW GRANTS` を固定validatorが受理した履歴。原本の独立再検証ではない | 10/21現在の実効grant、role、principalと対象の同一性 |
+| 10/18 owner報告の旧94件 `EXACT_94_APPLIED_REVIEW_ONLY` / pending 0 | 旧本番のmigration ledgerに関する歴史的受入 | e858追加20件の実台帳、物理INDEX/FK/TRIGGER・M08・DDL適合 |
+| Aiven Console UI と端末の既存設定（owner申告） | 管理者本人が担当、緊急画面のCurrent queries/Terminateが表示、既存監査principalが存在、Macのlogin-path/CAファイルが存在 | 接続能力、実Terminate権限、独立したremote停止と終了証明 |
+| 10/21後続オーナーの**無接続**照合 | 意図する単一DBを選択し、ConsoleとMacのHost/Port/監査Userが一致、既存CAと現在CAのSHA256 fingerprintが一致したとの報告。**秘密や実識別子は記録しない** | hostname/SANと実TLSセッション、server UUID/`CURRENT_USER()`/engine、採用toolingの実接続資格 |
+| #809隔離MySQL 8.0/8.4 のFull94 TLS bridge | 固定source/SQL/ref、旧94 strict一致、名前差BLOCK、114 TRIGGER不可視BLOCK、同一TLS・自己session controlと負例の合成受入 | 実Aivenでの観測/停止/対象権限、real connector/real owner GO |
+
+**再確認禁止の原則**：引継ぎでは最初にこの表と#488の証拠を読んで、ユーザーに既存ユーザーの有無、Mac login-path/CAの存在、Host/Port/User、CA fingerprint、旧94監査、旧grants validatorを機械的に再実行させない。証拠の失効・設定変更・新しい具体的不一致を示せる場合のみ、対象と理由を明示して**新しい差分**を確認する。historical PASSをlive PASSへ昇格させず、無期限の免除ともしない。
+
+**次工程（実接続を伴わないB1 control/scope審査）**：既存のB1表を使い、固定e858 source/releaseと実接続用に将来採用するtoolingを区別（現状 **実用tooling未採用**）。operator管理Mac、同一target・同一最小principalの独立control session、自己session CIDだけを監視/停止する範囲、最大時間/取得量、独立した緊急fallback、残余remote終了不確実性、private保管、UTC開始/満了、**1回限り・再接続/自動retry禁止・中断後新承認**を事前審査する。補助Console UIの表示を実停止能力とみなさず、`PROCESS`/`CONNECTION_ADMIN`/`TRIGGER`等を追加しない。主dataとcontrolの操作・承認scopeを混在させない。曖昧ならHOLD。
+
+**承認の切れ目**：B1レビューを整えても `B1_PRIVATE_TARGET_ACCEPTED`、実装済みのlive connector、`B2_FRESH_OWNER_GO` のいずれにもならない。将来の **Q0/Q1/自己session controlだけの限定bootstrap** は別の実行仕様・実行直前の明示GOを要する。**full17実metadata監査はさらに別GO**。TRIGGER独立証拠、migration主体/binlog、実バックアップ復元、migration・デプロイ・実機受入も独立の未達ゲートとする。接続結果やremote終了が不明ならSTOPし、同じGOでは再実行しない。
+
+**維持**：`B1_HISTORICAL_EVIDENCE_REUSED` / `B1_OFFLINE_TARGET_CA_MATCH_OWNER_REPORTED` / `REAL_AIVEN_CONTROL_UNVERIFIED` / `LIVE_TOOLING_NOT_ADOPTED` / `B2_OWNER_GO_NOT_GRANTED` / `REAL_AIVEN_E858_NOT_RUN` / `PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
