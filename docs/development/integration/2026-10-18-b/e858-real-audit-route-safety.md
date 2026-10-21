@@ -419,16 +419,16 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 | Docker/MySQL/python image | 既存合成fixture専用。mutable tagはimmutable digestではない。実用Mac配布物にroot oracle/fixture setup/合成password/管理SQLを含めて有効化しない |
 | 実用配布物 | **NOT_BUILT**。将来の別adapter完全SHA・レビュー済みファイル集合・正確なartifact SHA256・runtime依存lockが必要。GitHub自動archiveのzip hashを再現可能な実用package hashとみなさない |
 
-**今回の差分検証**：新6 offlineテスト（目録決定性/不認可、基盤各file改変で歴史的証拠再利用拒否、既存integrity失敗時の拒否、秘密引数/例外/割込の固定出力、固定public読取境界）。同じLinux3.9/3.12・Mac3.12 CIで目録を実行し、既存114単体は回帰。runtime/host/fixed資産の差分がないためMySQL8.0/8.4 wireは **NOT_RUN / #817証拠再利用**。新wire-scope guardは該当基盤/test変更、base不明、手動dispatchでは従来実行を維持する。Full94/114/full17/KILLも再実行しない。
+**今回の差分検証**：新6 offlineテスト（目録決定性/不認可、基盤各file改変で歴史的証拠再利用拒否、既存integrity失敗時の拒否、秘密引数/例外/割込の固定出力、目録内容非露出）。同じLinux3.9/3.12・Mac3.12 CIで目録を実行し、既存114単体は回帰。runtime/host/fixed資産の差分がないためMySQL8.0/8.4 wireは **NOT_RUN / #817証拠再利用**。新wire-scope guardは該当基盤/test変更、base不明、手動dispatchでは従来実行を維持する。Full94/114/full17/KILLも再実行しない。
 
 ### 最後の管理Mac無接続受入と採用順序
 
-1. **今回の審査候補の差分受入**：固定HEADのclean full-history checkoutで、新6テスト＋public inventoryの生成だけ。#81626/#81713・実CA/対象・password・Docker/SQLの再実行は不要。固定HEAD/CI/コマンドはPR/Issue #488。失敗・依存/固定ref不一致・秘密出力はSTOP。成功しても実用SHA採用にならない。
+1. **今回の審査候補の差分受入**：固定HEADのclean full-history checkoutで新6テスト＋public inventory生成をCI Linux/Macで確認する。入力/TTY/driverの変更がないため、**今回の目録だけを理由とする管理Macの追加受入は不要**。#81626/#81713・実CA/対象・password・Docker/SQLの再実行は依頼しない。固定HEAD/CI/目録hashはPR/Issue #488。成功しても実用SHA採用にならない。
 2. **技術作業**：上表の実用adapter最小差分とpublic runtime/artifact lockを別PRで作り、実接続起動は閉じたまま単一対象/TTY/identity/秘匿/期限の差分をレビュー・Mac無接続受入。今回6件はその将来差分の受入を代替しない。ここまで未実装があるため現時点で実GOを依頼しない。
 3. **オーナー採用審査（未承認）**：レビュー/CI/Mac差分受入済みの**実用adapter完全SHA**とartifact/依存hashを私的P1欄へ採用。既存private対象/CA記録のbinding・本人/端末・保管期限・障害private引継ぎを確定し、R1〜R6を**個別**に受入/拒否。owner署名は技術的未達をPASSへ変換しない。今回PRや目録への受入はこの採用ではない。
 4. **別のPhase1接続直前GO（NOT_GRANTED）**：実用SHA採用・P1全欄・R欄の後、対象1件/owner監督/15–42全SQL/2TLS/≤120秒/1回・再試行不可の新GO。そのGO内だけで現在Q0/Q1/CA/TLS/sessionを検証。full17/KILL/移行/公開のGOとは別。
 
-**現在の次工程＝技術作業**（private bindingを持つ別adapterと配布lockの差分準備）。今回の目録受入だけのために実パスワード・実CA/接続先を共有する必要はない。ownerの次の最小操作は、PR/Issueに示す固定候補の**新6件＋目録だけの無接続差分受入**。既存証拠を繰り返さず、実用採用・R欄・実GOは上記条件成立後に分けて判断する。
+**現在の次工程＝技術作業**（private bindingを持つ別adapterと配布lockの差分準備）。今回の目録受入だけのために実パスワード・実CA/接続先を共有する必要はない。ownerに今すぐ追加テストや接続判断は求めない。**最後の管理Mac無接続受入は、将来の実用adapterで変わるtrusted入力/private binding/runtime配布境界だけ**を対象とし、既存26/13は再利用する。その固定候補ができた段階で実用採用・P1/R欄を判断し、実GOを別に扱う。
 
 **維持**：`LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 

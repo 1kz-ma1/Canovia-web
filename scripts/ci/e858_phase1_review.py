@@ -44,7 +44,7 @@ def inventory(root, head):
         reused_evidence_head=EVIDENCE, public_source_sha256=files,
         public_source_index_sha256=b.digest(files), pymysql_wheel=WHEEL.copy(),
         live_distribution='NOT_BUILT', live_tooling='NOT_ADOPTED',
-        runtime_artifact_lock='UNVERIFIED', mac_delta_acceptance='PENDING',
+        runtime_artifact_lock='UNVERIFIED', mac_delta_acceptance='NOT_REQUIRED_REVIEW_ONLY',
         approval='NOT_GRANTED')
     return value
 
