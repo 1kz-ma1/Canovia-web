@@ -478,6 +478,16 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 **維持**：`LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-22 Phase 1 private-root FD事前検査（INERT・owner trust未成立）
+
+#819のprivate bindingが要求する「既に安全に取得されたdirectory FD」に対し、**合成ディレクトリ限定**の次段階を設ける。新library `scripts/ci/e858_phase1/private_root.py` は、caller所有の既存anchor FDを受け取り、固定子名 `phase1-private` だけを `dir_fd` + `O_DIRECTORY/O_NOFOLLOW/O_CLOEXEC/O_NONBLOCK` で開く。親・子のUID/euid、mode0700、非継承、同一device、前後のstat identityを検査し、取得した子FDの所有権をcontext managerが保持する。差分テストは使い捨て合成ディレクトリでのみ行う。失敗時は固定BLOCKとし、未知または再利用されたFDを閉じるfallbackをしない。引数にパスワード・CA・endpoint・任意パスは取らない。
+
+**安全性の限界**：anchorの祖先path安全性、native macOS ACL、本人認証、署名・取消・durable one-shot、実root trustは**すべてUNVERIFIED**。POSIX mode0700 / FD identityだけでは、rootを実用上「trusted」と判定しない。assessmentは常に `execution_allowed=false` と明示し、実用operator entry・credential prompt・connector・実Aiven接続は存在しない。将来のtrusted root取得・ACL/端末の独立検証と、実TLS/identity bridge、runtime/配布物固定は別差分。今回のFDから既存`read_binding`へ実private値を渡す操作は禁止し、合成のみで検証する。
+
+実装差分：root library・新rootテスト・CI対象・public INERT archive member・import閉包・本正本のみ。新archiveは以前の#819の17 membersから**18 members**へ変わる独立新候補であり、#819のarchive SHA256 `a3d3f640...` を流用しない。新HEADでのSHA/CIはPRに記録し、review/採用前に固定する。旧#816 Mac26／#817 Mac13／#817隔離MySQLは保護済み基盤が不変なら証跡再利用し、無用な再実行をしない。過去の10/18・10/21照合も保持。
+
+状態：`INERT_ROOT_PREFLIGHT_ONLY / OWNER_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
