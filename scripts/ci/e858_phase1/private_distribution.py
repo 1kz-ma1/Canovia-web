@@ -21,7 +21,7 @@ from .private_binding import Block, Q0_SHA, Q1_SHA
 WHEEL = 'pymysql-1.1.2-py3-none-any.whl'
 WHEEL_SHA = 'e6b1d89711dd51f8f74b1631fe08f039e7d76cf67a42a323d3178f0f25762ed9'
 FILES = tuple('scripts/ci/' + p for p in (
-    'e858_phase1/private_binding.py','e858_phase1/private_candidate.py',
+    'e858_phase1/private_acl.py','e858_phase1/private_binding.py','e858_phase1/private_candidate.py',
     'e858_phase1/private_distribution.py','e858_phase1/private_root.py','e858_phase1/r1_tty.py',
     'e858_phase1/r1_adapter.py','e858_phase1/runtime.py','e858_phase1/protocol.py',
     'e858_tls/transport.py','e858_tls/control_contract.py','e858_b_offline.py',
