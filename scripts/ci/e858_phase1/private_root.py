@@ -82,7 +82,8 @@ def open_private_root(anchor_fd):
     try:
         needed = ("O_NOFOLLOW", "O_DIRECTORY", "O_CLOEXEC", "O_NONBLOCK")
         if (type(anchor_fd) is not int or anchor_fd <= 2
-                or any(not hasattr(os, name) for name in needed)
+                or any(not isinstance(getattr(os, name, None), int)
+                       or getattr(os, name) == 0 for name in needed)
                 or os.get_inheritable(anchor_fd)):
             raise Block()
         before = os.fstat(anchor_fd)
