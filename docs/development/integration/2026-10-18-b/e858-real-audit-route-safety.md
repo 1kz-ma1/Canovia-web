@@ -432,6 +432,52 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 **維持**：`LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-21 Phase 1限定private adapter候補（INERT、接続不能）
+
+[#818独立レビュー6318010899](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6318010899)に対応する限定実装。上の#818で未実装だった**private record reader・未知identityの受入契約・実constructorへの受渡し・候補archive**を具体化する。既存#813〜#817のruntime/SQL/transport/TTYは変更しない。10/18・10/21の照合、管理Mac26/13、#817 MySQL8.0/8.4 CI39599644167を再利用。これらを現在の実対象/権限/実TLSの受入へ昇格しない。
+
+### 単一private対象・CA形式とreader
+
+`private_binding.read_binding(directory_fd, expected_record_hash, tooling_sha, now)` は将来私的に取得・確認したdirectory FDのdupを所有し、**固定basename `target.json` と `ca.pem` だけ**を読むlibrary。今回読むのはテストが新規作成する合成ファイルのみ。実private path入力CLI・credentials reader・実CA取得はない。
+
+- owner/euid一致、directory mode0700、file mode0600・regular・hardlinkなしを要求。`dir_fd`＋O_NOFOLLOW/O_NONBLOCK/O_CLOEXEC、file/dirの前後stat・bounded readを使い、symlink/FIFO/不正FD/緩いmode/oversize/途中変更/close失敗を固定BLOCKにする。record≤16KiB、CA≤64KiBで、既存metadata capsは変更しない。parent pathの安全なFD取得、native ACL/管理端末の信頼性はmode検査だけでは証明せず、実用entryの別審査に残す。
+- record SHA256の**独立した私的期待値**と原bytesを照合してから既存B JSON boundary（duplicate/depth/type/size）でdecode。record自身が宣言するhashやapproved欄を信頼anchorにしない。期待hashの私的審査は本人承認の実装ではない。hash/private値をreceiptへ出さない。
+- exact schemaは `kind/provenance/source_sha/release_ref/tooling_sha/sql_sha256/q0_sha256/q1_sha256/starts_at/expires_at/target/tls`。kind=`E858_PHASE1_PRIVATE_BINDING_V1`、provenance=`OWNER_PRIVATE_2026_10_21` は歴史的出典の申告で、署名・現在値証明ではない。targetは単一objectの `service/database/host/port/principal` のみ、tlsは `mode/minimum/san/ca_sha256` のみ。未知field/複数対象・期限切れ・seal改変を拒否。実UUID/grants/CIDの記入欄は設けずGO前probeを要求しない。
+- source/release/Q0/Q1/bundleの既存固定値と**別途reviewした完全tooling SHA**を照合。DBは既存validatorが扱うASCII identifier、principalは保守的なASCII32字内、hostは小文字DNS名（raw IP/wildcard/曖昧表記を拒否）、portは1–65535整数、SAN期待名は同じhost。許容外の実値があっても正規化/推測せず別レビューでBLOCKする。
+- CAは独立record seal内の期待hashと一致し、private keyを含まずSSLContextでparseできること。CERT_REQUIRED＋check_hostname＋TLS1.2以上、CA default store・環境overrideなし。**DNSを解決せずIPも固定しない**。Aivenの動的IPをDocker固定IPへ置換しない。実handshakeのCA chain/SAN/peer/session連続性は未実行であり、このfile検査を実TLS証明にしない。
+
+### Trusted TTY・資格情報・未知identity
+
+`private_candidate.Candidate` はsource固定Q0/Q1 bytesとPyMySQL1.1.2/debug無効を要求し、既存 `SharedBudget` と `Gate` を使用する。入力開始前から同じ120秒窓を消費し、expiry/timeout後に受渡ししない。`WindowedTTY` は#815のcapture/echo/復元を継承し、read hookだけを元のattempt残時間でclampする（新しい120秒へリセットしない）。hookの上限/EOF/制御文字/期限を新差分テストで確認する。enumやprivate recordは本人認証・実GOではない。
+
+- `capture_synthetic_ctty()` は**fresh pty.fork child/session leaderに限定**。明示合成action・parent・foreground pgrp・所有slave/euid・character TTY・非継承FDを確認してfixed `/dev/tty` をopen、#815非echo/復元を再利用。固定合成passwordだけを受け付け、通常の管理Macから実passwordを入力する入口は作らない。標準入力fallback/再入力/ログ/保存/環境/argv/login-path抽出なし。実owner管理Macのtrusted TTY取得・明示操作・native ACL/親directory bindingを有効化するentryは**未実装・別審査**で、合成のparent/gesture検査をその代用にしない。
+- `prepare_pair()` は同じprincipal/CA/targetと同じmutable bufferを、Control→Dataの**実PyMySQL constructor**へ各1回だけ渡す。`DisabledWire` は既存Wire/StrictConnectionの契約を継承しつつ、connect/auth/SQL/normal QUIT要求を無条件拒否してattemptをcloseする。**実接続数0／送信SQL0／TLS0**。2つのdeferred objectを2 TLS成功と呼ばない。任意factory/endpoint switch/接続許可flagはない。
+- constructor途中失敗/割込/入力・SQL要求失敗/期限切れ/再entryで停止。context/finallyで両driverのpassword参照解除、元bufferのbest-effortゼロ化、target/identity/CID参照を解除し、不確実cleanupはBLOCK。driver一時packet/immutable bytes、Python/SSL/OS/swap/core/debuggerの完全消去は保証しない。実認証後の参照解除/full authは#817証拠を再利用し、今回のdeferred constructor試験から新しい実認証成功を推論しない。
+- `observe_identity()` は**オフライン入力seam**。初回ControlでDB・logical principal・許可engine（8.0/8.4）・UUID形式・handshake CIDを検査し、未知のCURRENT_USER host部分/UUIDをprivateにlatchする。Q1は既存strict grants validatorを再利用し、recipientも当該CURRENT_USERに一致させる。Dataは同じidentity＋別CID、以後Control/Dataも完全一致を要求。UUID/CID/account切替・未知role/不足/過剰権限・期限切れはSTOP、@%やUUIDを事前推測しない。このseamの自己申告は本物のTLS/grants証明ではなく、将来の既定SQLからだけ供給する実用bridgeの別レビューが必要。
+- 実用runnerを本PRで起動しない。固定Q0/Q1・全SQL表・15/42・2TLS・10/120秒・caps・Control観測/COM_QUITは既存正本どおり。新SQL/接続/権限を追加しない。異常時は追加SQL/再接続/KILL/admin fallbackなし。正常close/remote消滅は今回観測しておらず、reportは常に `REMOTE_TERMINATION_UNVERIFIED`。既存正常close証拠を異常時の遠隔停止能力へ昇格しない。
+
+### 再現可能な候補archiveとruntime lockの境界
+
+`private_distribution` は固定Git HEADの13 library source、#795の原本Q0/Q1、hash-pinned PyMySQL wheel、生成manifestの**17 members**をdeterministic ZIP_STORED（固定mtime/owner mode/順序）へまとめる。host CLI/Docker fixture/実private record/実CA/passwordは配布しない。shared libraryの固定合成機能は存在するが、本候補からlive connectorに切替できない。全runtime依存の承認済み実行packageではなく **INERT library候補archive** である。
+
+- `e858_private_archive.py` はpublic wheel/sourceからarchiveを作るオフラインCLIだけ。`--tooling-sha/--wheel/--output`以外（target/CA/credential/connect mode等）は拒否。既存B integrityでclean/full-history/fixed refs/source/SQL/referenceを照合し、Git blobからだけ構築。出力はrepo外の新規file0600、既存fileを上書きしない。秘密引数/例外/詳細pathを表示せず固定BLOCKにする。
+- 検証は**別にreviewした完全HEAD/pins/archive SHA256**を期待値に使い、全member hash/manifest/source/ref/Q0/Q1/wheelを照合。未知member/path traversal/重複/symlink/compression/size超過/改変は拒否。verifierはextract/実行しない。CIだけが検証済み固定public memberを使い捨てdirへ展開してsocket audit hookで通信拒否したimport閉包を確認する。
+- PyMySQL wheelの既存SHA256 `e6b1d89711dd51f8f74b1631fe08f039e7d76cf67a42a323d3178f0f25762ed9` を再利用。manifestに自分のarchive hashは埋め込まず、commit後に固定HEAD/生成SHAをPR/Issueへ記録する（自己参照なし）。同じHEAD/wheelならLinux/Macで同じarchive bytesを要求する。#818 public source目録のhashとは別物。
+- `runtime_components()` は**実行した機械だけ**のPython version/architecture/OS、実executable SHA256、SSL extension SHA256（builtinならspecで確認してexecutableに含まれると区別）、OpenSSL version、installed PyMySQL source-set hashを取得する。絶対pathは出さない。`verify_runtime(expected)` は別にreviewした期待値との完全一致だけを確認し、不明/変更はBLOCK。今回のCI/Linux観測値を管理Macのhashにしない。
+- native dyld/OpenSSL/system library/OS全体の依存閉包・管理Macのruntime provenance/署名/実package installは**未検証**。`runtime_complete=false` / `linkage_closure=UNVERIFIED` を常に残す。自己採取snapshotの比較だけでowner採用や完全なruntime lockを成立させない。cryptography46.0.3は合成CA生成test依存であり、live TLSはstdlib SSLの別審査。管理Mac binary hashを推測で記載しない。
+
+### 差分受入・採用審査への判定
+
+新25 offlineテスト＋CI archive/import閉包1件。private形式/seal/CA/TLS弱化/期限/型、mode/FD/symlink/hardlink/FIFO/巨大file/途中変更、環境無効、秘密非出力、fresh合成ctty→実constructor2個のalias/破棄、部分失敗/割込/reentry/close不明、identity/grants/CID切替、接続要求拒否、archive改変/余剰member/重複/link/圧縮、runtime component不一致を検証する。既存#81521・Phase1 15・B1 22・TLS17・review6を必要範囲の回帰とする。
+
+旧#81626/#81713は固定基盤・そのtestが無変更なら再実行せずowner受入/CIを再利用。MySQL8.0/8.4も旧wire profileの既存基盤に差分がないため**NOT_RUN**、#817を再利用。新private libraryを既存wire profileへ黙って注入しない。該当基盤/test変更、base不明、dispatchでは従来の回帰を実行。旧94/114/full17/KILLのwireも今回対象外。
+
+**結論：限定候補のソース・archive差分レビューへは進めるが、最終の実用tooling採用条件は未達。追加の技術差分が残る。** (1) 管理Macのtrusted owner entry/私的directory FD取得とnative ACLを含む信頼境界、(2) 今回latchを将来の実TLS/既定Q0/Q1/Controlへ束縛するbridge（現在のrunnerは合成固定で、新candidateは接続不能）、(3) 管理Macの実runtime/dependency linkageと配布lock。この3点は実Aivenへの事前probeで埋めず、別の無接続差分・採用審査で扱う。connect拒否を単に削除したりflagで解除したりしない。将来のactivation変更も新しい完全SHA/受入が必要。
+
+オーナーの次操作は**まだ実接続GOではない**。最終SHA/CI/archive hashを示す本限定候補の新しい差分だけ、管理Mac無接続で受け入れるかを審査できる（旧26/13は再利用、実CA/対象/password不要）。今後の実用候補が技術ゲートを満たしても、**完全SHA＋artifact/依存lock採用 → P1票 → R1〜R6個別受入 → 新しいPhase1限定GO** はそれぞれ別判断。現在の候補archive採用と本番用実行toolingの採用を混同しない。
+
+**維持**：`LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
