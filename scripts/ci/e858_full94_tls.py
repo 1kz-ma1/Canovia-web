@@ -9,6 +9,7 @@ import sys
 import tarfile
 import time
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import e858_tls_host as h
 from e858_b_offline import template, validate, DECLARATIONS
 
