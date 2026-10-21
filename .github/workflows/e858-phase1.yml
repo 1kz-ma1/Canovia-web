@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/ci/e858_phase1/**'
       - 'scripts/ci/e858_phase1_host.py'
+      - 'scripts/ci/e858_r1_driver_host.py'
       - 'scripts/ci/e858_tls/transport.py'
       - 'scripts/ci/e858_tls/control_contract.py'
       - 'scripts/ci/e858_tls_host.py'
@@ -13,6 +14,7 @@ on:
       - 'tests/ci/test_e858_phase1.py'
       - 'tests/ci/test_e858_r1_tty.py'
       - 'tests/ci/test_e858_r1_adapter.py'
+      - 'tests/ci/test_e858_r1_driver.py'
       - '.github/workflows/e858-phase1.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
   workflow_dispatch:
@@ -43,6 +45,7 @@ jobs:
       - run: python3 -m pip install PyMySQL==1.1.2 cryptography==46.0.3
       - name: Phase1 SQL privacy and close contracts with unchanged B and TLS guards
         run: |
+          python3 -B -m unittest discover -s tests/ci -p test_e858_r1_driver.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_r1_adapter.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_r1_tty.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_phase1.py -v
@@ -66,8 +69,8 @@ jobs:
         with:
           python-version: '3.12'
       - run: python3 -m pip install cryptography==46.0.3
-      - name: Observe-only phase1 on owned internal TLS network
+      - name: Phase1 plus R1 real driver delta on the same owned TLS network
         env:
           SERIES: ${{ matrix.series }}
-        run: python3 -I -B scripts/ci/e858_phase1_host.py --series "$SERIES" --tooling-sha "$(git rev-parse HEAD)"
+        run: python3 -I -B scripts/ci/e858_r1_driver_host.py --series "$SERIES" --tooling-sha "$(git rev-parse HEAD)"
       - run: test -z "$(git status --porcelain)"
