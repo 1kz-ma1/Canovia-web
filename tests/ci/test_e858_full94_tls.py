@@ -116,3 +116,9 @@ class FrozenBridgeInputTests(unittest.TestCase):
             with self.assertRaises(self.bridge.Block):collector.capture()
             with self.assertRaisesRegex(self.bridge.Block,'NEW_OWNER_GO_REQUIRED'):collector.capture()
             self.assertEqual(1,opened.call_count)
+
+    def test_query_log_delimiter_normalization_does_not_admit_extra_sql(self):
+        allowed=self.bridge.log_key('SELECT 1;\n')
+        self.assertEqual(allowed,self.bridge.log_key(b'SELECT 1'))
+        for sql in ('SELECT 1; SELECT 2','SELECT 1;;','SELECT * FROM users','SELECT 1 #extra'):
+            self.assertNotEqual(allowed,self.bridge.log_key(sql))

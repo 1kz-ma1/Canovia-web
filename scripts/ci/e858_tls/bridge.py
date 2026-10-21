@@ -10,6 +10,13 @@ from e858_audit.core import audit, hashed, CANDIDATE, SEAL, RELEASE
 from p0_mysql_full_ledger_offline_check import parse_full_ledger
 
 
+def log_key(value):
+    # MySQL general_log omits a terminal statement delimiter. This is ONLY
+    # observation normalization; Session still requires the exact frozen bytes.
+    text=(value.decode('ascii') if isinstance(value,bytes) else value).strip()
+    return text[:-1] if text.endswith(';') else text
+
+
 def assets(directory=Path('/synthetic')):
     manifest=json.loads((directory/'manifest.json').read_text())
     raw=(directory/'reference.json').read_bytes()
