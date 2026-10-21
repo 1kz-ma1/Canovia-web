@@ -107,6 +107,8 @@ def run():
             return dict(summary(result,expected,strict),**proof)
         case('FULL_NARROW_SINGLE_TLS',narrow)
         if stage=='old94':
+            from control_fixture import run as control_contract_cases
+            case('B1_BOUND_CONTROL_CONTRACT',lambda:control_contract_cases(admin,own))
             for kind in ('sql','export','target','swap'):case('DENY_'+kind.upper(),lambda k=kind:negative(own,k))
             def alias():
                 rows(admin.conn,'ALTER TABLE intelligence_decision_traces RENAME INDEX intelligence_decision_traces_domain_index TO e858_synthetic_full_alias')
