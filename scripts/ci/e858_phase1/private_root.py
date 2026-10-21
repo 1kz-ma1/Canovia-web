@@ -79,6 +79,7 @@ def open_private_root(anchor_fd):
     This check must never be interpreted as owner authentication or a live GO.
     """
     child_fd = None
+    reverse_fd = None
     try:
         needed = ("O_NOFOLLOW", "O_DIRECTORY", "O_CLOEXEC", "O_NONBLOCK")
         if (type(anchor_fd) is not int or anchor_fd <= 2
@@ -95,16 +96,33 @@ def open_private_root(anchor_fd):
         after = os.fstat(child_fd)
         if (child_fd <= 2 or os.get_inheritable(child_fd)
                 or not _private_directory(after)
-                or after.st_dev != before.st_dev
+                or after.st_dev != before.st_dev):
+            raise Block()
+        # Observe the direct reverse link, not an absolute path. This checks
+        # one parent/child relationship; it does NOT establish anchor ancestry.
+        reverse_fd = os.open("..", flags, dir_fd=child_fd)
+        reverse = os.fstat(reverse_fd)
+        if (reverse_fd <= 2 or os.get_inheritable(reverse_fd)
+                or not _private_directory(reverse)
+                or (reverse.st_dev, reverse.st_ino) != (before.st_dev, before.st_ino)
                 or _identity(before) != _identity(os.fstat(anchor_fd))
+                or _identity(reverse) != _identity(os.fstat(reverse_fd))
                 or _identity(after) != _identity(os.fstat(child_fd))):
             raise Block()
+        os.close(reverse_fd)
+        reverse_fd = None
         owned = PreflightRoot(child_fd, _identity(after))
         child_fd = None
         return owned
     except BaseException:
         raise Block() from None
     finally:
+        # Never treat failure to close an owned observer as successful inspection.
+        if reverse_fd is not None:
+            try:
+                os.close(reverse_fd)
+            except BaseException:
+                raise Block() from None
         if child_fd is not None:
             try:
                 os.close(child_fd)

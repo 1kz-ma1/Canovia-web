@@ -498,6 +498,16 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 残ゲート：実owner trusted entry、親祖先path/OS管理状態の検証、native runtime lock、実TLS/identity bridge、P1/R1〜R6と独立新GO。状態：`INERT_NATIVE_ACL_OBSERVER_ONLY / OPERATOR_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-22 private root親子FD逆方向照合（INERT、限定差分）
+
+#820で追加した `open_private_root(anchor_fd)` が子 `phase1-private` を開く際に、子FDから `dir_fd` 付き `os.open("..", O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC|O_NONBLOCK)` で逆方向の親FDを別途取得し、**最初に受け取ったanchor FDと同じdevice/inodeの直接親であること**を検証する。owner/euid、mode0700、非継承、前後stat identityを既存検査とともに確認する。親参照FDのclose失敗は固定BLOCKとする。この結果は「同一時点に観測した1階層の親子関係」の証拠にすぎず、祖先全体のpath trustや別processによる競合更新のないことを保証しない。
+
+新規3テストでは、合成ディレクトリの正常関係、別のmode0700/euid所有parent FDを返す差し替え、`..` 取得失敗時の子FD cleanupと例外秘匿を確認する。既存root7/ACL6/private candidate25＋archiveはCIの差分回帰で確認する。既存の固定SQL、B/R1 wire runner、実TTY、実credential、live connector、production、固定releaseは変更しない。旧#816 Mac26・#817 Mac13と隔離MySQL通信は基盤無変更を前提に従来証拠を再利用する。
+
+追加の直近親照合がPASSでも、callerが最初に渡したanchorの由来、native ACLの `ENOENT`、管理Macのoperator本人認証、実runtimeの署名・依存閉包、実Aiven TLS/identityは**UNVERIFIED**。INERT archiveのhashは新PR検証HEADで再生成し、#821のSHAをそのまま採用しない。採用権限や実AivenのGOを新設しない。
+
+状態：`INERT_PARENT_LINK_OBSERVED_ONLY / ANCESTOR_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
