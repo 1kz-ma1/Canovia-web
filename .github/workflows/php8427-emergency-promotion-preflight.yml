@@ -26,7 +26,7 @@ jobs:
       - name: Run fail-closed synthetic negative controls
         run: |
           set -euo pipefail
-          python3 -m unittest tests/ci/test_php8427_emergency_promotion_preflight.py -v
+          python3 -m unittest discover -s tests/ci -p 'test_php8427_emergency_promotion_preflight.py' -v
 
       - name: Fetch immutable Live and candidate source refs only
         run: |
