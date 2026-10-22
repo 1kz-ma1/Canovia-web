@@ -4,13 +4,15 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+import ssl
+import time
 import unittest
 from unittest.mock import patch
 import zipfile
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'scripts/ci'))
 from e858_phase1 import b1_integrity as b, b1_bridge as bridge
 from e858_phase1 import private_distribution as d
-from e858_phase1.private_binding import Block
+from e858_phase1.private_binding import Block,Target
 from e858_phase1.runtime import SharedBudget
 from e858_phase1.protocol import INIT,CID
 
@@ -57,6 +59,25 @@ class Integrity(unittest.TestCase):
         with patch('socket.getaddrinfo',side_effect=AssertionError('NETWORK_FORBIDDEN')):
             result=bridge.Bridge(entry).run()
         self.assertEqual(result['result'],'BLOCK');self.assertFalse(result['real_aiven_connected'])
+    def test_bound_wire_never_accepts_private_target(self):
+        wire=object.__new__(bridge.BoundWire)
+        target=Target('synthetic','private_db','private.synthetic.invalid',3306,'inspector',b'fake CA','0'*64,'a'*40,0,2**31)
+        with patch('socket.getaddrinfo',side_effect=AssertionError('NO_NETWORK')):
+            with self.assertRaises(Block):wire.initialize_bound(None,bytearray(bridge.SYNTHETIC_PASSWORD),{},target)
+    def test_bound_wire_rejects_ca_change_and_untrusted_target_class(self):
+        target=Target('synthetic',bridge.r.DB,bridge.r.HOST,3306,bridge.r.USER,b'fake CA','0'*64,'a'*40,0,2**31)
+        pin=dict(ca_sha256='0'*64,tooling_sha='a'*40)
+        for value in (target,unittest.mock.Mock()):
+            with self.assertRaises(Block):
+                object.__new__(bridge.BoundWire).initialize_bound(None,bytearray(bridge.SYNTHETIC_PASSWORD),pin,value)
+    def test_bound_wire_no_filename_ca_reread_and_no_weak_context(self):
+        ca=b'synthetic bytes for mock only'
+        target=Target('synthetic',bridge.r.DB,bridge.r.HOST,3306,bridge.r.USER,ca,'0'*64,'a'*40,0,2**31)
+        pin=dict(ca_sha256=d._sha(ca),tooling_sha='a'*40)
+        context=ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        context.check_hostname=False;context.verify_mode=ssl.CERT_NONE
+        with patch.object(Target,'tls_context',return_value=context),patch.object(bridge.Path,'read_bytes',side_effect=AssertionError('NO_PATH_READ')):
+            with self.assertRaises(Block):object.__new__(bridge.BoundWire).initialize_bound(None,bytearray(bridge.SYNTHETIC_PASSWORD),pin,target)
     def test_gate_metadata_exact_bytes_and_scope(self):
         cfg=dict(q0=b'fixed q0',q1=b'fixed q1');bundle={k:('fixed '+k).encode() for k in set(bridge.ORDER)}
         gate=bridge.BridgeGate('data',cfg,SharedBudget(),bundle)

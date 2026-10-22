@@ -88,7 +88,8 @@ def native_graph():
     it; owner review must reject unexplained images. No raw paths are returned.
     """
     try:
-        if sys.platform!='darwin':raise Block()
+        if (sys.platform!='darwin' or any(k.startswith('DYLD_') or k in ('LD_PRELOAD','LD_LIBRARY_PATH') for k in os.environ)):
+            raise Block()
         lib=ctypes.CDLL(None)
         count=lib._dyld_image_count;count.restype=ctypes.c_uint32
         image=lib._dyld_get_image_name;image.argtypes=[ctypes.c_uint32];image.restype=ctypes.c_char_p

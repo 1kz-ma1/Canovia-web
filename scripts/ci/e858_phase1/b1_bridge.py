@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import socket
+import ssl
 import time
 
 import pymysql
@@ -33,14 +34,17 @@ class BoundWire(R1Wire):
     There is no implementation that enables a live target.
     """
     def initialize_bound(self,gate,secret,pin,target):
-        if (type(secret) is not bytearray or secret!=SYNTHETIC_PASSWORD or target is None
+        if (type(secret) is not bytearray or secret!=SYNTHETIC_PASSWORD or type(target) is not Target
                 or (target.host,target.port,target.database,target.principal)!=(r.HOST,3306,r.DB,r.USER)
                 or hashlib.sha256(target.ca).hexdigest()!=pin['ca_sha256']
                 or target.tooling_sha!=pin['tooling_sha']):raise Block()
         self.gate=gate;self.pin=dict(pin);self.quit_written=False
         self.alias_verified=False;self.full_auth_packet_seen=False;self.password=b''
+        context=target.tls_context()
+        if (context.verify_mode!=ssl.CERT_REQUIRED or not context.check_hostname
+                or context.minimum_version<ssl.TLSVersion.TLSv1_2):raise Block()
         r.StrictConnection.__init__(self,host=target.host,port=target.port,user=target.principal,
-            database=target.database,password=secret,ssl=target.tls_context(),charset='ascii',
+            database=target.database,password=secret,ssl=context,charset='ascii',
             autocommit=None,sql_mode=None,connect_timeout=2,read_timeout=10,write_timeout=10,
             cursorclass=pymysql.cursors.SSCursor)
         self.alias_verified=self.password is secret
