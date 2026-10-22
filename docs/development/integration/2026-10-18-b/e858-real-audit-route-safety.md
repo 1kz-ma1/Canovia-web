@@ -534,6 +534,20 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 状態：`PINNED_WHEEL_INSTALLED_SOURCES_OBSERVED_ONLY / NATIVE_LINKAGE_UNVERIFIED / OWNER_RUNTIME_LOCK_UNADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-22 Native Runtime直接リンク・署名の観測候補（Darwin限定・無接続）
+
+#824では固定wheelとrunner上のPyMySQLインストール済みPython sourceの一致を検証したが、Macで実際にPython実行体や`_ssl`拡張がどのネイティブライブラリへリンクし、ローカル署名検証がどう返るかは未観測。本差分は、これらを**値非露出・読み取り専用・管理Macで同じ操作を再実行可能なオフライン**の観測材料へ限定して追加する。
+
+`private_native_runtime.observe_native_runtime()` は `sys.executable` と使用中の `_ssl.__file__`（built-inの場合は未検証と明記）だけを対象に、ファイルのbytes SHA256と前後statを確認する。固定の `/usr/bin/otool -L` と `/usr/bin/codesign --verify --strict` をシェルなし・8秒制限・サニタイズ環境・標準入力無効で呼び出す。ライブラリの実path、署名やエラーの生詳細は公開しない。直接依存の件数・ハッシュと、`LOCAL_CODESIGN_EXIT_ZERO_NOT_OWNER_TRUST`（または `UNVERIFIED`）の限定状態だけを返す。形式不正/バイナリ途中変更/観測例外は固定BLOCK。対象のパス/コマンドはユーザー指定できない。TLS通信・パスワード/CA/秘密、TTY read/write、アプリ起動・署名変更・installはしない。
+
+`scripts/ci/e858_native_runtime_review.py` は追加引数を受け付けない無接続CLIで、macOS以外や観測失敗なら固定 `INERT_NATIVE_RUNTIME_OBSERVATION_BLOCKED` と終了2。観測が成立しても `runtime_complete=false / live_tooling_adopted=false / execution_allowed=false / real_aiven_connected=false`。将来管理Macの**独立レビュー済みclean checkout**上で `python3 -I -B scripts/ci/e858_native_runtime_review.py` のように実行し、秘密を含まない結果だけownerがレビューできる。今回のGitHub CIのMacは本人の管理Macではなく、結果を実用tooling採用値へ流用しない。
+
+**未成立の信頼境界**：`otool -L`は直接依存の観測であり、再帰的dyld解決・実際にloadされた共有cache/ライブラリ・nested plugin/import hook・環境の起源・親パスACL・developer Team ID/Notarization/Gatekeeper審査を証明しない。`codesign --verify`終了0はローカル署名形式の確認であり、コードの発行元がownerにより信頼された証明ではない。動的リンク閉包・OS管理状態・operator本人意思は常に `UNVERIFIED`。完全package/runtime lockと採用完全SHA、P1/R1〜R6個別受入、新Phase1限定GOは別ゲート。合成で全テストPASSでも実Aiven・本番へ接続可能にはならない。
+
+**検証**：新 `test_e858_private_native_runtime.py` でLinux BLOCK、synthetic Darwin/Apple tools mock、入力path変更・tamper・Codesign失敗時の誤昇格阻止、実macOS runnerのread-only実行、実CLIの拒否契約を確認。既存root/ACL/foreground/wheel/Private candidateとarchive/import閉包を再実行。INERT archiveは新sourceを追加し完全HEADごとに再hash。既存Mac26/13/隔離MySQL8.0/8.4は変更外なら証拠再利用。実管理Macの診断実行を今回要求しない。
+
+状態：`DARWIN_NATIVE_DIRECT_LINKS_OBSERVABLE / CODESIGN_LOCAL_ONLY / OWNER_MACHINE_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
