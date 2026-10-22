@@ -12,64 +12,21 @@ bootstrap/cache \
 /run/nginx \
 /var/log/supervisor
 
-echo "Running Laravel migrations..."
-
-migration_attempt=1
-migration_max_attempts="${CANOVIA_MIGRATION_MAX_ATTEMPTS:-5}"
-migration_retry_delay="${CANOVIA_MIGRATION_RETRY_DELAY_SECONDS:-8}"
-
-# Never log raw Laravel migration exceptions in isolated staging:
-# a failed PostgreSQL connection may include private DSN or credentials.
-# Retain the original production startup and transient-error logic.
-isolated_staging=false
-if [ "${APP_ENV:-}" = "staging" ] && [ "${CANOVIA_STAGING_ISOLATED:-}" = "true" ]; then
-    isolated_staging=true
+# Emergency runtime hotfix: production only, with an immutable no-DDL startup mode.
+# Fail before running Laravel/Artisan if a stale or unsafe mode is configured.
+# Release acceptance must separately prove the actual schema and migration ledger
+# are compatible with the pinned legacy Live code. This guard is not that proof.
+if [ "${APP_ENV:-}" != "production" ]; then
+    echo "Emergency PHP hotfix refuses non-production APP_ENV" >&2
+    exit 42
 fi
-
-while true; do
-    if [ "$isolated_staging" = "true" ]; then
-        if php artisan migrate --force --no-interaction --quiet >/dev/null 2>&1; then
-            echo "MCP isolated staging migrations: completed (details suppressed)"
-            break
-        fi
-        if [ "$migration_attempt" -ge "$migration_max_attempts" ]; then
-            echo "MCP isolated staging migrations: failed (details suppressed)" >&2
-            exit 1
-        fi
-        echo "MCP isolated staging migrations: retrying (details suppressed)" >&2
-        migration_attempt=$((migration_attempt + 1))
-        sleep "$migration_retry_delay"
-        continue
-    fi
-
-    migration_output=""
-
-    if migration_output="$(php artisan migrate --force 2>&1)"; then
-        printf '%s\n' "$migration_output"
-        break
-    else
-        migration_status=$?
-    fi
-
-    printf '%s\n' "$migration_output"
-
-    case "$migration_output" in
-        *"SQLSTATE[08S01]"*|*"SQLSTATE[HY000] [2002]"*|*"SQLSTATE[HY000] [2006]"*|*"SQLSTATE[HY000] [2013]"*|*"Got timeout reading communication packets"*)
-            ;;
-        *)
-            exit "$migration_status"
-            ;;
-    esac
-
-    if [ "$migration_attempt" -ge "$migration_max_attempts" ]; then
-        echo "Migration failed after ${migration_attempt} transient database attempts."
-        exit "$migration_status"
-    fi
-
-    echo "Transient database error during migration attempt ${migration_attempt}; retrying in ${migration_retry_delay}s..."
-    migration_attempt=$((migration_attempt + 1))
-    sleep "$migration_retry_delay"
-done
+if [ "${CANOVIA_STARTUP_MIGRATIONS:-check}" != "check" ] \
+    || [ -n "${CANOVIA_APPROVED_MIGRATION_SHA:-}" ]; then
+    echo "Emergency PHP hotfix refuses migration execution or approval settings" >&2
+    exit 42
+fi
+echo "Emergency PHP hotfix: automatic migrations disabled; separate schema acceptance required"
+isolated_staging=false
 
 # On-demand, staging-only synthetic account creation occurs strictly
 # after migrations and before HTTP startup. Both approval switches and
