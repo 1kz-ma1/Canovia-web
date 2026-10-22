@@ -1,0 +1,81 @@
+name: PHP 8.4 October 2026 Security Hotfix (Isolated Docker)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'Dockerfile'
+      - 'Dockerfile.mcp-staging'
+      - '.github/workflows/php-security-hotfix-2026-10.yml'
+      - 'docs/development/PHP_SECURITY_HOTFIX_2026_10_22.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-security-hotfix-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patched-php-runtime:
+    name: Patched PHP image / ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: production-image
+            dockerfile: Dockerfile
+            image: canovia-php-security-production:ci
+          - target: isolated-staging-image
+            dockerfile: Dockerfile.mcp-staging
+            image: canovia-php-security-staging:ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require patched and matching PHP image declarations
+        env:
+          TARGET_DOCKERFILE: ${{ matrix.dockerfile }}
+        run: |
+          set -eu
+          grep -Fxq 'FROM php:8.4.27-fpm-bookworm AS app' Dockerfile
+          grep -Fxq 'FROM php:8.4.27-fpm-bookworm AS app' Dockerfile.mcp-staging
+          grep -Fxq 'FROM php:8.4.27-fpm-bookworm AS app' "$TARGET_DOCKERFILE"
+          grep -Fq 'PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500' Dockerfile
+          grep -Fq 'PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500' Dockerfile.mcp-staging
+
+      - name: Pull patched PHP base and record immutable digest
+        run: |
+          set -eu
+          docker pull php:8.4.27-fpm-bookworm
+          docker image inspect php:8.4.27-fpm-bookworm --format '{{json .RepoDigests}}'
+
+      - name: Build real Laravel image without reusable Docker layer cache
+        env:
+          TARGET_DOCKERFILE: ${{ matrix.dockerfile }}
+          TARGET_IMAGE: ${{ matrix.image }}
+        run: |
+          set -eu
+          docker build --pull --no-cache --progress=plain \
+            --file "$TARGET_DOCKERFILE" --tag "$TARGET_IMAGE" .
+
+      - name: Verify image PHP version and runtime dependencies without startup or network
+        env:
+          TARGET_IMAGE: ${{ matrix.image }}
+        run: |
+          set -eu
+          docker run --rm --entrypoint php "$TARGET_IMAGE" -r '
+            if (PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500) {
+              fwrite(STDERR, "Blocked: PHP 8.4.27+ required\n");
+              exit(1);
+            }
+            echo "Patched PHP runtime: ", PHP_VERSION, "\n";
+          '
+          docker run --rm --entrypoint php-fpm "$TARGET_IMAGE" -t
+          docker run --rm --entrypoint nginx "$TARGET_IMAGE" -t
+          docker run --rm --entrypoint composer "$TARGET_IMAGE" check-platform-reqs --no-dev
+          # Do not invoke docker/render-start.sh or docker/mcp-staging-start.sh here:
+          # those entrypoints can perform migrations. Existing isolated staging
+          # HTTP regression jobs own disposable-DB startup verification.

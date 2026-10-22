@@ -16,7 +16,12 @@ RUN npm run build
 # -----------------------------
 # 2) Laravel runtime (Nginx + PHP-FPM)
 # -----------------------------
-FROM php:8.4-fpm-bookworm AS app
+# PHP 8.4.27 fixes CVE-2026-109618 and CVE-2026-109619.
+# Do not use a floating 8.4 tag: every runtime build must use a patched image.
+FROM php:8.4.27-fpm-bookworm AS app
+
+# Fail the build if an unexpectedly old or unsupported PHP release is used.
+RUN php -r 'if (PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500) { fwrite(STDERR, "PHP 8.4.27+ required for CVE-2026-109618/109619\n"); exit(1); }'
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
