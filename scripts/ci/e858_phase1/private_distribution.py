@@ -167,7 +167,7 @@ def verify_pymysql_wheel_installation(wheel):
                 if not name.startswith('pymysql/') or not name.endswith('.py'):
                     continue
                 if (any(segment in ('', '.', '..') for segment in name.split('/'))
-                        or '\\' in name or not 0 < item.file_size <= 131072):
+                        or '\\' in name or not 0 <= item.file_size <= 131072):
                     raise Block()
                 expected[name] = _sha(archive.read(item))
         if not 1 <= len(expected) <= 64 or 'pymysql/__init__.py' not in expected:
@@ -181,7 +181,7 @@ def verify_pymysql_wheel_installation(wheel):
             raise Block()
         observed = {}
         for name in names:
-            raw = _public_file(distribution.locate_file(name), 131072)
+            raw = _public_file(distribution.locate_file(name), 131072, allow_empty=True)
             observed[name] = _sha(raw)
             if observed[name] != expected[name]:
                 raise Block()
