@@ -34,7 +34,7 @@ def build(root,head,wheel):
         contract=json.loads(git(root,'show',pins['source_sha']+':resources/release20_pending_schema_contract.json'))
         files[DERIVED[1]]=canonical({k:v for k,v in contract.items() if k.startswith('absent_')})
         manifest=dict(kind='E858_B1_OFFLINE_REVIEW_BUNDLE_V1',pins=pins,
-            files={p:d._sha(v) for p,v in files.items()},execution_allowed=False,live_backend='DISABLED_NO_LAUNCHER',
+            files={p:d._sha(v) for p,v in files.items()},execution_allowed=False,production_go=False,live_backend='DISABLED_NO_LAUNCHER',
             owner_machine='UNVERIFIED',private_target='UNVERIFIED',b2_owner_go='NOT_GRANTED')
         files['b1-manifest.json']=canonical(manifest)
         raw=d.pack(files)
@@ -55,11 +55,11 @@ def verify(raw,expected_sha,pins):
             files={n:archive.read(n) for n in names}
         manifest=decode(files.pop('b1-manifest.json'))
         expected=dict(kind='E858_B1_OFFLINE_REVIEW_BUNDLE_V1',pins=pins,
-            files={p:d._sha(v) for p,v in files.items()},execution_allowed=False,live_backend='DISABLED_NO_LAUNCHER',
+            files={p:d._sha(v) for p,v in files.items()},execution_allowed=False,production_go=False,live_backend='DISABLED_NO_LAUNCHER',
             owner_machine='UNVERIFIED',private_target='UNVERIFIED',b2_owner_go='NOT_GRANTED')
         if canonical(manifest)!=canonical(expected):raise Block()
         d.verify(files['library.zip'],d._sha(files['library.zip']),pins)
         return dict(result='B1_OFFLINE_BUNDLE_VERIFIED',tooling_sha=pins['tooling_sha'],
             bundle_sha256=expected_sha,member_count=len(files)+1,execution_allowed=False,
-            live_tooling_adopted=False,real_aiven_connected=False)
+            live_tooling_adopted=False,real_aiven_connected=False,production_go=False)
     except BaseException:raise Block() from None

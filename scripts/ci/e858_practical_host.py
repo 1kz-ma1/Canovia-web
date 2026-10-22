@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """Reuse Full94 B1 lifecycle; only synthetic worker/principal/package differ."""
+import contextlib
+import io
 import hashlib
 import json
 import os
@@ -48,4 +50,9 @@ def build_without_import_caches(argv,*args,**kwargs):
 
 if __name__=='__main__':
     with patch.object(h,'run',side_effect=build_without_import_caches),patch.object(full,'exercise',exercise):
-        raise SystemExit(h.main(profile='full94'))
+        output=io.StringIO()
+        with contextlib.redirect_stdout(output):code=h.main(profile='full94')
+        value=json.loads(output.getvalue())
+        value.update(execution_allowed=False,real_aiven_connected=False,production_go=False,live_tooling_adopted=False)
+        print(json.dumps(value,sort_keys=True))
+        raise SystemExit(code)
