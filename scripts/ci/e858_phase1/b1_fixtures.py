@@ -43,8 +43,7 @@ def child_run(fault,parent):
             result=original(channel,sql,cap)
             if fault=='POSTFLIGHT_IDENTITY' and role=='data' and used==5:return result.replace(r.DB,'synthetic_other')
             if fault=='STRICT_TAMPER' and sql==Path('/synthetic/queries/index.sql').read_bytes():
-                lines=result.splitlines();fields=lines[0].split('\t');fields[2]='SYNTHETIC_DIFFERENT_INDEX'
-                lines[0]='\t'.join(fields);result='\n'.join(lines)+'\n'
+                result=result.replace('\tPRIMARY\t','\tSYNTHETIC_DIFFERENT_INDEX\t')
             return result
         def send(wire,data):
             if fault=='QUIT_FAILURE' and wire.gate.role=='data' and data==b'\x01\x00\x00\x00\x01':raise OSError()
