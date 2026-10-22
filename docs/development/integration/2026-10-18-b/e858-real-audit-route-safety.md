@@ -572,6 +572,20 @@ CIでは無入力/合成全種類/ACL ENOENT・zero-entry/偽造GO・operatorな
 
 新テストは旧#826の8件を更新し、実#804 B1 synthetic receiptとの互換、偽B2承認、A-onlyゲートの混入防止、旧ACL ENOENT厳格分類、未入力HOLDをLinux3.9/3.12とmacOS3.12で回帰。固定e858 source/release、実SQL/transport、Mac既存26/13、MySQL隔離wire、実Aiven/productionを変更しない。
 
+## 2026-10-22 B1 Trusted Operator Entry 結合リハーサル（無接続・オーナー認証は未成立）
+
+既存PR #820〜#823はcaller由来が未確定のprivate anchor FD、Darwin native ACL、foreground TTY FDを独立観測する。B案（owner採用済み#803）の **B1の次の技術差分**として、これらを**同一呼出しで組み合わせ、中途不整合時に全体をBLOCK**するオフラインlibrary `private_entry.review_b_operator_entry(anchor_fd, terminal_fd)` を追加する。固定`phase1-private`子directory以外は開かず、callerがすでに持っている非継承anchor/TTY FDのみ受け付ける。実Homeからのroot祖先の証明、real TTY取得、ownerの明示操作は**まだ未実装**であり、このリハーサルを完全なTrusted Operator Entryとは称さない。
+
+検査順はDarwin/FD型と別FD/非継承 → anchor owner/mode0700 → anchor native ACL → 固定子のdir_fd O_DIRECTORY|O_NOFOLLOW|O_CLOEXEC|O_NONBLOCK取得と逆親照合 → 子native ACL → 既存foreground TTY/read-only termios検査 → 親/端末の前後stat・FD再検査 → 子FDを確実にclose、という構成。途中で権限/ACL/FD/TTY/関係/後始末に不確実性があれば固定BLOCK。実行中に外部processによるrename等のTOCTOUを完全排除するものではなく、anchor祖先由来は`UNVERIFIED`を維持する。Darwin合成環境で`acl_get_fd_np`が返す`ENOENT`は`ACL_RECORD_ENOENT_UNVERIFIED`であり、ゼロACL証明やGOへ昇格させない。
+
+**禁止のまま**：`target.json`/`ca.pem`のread、現実password/TTY read/write・画面操作・private path/host/FD/raw ACLの出力・Aiven/SQL/TLS接続・B2 GO・実用driver生成・再実行switch。返値は固定分類だけで`B1_PRIVATE_ACCEPTANCE_PENDING / B2_NOT_GRANTED / execution_allowed=false / target_ca_read=false / credential_read=false / real_aiven_connected=false`を維持。callerのanchor/TTY FDは所有せずcloseしない。固定子FDのみclose。成功してもowner本人認証済みとはみなさない。
+
+新`test_e858_private_entry.py` では、OSが作成する使い捨て0700ディレクトリ・PTYだけを対象に、Mac CIは**real native ACLのread-only観測**とmock TTY、Linuxはmock Darwin合成検査/非Darwin拒否、既存root/ACL/TTY helper組み合わせの不正入力・ACL誤格上げ・TTY identity偽装・子FD cleanup・秘密非出力を検証する。既存base script/driver/固定e858監査資産に変更を加えない。INERT Archive source memberを1追加し、検証HEADごとに新hashをCIで算出する。旧#816 Mac26/#817 Mac13・隔離MySQL wire、#827 B0採用の意思決定とB1 packetは再利用。GitHubのCI成功は管理Mac実機を受け入れた証拠ではない。
+
+**B1の引き続く技術課題**：管理Macの信頼できるanchor祖先と非同期変更監視、ACL ENOENTの扱いと私的保存場所のowner受入、実TTY上での本人の明示操作、real runtime/tooling完全SHA・配布lock、固定private target/CAのbindingとVERIFY_IDENTITY TLS/current user/server identity bridge。B2接続直前の新GOは、これらの技術とP1/R1〜R6の個別受入とはさらに別。A案の独立署名・耐rollback storeは将来設計のまま。
+
+状態：`B_DESIGN_ADOPTED / B1_ENTRY_INTEGRATION_REHEARSAL_ONLY / ANCHOR_ORIGIN_UNVERIFIED / ACL_ENOENT_UNVERIFIED / OWNER_GESTURE_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
