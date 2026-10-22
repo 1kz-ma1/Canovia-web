@@ -4,7 +4,9 @@ Generic TLS/identity/secret machinery is exercised only by the separately
 owned synthetic fixture backend. B's supervised private records are not an
 approval authority; all successful reports retain execution_allowed=False.
 """
+import ctypes
 import hashlib
+import platform
 import io
 import json
 import os
@@ -20,7 +22,7 @@ from pymysql import connections, _auth
 from e858_b_offline import canonical, digest, SOURCE, RELEASE
 from . import runtime as r, b1_package as pkg, private_distribution as dist
 from .b1_bridge import Bridge, ORDER
-from .b1_integrity import installed_wheel
+from .b1_integrity import installed_wheel, native_graph
 from .b1_operator import Entry, Root, native_acl
 from .private_binding import Block, Target, read_binding, _read, HEX
 from .private_candidate import Candidate
@@ -28,6 +30,28 @@ from .private_candidate import Candidate
 CAPS=dict(engine=1,identity=1,grants=8,ledger=115,table=512,column=4096,index=4096,
           foreign_key=2048,check=512,trigger=128,semantic_version=1,
           semantic_index=4096,semantic_foreign_key=2048,column_extra=4096)
+
+
+def native_identity():
+    """Private live-process image snapshot; paths are hashed, never rendered.
+
+    OS/shared-cache images remain external managed-OS trust, not file proofs.
+    No native function is loaded from caller-supplied paths.
+    """
+    if sys.platform!='darwin':return dict(kind='SYNTHETIC_NON_DARWIN_RUNTIME')
+    lib=ctypes.CDLL(None)
+    count=lib._dyld_image_count;count.restype=ctypes.c_uint32
+    image=lib._dyld_get_image_name;image.argtypes=[ctypes.c_uint32];image.restype=ctypes.c_char_p
+    size=count()
+    if not 1<=size<=512:raise Block()
+    names=[os.fsdecode(image(i)) for i in range(size)]
+    values=[]
+    for name in names:
+        if not name.startswith('/'):raise Block()
+        value='OS_TRUST_REQUIRED' if name.startswith(('/usr/lib/','/System/Library/')) else dist._sha(dist._public_file(Path(name).resolve(),64*1024*1024))
+        values.append((dist._sha(os.fsencode(name)),value))
+    if count()!=size or names!=[os.fsdecode(image(i)) for i in range(size)]:raise Block()
+    return dict(kind='DARWIN_LOADED_IMAGES_NOT_OS_PROVENANCE',os_release=platform.release(),images=values)
 
 
 class Program:
@@ -42,7 +66,9 @@ class Program:
                     self.files.update({n:inner.read(n) for n in dist.FILES if n not in self.files})
                     self.wheel=inner.read(dist.WHEEL_PATH)
             installed_wheel(self.wheel)
-            self.runtime=digest(dist.runtime_components())
+            self.graph=native_graph() if sys.platform=='darwin' else None
+            self.native=native_identity()
+            self.runtime=digest(dict(components=dist.runtime_components(),native=self.native,graph=self.graph))
             self.queries={k:self.files['scripts/ci/e858_audit/queries/'+k+'.sql'] for k in pkg.KEYS}
             if digest({k:dist._sha(v) for k,v in self.queries.items()})!=pins['sql_sha256']:raise Block()
             self.check()
@@ -52,7 +78,8 @@ class Program:
         try:
             if (version('PyMySQL')!='1.1.2' or connections.DEBUG or _auth.DEBUG
                     or self.pins['source_sha']!=SOURCE or self.pins['release_ref']!=RELEASE
-                    or digest(dist.runtime_components())!=self.runtime):raise Block()
+                    or native_identity()!=self.native
+                    or digest(dict(components=dist.runtime_components(),native=self.native,graph=self.graph))!=self.runtime):raise Block()
             directory=Path(__file__).resolve().parents[1]
             for name in set(dist.FILES)|set(pkg.FILES):
                 path=directory/name[len('scripts/ci/'):]
@@ -143,7 +170,8 @@ class ReviewedEntry(Entry):
             value=review.check()
             # A self-declared hash in target.json / same private leaf is not an
             # independent expected record. Ancestor/ACL checks apply to both roots.
-            if os.path.samestat(os.fstat(self.root.check()),os.fstat(review.root.check())):raise Block()
+            if (self.root.stats[-1][:2] in [v[:2] for v in review.root.stats]
+                    or review.root.stats[-1][:2] in [v[:2] for v in self.root.stats]):raise Block()
             self.review=review
             self.target=read_binding(self.root.check(),value['binding_sha256'],value['tooling_sha'],int(time.time()),inspect_acl=native_acl)
             self.binding=(value['binding_sha256'],value['tooling_sha'])
@@ -174,7 +202,8 @@ class PrivateWire(r.Wire):
     """
     def initialize(self,gate,secret,target):
         if (type(target) is not Target or not target.valid(int(time.time()))
-                or type(secret) is not bytearray or not 0<len(secret)<=1024):raise Block()
+                or type(secret) is not bytearray or not 0<len(secret)<=1024
+                or any(c<32 or c==127 for c in secret)):raise Block()
         self.gate=gate;self.target=target;self.password=b'';self.quit_written=False
         self.alias_verified=False;self.full_auth_packet_seen=False
         context=target.tls_context()
@@ -210,8 +239,11 @@ class PrivateBoundary:
     def factory(self,gate,fault=None):
         try:
             self.entry.check()
+            config=self.entry.review.program.config()
             if (self.closed or fault is not None or len(self.wires)>=2
-                    or gate.role!=('control','data')[len(self.wires)]):raise Block()
+                    or gate.role!=('control','data')[len(self.wires)]
+                    or gate.q0!=config['q0'] or gate.q1!=config['q1']
+                    or not time.monotonic()<gate.deadline<=self.entry.until):raise Block()
             wire=object.__new__(PrivateWire);self.wires.append(wire)
             wire.initialize(gate,self.secret,self.entry.target)
             return wire

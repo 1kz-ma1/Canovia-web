@@ -20,6 +20,14 @@ from .private_distribution import runtime_components
 from e858_b_offline import canonical,digest,SOURCE,RELEASE
 
 
+def resolve_owned(host,port,owned):
+    if host not in ('mysql.synthetic.invalid','mismatch.synthetic.invalid') or port!=3306:raise Block()
+    answers=socket.getaddrinfo(host,port,type=socket.SOCK_STREAM)
+    if (not answers or len(answers)>32 or any(a[0] not in (socket.AF_INET,socket.AF_INET6)
+            or a[4][0] not in owned for a in answers)):raise Block()
+    return answers
+
+
 class FixtureWire(p.PrivateWire):
     def initialize_fixture(self,gate,secret,target):
         cfg=json.loads(Path('/synthetic/practical.json').read_text())
@@ -33,11 +41,9 @@ class FixtureWire(p.PrivateWire):
         raw=None
         try:
             if sock is not None or self.connect_count:raise Block()
-            addresses=socket.getaddrinfo(self.target.host,self.target.port,type=socket.SOCK_STREAM)
-            if not addresses or len(addresses)>32:raise Block()
+            addresses=resolve_owned(self.target.host,self.target.port,self.namespace['owned_ips'])
             # Fresh DNS per connection. The independent host lifecycle attested
             # these internal endpoints. Never impose this list on real Aiven.
-            if any(a[0] not in (socket.AF_INET,socket.AF_INET6) or a[4][0] not in self.namespace['owned_ips'] for a in addresses):raise Block()
             family,kind,proto,_,peer=addresses[0]
             raw=socket.socket(family,kind,proto);raw.settimeout(min(2,self.gate.deadline-time.monotonic()))
             raw.connect(peer)
@@ -46,7 +52,11 @@ class FixtureWire(p.PrivateWire):
             if (not isinstance(self._sock,ssl.SSLSocket) or not self._sock.cipher()
                     or self._sock.server_hostname!=self.target.host or not self._sock.getpeercert().get('subjectAltName')):raise Block()
             self.tls_verified=True
-        except BaseException:
+        except BaseException as error:
+            original=getattr(error,'original_exception',error)
+            self.failure=('CHAIN' if isinstance(original,ssl.SSLCertVerificationError) and original.verify_code in (18,19,20,21)
+                else 'HOSTNAME' if isinstance(original,ssl.SSLCertVerificationError) and original.verify_code==62
+                else 'AUTH_REJECTED' if error.args and error.args[0]==1045 else 'OTHER_FIXED_FAILURE')
             if raw is not None:raw.close()
             self.close();raise Block() from None
 
@@ -141,6 +151,14 @@ def child_case(fault,parent):
                 if fault=='METADATA' and result['strict_result']!='REVIEW_REQUIRED':raise Block()
                 if fault=='PHASE1' and not wires[0].full_auth_packet_seen:raise Block()
             elif result['result']!='BLOCK' or result['remote_termination']!='REMOTE_TERMINATION_UNVERIFIED':raise Block()
+            if fault in ('WRONG_CA','WRONG_HOST','AUTH_FAILURE'):
+                expected={'WRONG_CA':'CHAIN','WRONG_HOST':'HOSTNAME','AUTH_FAILURE':'AUTH_REJECTED'}[fault]
+                if len(wires)!=1 or wires[0].connect_count!=1 or wires[0].authenticated or getattr(wires[0],'failure',None)!=expected:raise Block()
+            if fault in ('GRANTS_EXCESS','GRANTS_MISSING') and result['sql_count']!=3:raise Block()
+            if fault in ('SERVER_CHANGED','CONTROL_LOST') and result['sql_count']!=7:raise Block()
+            if fault in ('SQL','EXPORT','INTERRUPT','RECONNECT') and result['sql_count']!=10:raise Block()
+            if fault=='TIMEOUT' and not 10<=result['sql_count']<=11:raise Block()
+            if fault=='QUIT_FAILURE' and result['sql_count']!=12:raise Block()
             if any(w.password for w in wires) or any(secret_refs) or not entry.closed:raise Block()
             try:adapter.run()
             except Block:pass

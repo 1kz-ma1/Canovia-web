@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import ssl
+import socket
 import sys
 import tempfile
 import time
@@ -15,7 +16,7 @@ from unittest.mock import patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'scripts/ci'))
 from e858_phase1 import practical as p, b1_package, private_distribution as d, private_binding as binding
 from e858_phase1 import r1_driver_fixtures as tty
-from test_e858_private_candidate import PrivateCandidate
+import test_e858_private_candidate as binding_fixture
 import e858_b_offline as old
 
 CANARY='SYNTHETIC_PRIVATE_NEVER_RENDER'
@@ -24,7 +25,7 @@ CANARY='SYNTHETIC_PRIVATE_NEVER_RENDER'
 class Practical(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        PrivateCandidate.setUpClass();cls.ca=PrivateCandidate.ca
+        binding_fixture.PrivateCandidate.setUpClass();cls.ca=binding_fixture.PrivateCandidate.ca
         root=Path(os.environ['B1_BUILD_DIR']);cls.archive=(root/'b1-candidate.zip').read_bytes()
         cls.head=old.git(old.ROOT,'rev-parse','HEAD').decode().strip();cls.pins=old.integrity(old.ROOT,cls.head)
         cls.program=p.Program(cls.archive,d._sha(cls.archive),cls.pins)
@@ -144,6 +145,19 @@ class Practical(unittest.TestCase):
             finally:wire.close()
         self.assertEqual(wire.password,b'');secret.clear()
 
+    def test_dynamic_dns_can_change_within_owned_fixture_not_record_ip(self):
+        from e858_phase1.practical_fixture import resolve_owned
+        one=(socket.AF_INET,socket.SOCK_STREAM,6,'',('172.20.0.2',3306))
+        two=(socket.AF_INET,socket.SOCK_STREAM,6,'',('172.20.0.3',3306))
+        with patch('socket.getaddrinfo',side_effect=[[one],[two]]) as lookup:
+            self.assertEqual(resolve_owned('mysql.synthetic.invalid',3306,{'172.20.0.2','172.20.0.3'}),[one])
+            self.assertEqual(resolve_owned('mysql.synthetic.invalid',3306,{'172.20.0.2','172.20.0.3'}),[two])
+            self.assertEqual(lookup.call_count,2)
+        with patch('socket.getaddrinfo',return_value=[two]):
+            with self.assertRaises(binding.Block):resolve_owned('mysql.synthetic.invalid',3306,{'172.20.0.2'})
+        with patch('socket.getaddrinfo',side_effect=AssertionError('NO_REAL_DNS')):
+            with self.assertRaises(binding.Block):resolve_owned('private.example.invalid',3306,{'172.20.0.2'})
+
     def test_default_adapter_blocks_before_private_read_input_and_network(self):
         entry=unittest.mock.Mock()
         with patch('socket.getaddrinfo',side_effect=AssertionError('NETWORK_FORBIDDEN')):
@@ -171,11 +185,14 @@ class Practical(unittest.TestCase):
             if os.getppid()!=parent:raise binding.Block()
             entry=p.ReviewedEntry();review=None
             try:
-                review=self.load();entry.begin(str(self.private),human_supervised=True)
+                if fault=='same_root':
+                    path=self.private/'review.json';path.write_bytes(old.canonical(self.review));path.chmod(0o600)
+                    review=p.PrivateReview(str(self.private),self.review_hash,self.program)
+                else:review=self.load()
+                entry.begin(str(self.private),human_supervised=True)
                 if fault=='same_root':
                     # The owner record has valid schema but its origin is the
                     # target leaf; that cannot establish an independent review.
-                    review.root.close();review.root=p.Root(str(self.private))
                     with self.assertRaises(binding.Block):entry.bind_review(review)
                 else:
                     entry.bind_review(review)
