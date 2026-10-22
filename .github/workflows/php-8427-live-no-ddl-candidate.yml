@@ -1,0 +1,101 @@
+name: PHP 8.4.27 Live No-DDL Candidate (No Production Access)
+
+on:
+  push:
+    branches:
+      - fix/php-8427-live-no-ddl-20261022
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-8427-no-ddl-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scope-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce fixed Live ancestor, five-path allowlist and reviewed runtime blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REF" = "refs/heads/fix/php-8427-live-no-ddl-20261022"
+          baseline=15abdc9de6f24b5250fb255c579d1aa55facaf1a
+          git merge-base --is-ancestor "$baseline" HEAD
+          git diff --check "$baseline" HEAD
+          git diff --name-only "$baseline" HEAD | LC_ALL=C sort > actual.txt
+          cat > expected.txt <<'END_PATHS'
+          .github/workflows/php-8427-live-no-ddl-candidate.yml
+          Dockerfile
+          docker/render-start.sh
+          docs/development/PHP_SECURITY_LIVE_NO_DDL_CANDIDATE_2026_10_22.md
+          scripts/ci/php_8427_no_ddl_live_boot_test.sh
+          END_PATHS
+          LC_ALL=C sort -o expected.txt expected.txt
+          diff -u expected.txt actual.txt
+
+          test "$(git hash-object Dockerfile)" = 03ead1ab2823f1345ffb237a68fb26a75b656edd
+          test "$(git hash-object docker/render-start.sh)" = 97b9de037130e15989dc411db368e48c35580110
+          grep -Fxq 'FROM php:8.4.27-fpm-bookworm AS app' Dockerfile
+          grep -Fq 'PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500' Dockerfile
+          grep -Fq 'if [ "${APP_ENV:-}" != "production" ]; then' docker/render-start.sh
+          grep -Fq 'CANOVIA_STARTUP_MIGRATIONS:-check' docker/render-start.sh
+          if grep -Eq '^[[:space:]]*php[[:space:]]+artisan[[:space:]]+migrate([[:space:]]|$)' docker/render-start.sh; then
+            echo 'Live start script still invokes migrations' >&2
+            exit 1
+          fi
+          sh -n docker/render-start.sh
+          sh -n scripts/ci/php_8427_no_ddl_live_boot_test.sh
+          echo 'LIVE_BASELINE_AND_NO_DDL_SOURCE_SCOPE=PASS'
+
+  isolated-image:
+    needs: scope-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch patched image and record resolved digest
+        run: |
+          set -euo pipefail
+          docker pull php:8.4.27-fpm-bookworm
+          docker image inspect php:8.4.27-fpm-bookworm --format '{{json .RepoDigests}}'
+
+      - name: Build exact legacy Live source with patched PHP
+        run: |
+          set -euo pipefail
+          docker build --pull --no-cache --progress=plain -f Dockerfile -t canovia-live-8427-no-ddl:ci .
+
+      - name: Validate PHP-FPM, Nginx, Composer and actual PHP version without networking
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint php canovia-live-8427-no-ddl:ci -r '
+            if (PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500) {
+              fwrite(STDERR, "Patched PHP 8.4 required\n");
+              exit(1);
+            }
+            echo "CANDIDATE_PHP_VERSION=", PHP_VERSION, "\n";
+          '
+          docker run --rm --network none --entrypoint php-fpm canovia-live-8427-no-ddl:ci -t
+          docker run --rm --network none --entrypoint nginx canovia-live-8427-no-ddl:ci -t
+          docker run --rm --network none --entrypoint composer canovia-live-8427-no-ddl:ci check-platform-reqs --no-dev
+
+      - name: Execute actual boot script with disposable PHP/Supervisor mocks and no network
+        run: |
+          set -euo pipefail
+          docker run --rm --network none \
+            -e CANOVIA_HOTFIX_CI_ISOLATED=yes \
+            --entrypoint sh canovia-live-8427-no-ddl:ci \
+            scripts/ci/php_8427_no_ddl_live_boot_test.sh
+
+      - name: Record limits of offline verification
+        run: |
+          echo 'NO_REAL_DB=TRUE; NO_REAL_RENDER=TRUE; NO_ACTUAL_APP_BOOT=TRUE'
+          echo 'PRODUCTION_PROMOTION=NOT_AUTHORIZED; LIVE_PHP_PATCH=NOT_APPLIED'
