@@ -145,3 +145,63 @@ def verify_runtime(expected):
         return dict(components_match=True,runtime_complete=False,execution_allowed=False)
     except BaseException:
         raise Block() from None
+
+
+def verify_pymysql_wheel_installation(wheel):
+    """Compare installed RECORD-listed .py bytes to the pinned PyMySQL wheel.
+
+    This does not attest the OS loader, extra untracked files, Python import
+    hooks, active native libraries, parent-directory trust or live adoption.
+    No caller-supplied file paths, command execution, network or secrets.
+    """
+    try:
+        if type(wheel) is not bytes or not 0 < len(wheel) <= 131072 or _sha(wheel) != WHEEL_SHA:
+            raise Block()
+        with zipfile.ZipFile(io.BytesIO(wheel)) as archive:
+            expected = {}
+            names = archive.infolist()
+            if len(names) > 128 or len({i.filename for i in names}) != len(names):
+                raise Block()
+            for item in names:
+                name = item.filename
+                if not name.startswith('pymysql/') or not name.endswith('.py'):
+                    continue
+                if (any(segment in ('', '.', '..') for segment in name.split('/'))
+                        or '\\' in name or not 0 <= item.file_size <= 131072):
+                    raise Block()
+                expected[name] = _sha(archive.read(item))
+        if not 1 <= len(expected) <= 64 or 'pymysql/__init__.py' not in expected:
+            raise Block()
+        distribution = metadata.distribution('PyMySQL')
+        if distribution.version != '1.1.2' or distribution.files is None:
+            raise Block()
+        names = [str(file) for file in distribution.files
+                 if str(file).startswith('pymysql/') and str(file).endswith('.py')]
+        if len(names) != len(expected) or set(names) != set(expected):
+            raise Block()
+        observed = {}
+        for name in names:
+            raw = _public_file(distribution.locate_file(name), 131072, allow_empty=True)
+            observed[name] = _sha(raw)
+            if observed[name] != expected[name]:
+                raise Block()
+        # Installed metadata alone is insufficient if a different package
+        # is actually loaded due to sys.path/import redirection.
+        import pymysql
+        if (not getattr(pymysql, '__file__', None)
+                or not os.path.samefile(pymysql.__file__,
+                                        distribution.locate_file('pymysql/__init__.py'))):
+            raise Block()
+        return dict(
+            result='PINNED_WHEEL_RECORD_SOURCES_MATCH_OBSERVED',
+            wheel_sha256=WHEEL_SHA,
+            source_count=len(observed),
+            installed_sources_sha256=digest(observed),
+            untracked_files='UNVERIFIED',
+            runtime_linkage_closure='UNVERIFIED',
+            runtime_complete=False,
+            live_tooling_adopted=False,
+            execution_allowed=False,
+        )
+    except BaseException:
+        raise Block() from None

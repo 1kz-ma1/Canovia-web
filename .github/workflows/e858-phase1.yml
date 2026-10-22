@@ -23,6 +23,7 @@ on:
       - 'tests/ci/test_e858_private_acl.py'
       - 'tests/ci/test_e858_private_operator.py'
       - 'tests/ci/test_e858_private_archive_closure.py'
+      - 'tests/ci/test_e858_private_runtime_lock.py'
       - '.github/workflows/e858-phase1.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
   workflow_dispatch:
@@ -93,6 +94,7 @@ jobs:
           python3 -I -B scripts/ci/e858_private_archive.py --tooling-sha "$(git rev-parse HEAD)" --wheel "$BUILD_DIR/pymysql-1.1.2-py3-none-any.whl" --output "$BUILD_DIR/repeated.zip"
           cmp "$BUILD_DIR/candidate.zip" "$BUILD_DIR/repeated.zip"
           python3 -B -m unittest discover -s tests/ci -p test_e858_private_archive_closure.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_private_runtime_lock.py -v
       - uses: actions/upload-artifact@v4
         with:
           name: inert-candidate-${{ matrix.os }}-${{ matrix.python }}
