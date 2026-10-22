@@ -131,6 +131,15 @@ class Practical(unittest.TestCase):
         try:return binding.read_binding(fd,self.review['binding_sha256'],self.head,int(time.time()),inspect_acl=p.native_acl)
         finally:os.close(fd)
 
+    def test_reviewed_engine_does_not_accept_another_mysql_family(self):
+        target=self.target()
+        identity=p.ReviewedIdentity(target,self.program.queries['identity'],self.program.queries['grants'],'8.0')
+        try:
+            raw='private_fixture\tprivate_inspector@10.%\t8.4.7\t12345678-1234-1234-1234-123456789012\t91\n'
+            with self.assertRaises(binding.Block):identity._fields(raw,91,True)
+            self.assertEqual(identity._fields(raw.replace('8.4.7','8.0.44'),91,True)[2],'8.0.44')
+        finally:identity.close()
+
     def test_deferred_generic_wire_no_dns_and_secret_alias(self):
         target=self.target();secret=bytearray(b'SYNTHETIC-DIFFERENT-PASSWORD');wire=object.__new__(p.PrivateWire)
         with patch('socket.getaddrinfo',side_effect=AssertionError('NETWORK_FORBIDDEN')):

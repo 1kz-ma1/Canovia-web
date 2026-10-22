@@ -261,6 +261,17 @@ class PrivateBoundary:
         return okay
 
 
+class ReviewedIdentity(Candidate):
+    def __init__(self,target,q0,q1,engine):
+        if engine not in ('8.0','8.4'):raise Block()
+        self.engine=engine
+        super().__init__(target,q0,q1)
+    def _fields(self,raw,cid,control):
+        fields=super()._fields(raw,cid,control)
+        if not fields[2].startswith(self.engine+'.'):raise Block()
+        return fields
+
+
 class Adapter(Bridge):
     """Common engine for reviewed targets. Shipped implementation cannot run.
 
@@ -283,6 +294,6 @@ class Adapter(Bridge):
         review=self.entry.review
         if review is None or review.check()['scope']!=self.scope:raise Block()
         self.program=review.program
-        self.validator=Candidate(self.entry.target,self.program.queries['identity'],self.program.queries['grants'])
+        self.validator=ReviewedIdentity(self.entry.target,self.program.queries['identity'],self.program.queries['grants'],review.value['engine'])
         self.inputs=self.program.inputs(review.value['engine'])
         return self.program.config(),self.program.queries if self.scope=='metadata' else {}
