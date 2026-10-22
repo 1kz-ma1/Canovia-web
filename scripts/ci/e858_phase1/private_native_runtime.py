@@ -21,10 +21,13 @@ _LIMIT = 32768
 
 def _target(path):
     # Canonicalize only the observed process components, never caller input.
-    target = Path(path).resolve(strict=True)
-    if not target.is_file():
-        raise Block()
-    return target
+    try:
+        target = Path(path).resolve(strict=True)
+        if not target.is_file():
+            raise Block()
+        return target
+    except BaseException:
+        raise Block() from None
 
 
 def _invoke(tool, arguments):
