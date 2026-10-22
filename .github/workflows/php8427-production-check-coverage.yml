@@ -1,0 +1,59 @@
+name: PHP 8.4.27 Protected Check Coverage Audit (Offline)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ci/php8427_production_required_checks_coverage.py'
+      - 'tests/ci/test_php8427_production_required_checks_coverage.py'
+      - '.github/workflows/php8427-production-check-coverage.yml'
+      - 'docs/development/PHP8427_PROTECTED_PROMOTION_CHECK_COVERAGE_2026_10_22.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-check-coverage:
+    name: Emergency protected-check coverage diagnosis (not GO)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Assert intentional denial of missing event/check coverage
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_php8427_production_required_checks_coverage.py' -v
+
+      - name: Read fixed old production Git tree (no credentials or DB)
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin +refs/heads/production:refs/remotes/origin/production
+          test "$(git rev-parse refs/remotes/origin/production)" = 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+
+      - name: Diagnose the five protected statuses that are not yet supported
+        run: |
+          set -euo pipefail
+          python3 scripts/ci/php8427_production_required_checks_coverage.py > coverage.json
+          python3 - <<'PY'
+          import json
+          with open("coverage.json", encoding="utf-8") as handle:
+              result = json.load(handle)
+          assert result["verdict"] == "NO_GO"
+          assert result["source_coverage"] == "BLOCK"
+          assert "MISSING_WORKFLOW:contract" in result["blockers"]
+          assert "workspace:PULL_REQUEST_NOT_PRODUCTION_ONLY" in result["blockers"]
+          assert "recovery:PULL_REQUEST_NOT_PRODUCTION_ONLY" in result["blockers"]
+          assert "mysql:PULL_REQUEST_RESTRICTED_EVENT" in result["blockers"]
+          print("REAL_PRODUCTION_COVERAGE=BLOCK; VALIDATED_STATUS=NO_GO")
+          print("REASONS=" + ",".join(result["blockers"]))
+          print("NO_REAL_DB_ACCESS; NO_PRODUCTION_OR_RENDER_MUTATIONS")
+          PY
+
+      - name: Prevent confusion with required production status checks
+        run: |
+          echo 'A passing diagnostic is not one of the five production checks.'
+          echo 'Do not use workflow_dispatch results as an attempted Ruleset bypass.'
