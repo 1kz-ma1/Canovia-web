@@ -6,18 +6,28 @@ A consumer MUST NOT use this assessment to authorize a connection.
 """
 from .private_binding import Block
 
+# Owner decision PR #803 (2026-10-20): B is the CURRENT baseline.
+# Independent signing authority and rollback-resistant nonce ledger are
+# FUTURE A only. They must not block this owner-supervised one-time B design.
 GATES = (
     'TRUSTED_ANCHOR_ANCESTRY',
     'NATIVE_ACL_OWNER_ACCEPTANCE',
     'OWNER_IDENTITY_AND_EXPLICIT_GESTURE',
-    'SIGNED_RUNTIME_ORIGIN_AND_TRANSITIVE_LINKAGE',
+    'REVIEWED_RUNTIME_ORIGIN_AND_LINKAGE_LIMITS',
     'REAL_TARGET_CA_TLS_IDENTITY_BRIDGE',
-    'INDEPENDENT_APPROVAL_AUTHORITY',
-    'DURABLE_ONE_SHOT_AND_REVOCATION',
+    'B1_OPERATOR_TARGET_AND_FROZEN_PACKET_REVIEW',
+    'B_PROCEDURAL_SINGLE_ATTEMPT_AND_NEW_GO_FOR_RETRY',
     'REVIEWED_LIVE_TOOLING_SHA_AND_ARTIFACT_LOCK',
     'PRIVATE_P1_AND_INDIVIDUAL_R1_R6_ACCEPTANCES',
-    'FRESH_OWNER_PHASE1_SINGLE_ATTEMPT_GO',
+    'B2_FRESH_OWNER_SINGLE_ATTEMPT_GO',
 )
+B_STAGES = {
+    'B0': 'DESIGN_BASELINE_ADOPTED_2026_10_20',
+    'B1': 'OFFLINE_PACKET_IMPLEMENTED_PRIVATE_ACCEPTANCE_PENDING',
+    'B2': 'FRESH_OWNER_GO_NOT_GRANTED',
+    'B3': 'REAL_AIVEN_AUDIT_NOT_RUN',
+    'B4': 'REAL_AUDIT_EVIDENCE_NOT_AVAILABLE',
+}
 
 # Retain just the fixed non-secret statuses. These schemas describe receipts,
 # not authenticators. A forged dict can never advance any gate to accepted.
@@ -71,8 +81,27 @@ REQUIRED = {
         'live_tooling_adopted': False,
         'runtime_complete': False,
     },
+    # PR #804's synthetic B1 receipt is only a review of a frozen packet;
+    # it does not attest owner consent, target identity, or a real attempt.
+    'b1_offline': {
+        'kind': 'E858_B_SYNTHETIC_RECEIPT_V1',
+        'result': 'B_OFFLINE_REVIEW_ONLY',
+        'code': 'CHECKLIST_DECLARATIONS_ONLY',
+        'owner_approval_verified': False,
+        'execution_allowed': False,
+        'real_aiven_connected': False,
+        'fresh_owner_go_required': True,
+        'tls_session': 'UNIMPLEMENTED',
+        'attempt': 'NOT_RUN',
+        'cleanup': 'NOT_RUN',
+        'retry_control': 'HUMAN_PROCEDURAL_ONLY',
+        'release_authorized': False,
+        'production_modified': False,
+        'strict_block_waived': False,
+    },
 }
 ACL_RESULTS = ('ACL_RECORD_ENOENT_UNVERIFIED', 'ZERO_ACL_ENTRIES_OBSERVED')
+B1_CASES = ('NOT_RUN', 'COMPLETED', 'BLOCK', 'INTERRUPTED')
 
 
 def review_inert_receipts(receipts):
@@ -96,6 +125,8 @@ def review_inert_receipts(receipts):
                     raise Block()
             if name == 'acl' and value.get('result') not in ACL_RESULTS:
                 raise Block()
+            if name == 'b1_offline' and value.get('synthetic_case') not in B1_CASES:
+                raise Block()
             # Shapes are never independently sourced or operator-signed.
             observations[name] = 'UNTRUSTED_RECEIPT_SHAPE_ONLY'
         return dict(
@@ -104,9 +135,12 @@ def review_inert_receipts(receipts):
             receipt_authenticity='UNVERIFIED',
             observations=observations,
             pending_gates=list(GATES),
-            required_design_decision='A_OR_B_OWNER_SELECTION_PENDING',
-            owner_authority='UNVERIFIED',
-            durable_one_shot='NOT_IMPLEMENTED',
+            current_design='B_OWNER_SUPERVISED_SINGLE_METADATA_AUDIT_ADOPTED',
+            future_design='A_INDEPENDENT_SIGNING_AND_DURABLE_NONCE_DEFERRED',
+            b_stages=dict(B_STAGES),
+            owner_authority='B2_FRESH_GO_UNVERIFIED',
+            retry_control='HUMAN_PROCEDURAL_NEW_GO_REQUIRED',
+            durable_one_shot='FUTURE_A_ONLY_NOT_B_PREREQUISITE',
             runtime_complete=False,
             live_tooling_adopted=False,
             real_aiven_connected=False,

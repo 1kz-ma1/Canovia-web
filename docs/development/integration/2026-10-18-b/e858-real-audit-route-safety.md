@@ -556,11 +556,21 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 **必ず残すHOLDゲート**：親anchor祖先の信頼性、ACL（特に`ENOENT`未検証）、オーナー本人の明示操作、信頼された署名発行元とruntimeの推移的動的リンク、実private target/CAとTLS identity bridge、独立承認authority、再起動・取消・rollbackに耐えるdurable one-shot、審査済み実用SHA+完全配布物lock、私的P1とR1〜R6の各受入、単発Phase1専用の新owner GO。固定出力は `OWNER_ADOPTION_HOLD / execution_allowed=false / runtime_complete=false / real_aiven_connected=false / production_go=false`。入力が空でも合成証拠が全種類揃っても絶対に`GO`を返さない。
 
-**設計上の重要な人間の選択（未決定）**：既存正本の A=独立承認authorityと復旧後も復活しないdurable one-shot storageを実証した後にオフライン実装する厳密モデル、B=人間監督下の単発metadata監査に要件変更する案。Bは既存BLOCKを単に解除するフラグではなく、ownerの別承認と新技術受入を要する。今回の「進めて」をA/B選択・private接続GOとして扱わない。authority/storeの採用を自作せず、**実用技術ゲートは別途未達**とする。
+**確定済みの設計選択（#803、2026-10-20）**：今回の実Aiven e858 metadata-only監査には **B=人間監督下の単発監査** を既に採用している。**A=独立署名authorityと復旧・rollbackにも耐えるdurable one-shotは将来構想**であり、現在のB1/B2審査の必須条件に戻さない。Bではowner/operator本人による独立したprivate対象・実行1回の接続直前GO、期限、手続による再試行禁止・実行中断時の新規GOを求める。ただし人間監督とprivate receiptをAの暗号学的・永続的replay保護と同等とは主張しない。**B設計採用（B0）と新しい実接続許可（B2）は別**であり、後者は未付与。実用Trusted Operator Entry・実TLS/Identity Bridge・固定tooling SHA/配布lock・P1/R1〜R6受入が未達のため、実監査は引き続きBLOCKする。
 
 CIでは無入力/合成全種類/ACL ENOENT・zero-entry/偽造GO・operatorなりすまし/原値非露出/輸入閉包の8テストをLinux3.9/3.12、macOS3.12で回帰し、基盤無変更の既存Mac26/13とMySQL wireは証拠再利用する。INERT Archiveの新ソース追加に伴うHashは当該review HEADで再生成し、過去値を再利用しない。これらの合成テストやGitHub mergeは、本人管理Macでの実用採用・実Aiven監査・本番昇格の承認と異なる。
 
-状態：`OWNER_ADOPTION_HOLD_REVIEW_ONLY / AUTHORITY_AND_DURABLE_ONE_SHOT_UNIMPLEMENTED / OWNER_CHOICE_A_B_PENDING / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+状態：`B_DESIGN_ADOPTED_2026_10_20 / B1_OFFLINE_PACKET_IMPLEMENTED_PRIVATE_ACCEPTANCE_PENDING / B2_FRESH_OWNER_GO_NOT_GRANTED / FUTURE_A_DEFERRED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`。
+
+## 2026-10-22 B案採用決定の機械判定への反映（#803/#804正本整合）
+
+2026-10-20の [PR #803](https://github.com/1kz-ma1/Canovia-web/pull/803) によるowner確定判断を最優先する。**Bは今回の単発metadata監査の採用済みベースライン、Aは将来の自動監査のFuture Design**。PR #826の「A/B未決定・独立issuer／durable nonce ledgerが今回Bの必須」という記述・出力は誤りであり、今回修正する。
+
+`private_acceptance.review_inert_receipts` は `current_design=B_OWNER_SUPERVISED_SINGLE_METADATA_AUDIT_ADOPTED` と `future_design=A_INDEPENDENT_SIGNING_AND_DURABLE_NONCE_DEFERRED` を分離する。B0〜B4はそれぞれ「2026-10-20設計採用済み」「既存#804の無接続B1 packetを実装済み・private実受入は未了」「新しいB2接続前owner GOは未付与」「B3実監査未実施」「B4実データの証拠未取得」と分類する。#804の実`e858_b_offline.receipt`を合成したテストデータとして同一HOLD reviewerへ渡せるが、receiptは自由に偽造可能・非署名であり真のowner監督・本人確認・現在のtarget/CA・TLS結果とはみなさない。異常な実行許可・本人確認詐称・未知分類は拒否する。
+
+**今回のB実用ゲート**はprivate anchor祖先・ACL・明示本人操作、限定runtime信頼、実target/CAとTLS+server/current-user identity、B1 private operator/target/frozen packetの照合、**人間による同一許可での再実行禁止と再GO手続**、審査済み実用tooling完全SHA+配布lock、私的P1/R1〜R6の個別受入、そして接続直前のB2限定GO。A方式の独立承認authority・rollback-proof nonce storeはこのゲートには含まない（将来別計画で実装する）。これらが不足する限り `OWNER_ADOPTION_HOLD / execution_allowed=false / real_aiven_connected=false / production_go=false` は不変。プランB選択済みの事実は実接続開始命令とは扱わない。
+
+新テストは旧#826の8件を更新し、実#804 B1 synthetic receiptとの互換、偽B2承認、A-onlyゲートの混入防止、旧ACL ENOENT厳格分類、未入力HOLDをLinux3.9/3.12とmacOS3.12で回帰。固定e858 source/release、実SQL/transport、Mac既存26/13、MySQL隔離wire、実Aiven/productionを変更しない。
 
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 

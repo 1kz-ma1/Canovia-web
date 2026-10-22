@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/ci'))
 from e858_phase1 import private_acceptance as acceptance
 from e858_phase1.private_binding import Block
+import e858_b_offline as b
 
 CANARY = 'SYNTHETIC_PRIVATE_CANARY_MUST_NOT_APPEAR'
 
@@ -17,6 +18,8 @@ def fake(name):
     value = dict(acceptance.REQUIRED[name])
     if name == 'acl':
         value['result'] = 'ACL_RECORD_ENOENT_UNVERIFIED'
+    if name == 'b1_offline':
+        value['synthetic_case'] = 'NOT_RUN'
     return value
 
 
@@ -25,8 +28,13 @@ class OwnerReadinessHold(unittest.TestCase):
         r = acceptance.review_inert_receipts({})
         self.assertEqual(r['result'], 'OWNER_ADOPTION_HOLD')
         self.assertEqual(set(r['pending_gates']), set(acceptance.GATES))
-        self.assertEqual(r['required_design_decision'],
-                         'A_OR_B_OWNER_SELECTION_PENDING')
+        self.assertEqual(r['current_design'],
+                         'B_OWNER_SUPERVISED_SINGLE_METADATA_AUDIT_ADOPTED')
+        self.assertEqual(r['future_design'],
+                         'A_INDEPENDENT_SIGNING_AND_DURABLE_NONCE_DEFERRED')
+        self.assertNotIn('required_design_decision', r)
+        self.assertEqual(r['b_stages']['B0'], 'DESIGN_BASELINE_ADOPTED_2026_10_20')
+        self.assertEqual(r['b_stages']['B2'], 'FRESH_OWNER_GO_NOT_GRANTED')
         self.assertTrue(all(x == 'NOT_SUPPLIED' for x in r['observations'].values()))
         self.assertFalse(r['execution_allowed'])
         self.assertFalse(r['production_go'])
@@ -40,8 +48,55 @@ class OwnerReadinessHold(unittest.TestCase):
                             for x in observed['observations'].values()))
         self.assertFalse(observed['runtime_complete'])
         self.assertFalse(observed['live_tooling_adopted'])
-        self.assertEqual(observed['owner_authority'], 'UNVERIFIED')
-        self.assertEqual(observed['durable_one_shot'], 'NOT_IMPLEMENTED')
+        self.assertEqual(observed['owner_authority'], 'B2_FRESH_GO_UNVERIFIED')
+        self.assertEqual(observed['durable_one_shot'], 'FUTURE_A_ONLY_NOT_B_PREREQUISITE')
+        self.assertEqual(observed['retry_control'], 'HUMAN_PROCEDURAL_NEW_GO_REQUIRED')
+
+    def test_b1_synthetic_receipt_never_becomes_b2_owner_go(self):
+        for simulated in acceptance.B1_CASES:
+            item = fake('b1_offline')
+            item['synthetic_case'] = simulated
+            result = acceptance.review_inert_receipts({'b1_offline': item})
+            self.assertEqual(result['observations']['b1_offline'],
+                             'UNTRUSTED_RECEIPT_SHAPE_ONLY')
+            self.assertEqual(result['b_stages']['B1'],
+                             'OFFLINE_PACKET_IMPLEMENTED_PRIVATE_ACCEPTANCE_PENDING')
+            self.assertEqual(result['b_stages']['B3'], 'REAL_AIVEN_AUDIT_NOT_RUN')
+            self.assertFalse(result['execution_allowed'])
+        for forged in ('REAL_OWNER_APPROVED', None, True):
+            item = fake('b1_offline')
+            item['synthetic_case'] = forged
+            with self.assertRaises(Block):
+                acceptance.review_inert_receipts({'b1_offline': item})
+
+    def test_existing_804_b1_packet_receipt_integrates_without_go(self):
+        now = 1000
+        pins = {'source_sha': b.SOURCE, 'release_ref': b.RELEASE}
+        packet = b.template(pins, now)
+        packet['declarations'] = dict(b.DECLARATIONS)
+        packet['attempt_id'] = 'd' * 32
+        receipt = b.receipt(packet, pins, now)
+        result = acceptance.review_inert_receipts({'b1_offline': receipt})
+        self.assertEqual(result['result'], 'OWNER_ADOPTION_HOLD')
+        self.assertEqual(result['observations']['b1_offline'],
+                         'UNTRUSTED_RECEIPT_SHAPE_ONLY')
+        self.assertEqual(result['b_stages']['B0'],
+                         'DESIGN_BASELINE_ADOPTED_2026_10_20')
+        self.assertEqual(result['b_stages']['B2'], 'FRESH_OWNER_GO_NOT_GRANTED')
+        self.assertFalse(result['execution_allowed'])
+        self.assertFalse(result['real_aiven_connected'])
+
+    def test_a_authority_is_future_not_a_b1_or_b2_gate(self):
+        result = acceptance.review_inert_receipts({})
+        joined = ' '.join(result['pending_gates'])
+        self.assertNotIn('INDEPENDENT_APPROVAL_AUTHORITY', joined)
+        self.assertNotIn('DURABLE_ONE_SHOT_AND_REVOCATION', joined)
+        self.assertEqual(result['future_design'],
+                         'A_INDEPENDENT_SIGNING_AND_DURABLE_NONCE_DEFERRED')
+        self.assertIn('B_PROCEDURAL_SINGLE_ATTEMPT_AND_NEW_GO_FOR_RETRY',
+                      result['pending_gates'])
+        self.assertIn('B2_FRESH_OWNER_SINGLE_ATTEMPT_GO',
+                      result['pending_gates'])
 
     def test_acl_enoent_and_zero_entries_both_remain_hold(self):
         for value in acceptance.ACL_RESULTS:
@@ -53,7 +108,7 @@ class OwnerReadinessHold(unittest.TestCase):
                 self.assertIn('NATIVE_ACL_OWNER_ACCEPTANCE', result['pending_gates'])
 
     def test_forged_go_or_identity_true_is_rejected(self):
-        for key in ('root', 'acl', 'tty', 'native_runtime', 'wheel', 'archive'):
+        for key in ('root', 'acl', 'tty', 'native_runtime', 'wheel', 'archive', 'b1_offline'):
             v = fake(key)
             v['execution_allowed'] = True
             with self.subTest(receipt=key):
