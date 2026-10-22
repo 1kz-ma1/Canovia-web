@@ -88,8 +88,9 @@ class SupervisedBEntryRehearsal(unittest.TestCase):
         self.assertFalse(r['execution_allowed'])
 
     def test_linux_invalid_fd_inherited_or_non_directory_is_blocked(self):
-        with self.assertRaises(Block):
-            entry.review_b_operator_entry(self.parent_fd, self.slave)
+        with patch.object(entry.sys, 'platform', 'linux'):
+            with self.assertRaises(Block):
+                entry.review_b_operator_entry(self.parent_fd, self.slave)
         with patch.object(entry.sys, 'platform', 'darwin'):
             for values in ((None, self.slave), (True, self.slave), (1, self.slave),
                            (self.parent_fd, self.parent_fd), (self.slave, self.parent_fd)):
