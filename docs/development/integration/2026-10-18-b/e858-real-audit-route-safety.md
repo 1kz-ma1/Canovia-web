@@ -548,6 +548,20 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 状態：`DARWIN_NATIVE_DIRECT_LINKS_OBSERVABLE / CODESIGN_LOCAL_ONLY / OWNER_MACHINE_TRUST_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-22 INERT証拠の統合評価と実用採用HOLD（新しいGO経路なし）
+
+#820〜#825で実装したprivate root FD・macOS ACL・foreground TTY・PyMySQL固定wheel・native runtime・deterministic archiveの**個別観測**は、技術的に異なるものを証明する。観測成功をowner本人認証、発行者権限、実private target/CA、動的依存閉包、失効可能なone-shot storeまたは実Aiven接続GOに連鎖させることは禁止する。
+
+`scripts/ci/e858_phase1/private_acceptance.py` の `review_inert_receipts(receipts)` は、これらの既存receiptについて固定の**型と非認可フィールド**を照合して、どの形式の合成証拠が提出されたかだけを表示する。外部で生成した辞書は自由に偽造でき、origin署名ではないため、成功でも`UNTRUSTED_RECEIPT_SHAPE_ONLY`の分類以外を与えない。渡された生値、ホスト/証明書/FD/署名値/実path、未知フィールド、原例外は出力しない。承認フィールド、実passwordや秘密を読む方法、ネットワーク/SQL/TTY/永続化、実権限token・nonce消費・CLI/live switchを新設しない。予期しない形式・偽の実行許可フラグ・verified identity claimは固定BLOCK。
+
+**必ず残すHOLDゲート**：親anchor祖先の信頼性、ACL（特に`ENOENT`未検証）、オーナー本人の明示操作、信頼された署名発行元とruntimeの推移的動的リンク、実private target/CAとTLS identity bridge、独立承認authority、再起動・取消・rollbackに耐えるdurable one-shot、審査済み実用SHA+完全配布物lock、私的P1とR1〜R6の各受入、単発Phase1専用の新owner GO。固定出力は `OWNER_ADOPTION_HOLD / execution_allowed=false / runtime_complete=false / real_aiven_connected=false / production_go=false`。入力が空でも合成証拠が全種類揃っても絶対に`GO`を返さない。
+
+**設計上の重要な人間の選択（未決定）**：既存正本の A=独立承認authorityと復旧後も復活しないdurable one-shot storageを実証した後にオフライン実装する厳密モデル、B=人間監督下の単発metadata監査に要件変更する案。Bは既存BLOCKを単に解除するフラグではなく、ownerの別承認と新技術受入を要する。今回の「進めて」をA/B選択・private接続GOとして扱わない。authority/storeの採用を自作せず、**実用技術ゲートは別途未達**とする。
+
+CIでは無入力/合成全種類/ACL ENOENT・zero-entry/偽造GO・operatorなりすまし/原値非露出/輸入閉包の8テストをLinux3.9/3.12、macOS3.12で回帰し、基盤無変更の既存Mac26/13とMySQL wireは証拠再利用する。INERT Archiveの新ソース追加に伴うHashは当該review HEADで再生成し、過去値を再利用しない。これらの合成テストやGitHub mergeは、本人管理Macでの実用採用・実Aiven監査・本番昇格の承認と異なる。
+
+状態：`OWNER_ADOPTION_HOLD_REVIEW_ONLY / AUTHORITY_AND_DURABLE_ONE_SHOT_UNIMPLEMENTED / OWNER_CHOICE_A_B_PENDING / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
