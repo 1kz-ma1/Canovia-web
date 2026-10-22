@@ -522,6 +522,18 @@ PyMySQL通常closeはQUIT write errorを隠すため、Phase1は送信成功を�
 
 状態：`FOREGROUND_TTY_OBSERVATION_ONLY / OWNER_GESTURE_UNVERIFIED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
 
+## 2026-10-22 PINNED PyMySQL wheelと実インストールソースの一致検査（無接続・INERT）
+
+#823までに `runtime_components` は現Python binary / SSL extension / PyMySQL 1.1.2のバージョンとインストール済みsource tree digestを観測済み。ただし版番号のみでは、事前固定した実wheelの内容と今回のrunnerに実際にインストールされているソースとの一致を証明しない。この限定差分では、新しい実行入口やユーザー管理Macへの操作要求を作らず、従来の`private_distribution.py`へ`verify_pymysql_wheel_installation(wheel_bytes)`を追加する。
+
+**照合する範囲**：旧#819の固定`pymysql-1.1.2-py3-none-any.whl`をSHA256 `e6b1d89711dd51f8f74b1631fe08f039e7d76cf67a42a323d3178f0f25762ed9`で照合。wheel内の`pymysql/**.py`（固定上限付き）を全てhash化し、現runnerの`importlib.metadata.distribution('PyMySQL')`のRECORD列挙ファイル・実ファイルのバイトハッシュと完全一致するかを観測する。現在importされる`pymysql.__file__`と配布`__init__.py`が同一ファイルであることも確認。wheel不正、版違い、wheel内の重複/異常path、source改変/不足、import path差し替え、読み取り例外を固定BLOCKとする。固定wheel以外を信頼済み依存として受け付けるfallbackを置かない。
+
+**証拠の限界**：これはRECORD列挙済みPython sourceのbyte一致だけである。`runtime_components()`が返すPython binary / SSL extension hashと別に、`_ssl`からの動的リンク先・OpenSSL dylib/共有キャッシュ・macOS codesign/notarization、追加の未列挙ソース/import hook、trusted origin/親directory FD、path alias、owner本人のMacが正しい端末かの評価は**UNVERIFIED**。新判定の`runtime_complete=false / live_tooling_adopted=false / execution_allowed=false`を固定する。実用runtime配布lock・実private対象/CA/TTY/password・実接続・TLS/SQL・production昇格は今回の範囲外。
+
+**検証**：新`test_e858_private_runtime_lock.py`は各CIで既存のハッシュ固定INERT archiveからwheelを取り出し、正常一致・wheel改変・インストール済みsource改変（mock）・配布metadata不可・別import実体を確認。Linux3.9/3.12＋macOS3.12の既存archive build後にのみ実行し、root10/ACL6/operator7/candidate25、旧Mac26/13・#817合成MySQL通信証拠は無変更部分を再利用。新候補archiveのHEADに依存するSHAは新PRのCIで確定し、旧#823のhashを転用しない。実user管理Macのruntime lockは別のowner審査に残し、CI観測を本人署名やP1/R欄/実GOに格上げしない。
+
+状態：`PINNED_WHEEL_INSTALLED_SOURCES_OBSERVED_ONLY / NATIVE_LINKAGE_UNVERIFIED / OWNER_RUNTIME_LOCK_UNADOPTED / REAL_AIVEN_NOT_RUN / B2_OWNER_GO_NOT_GRANTED / PRODUCTION_NO_GO_HOLD`。
+
 ## 2026-10-21 全94件の固定e858 single-session bridge（合成専用）
 
 [Issue #488・クリティカルパス決定](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6305867624)の実装レーン。`scripts/ci/e858_full94_tls.py` は#806の所有Docker/TLS/cleanup基盤を再利用し、固定e858のPHPソース・94 migrationをGitから展開してLaravelの既存 `migrate --realpath --path` 方式で構築する。手動のledger生成や最小3テーブルfixtureで代替しない。同じ使い捨てDBに固定114件まで適用してtargetも検証する。dump/restoreは行わない。セットアップ用DDL/GRANTと試験KILLは、この新規作成した合成network内だけであり、実Aivenへの操作経路は存在しない。
