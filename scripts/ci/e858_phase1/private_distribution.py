@@ -24,7 +24,7 @@ FILES = tuple('scripts/ci/' + p for p in (
     'e858_phase1/private_acl.py','e858_phase1/private_binding.py','e858_phase1/private_candidate.py',
     'e858_phase1/private_distribution.py','e858_phase1/private_acceptance.py',
     'e858_phase1/private_native_runtime.py',
-    'e858_phase1/private_operator.py',
+    'e858_phase1/private_operator.py','e858_phase1/private_entry.py',
     'e858_phase1/private_root.py','e858_phase1/r1_tty.py',
     'e858_phase1/r1_adapter.py','e858_phase1/runtime.py','e858_phase1/protocol.py',
     'e858_tls/transport.py','e858_tls/control_contract.py','e858_b_offline.py',
