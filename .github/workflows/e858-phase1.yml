@@ -59,7 +59,7 @@ jobs:
       - name: Own a synthetic Linux directory under trusted ancestors
         if: runner.os == 'Linux'
         run: |
-          B1_TEST_PARENT="/opt/canovia-b1-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          B1_TEST_PARENT="/canovia-b1-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           sudo install -d -m 700 -o "$(id -u)" -g "$(id -g)" "$B1_TEST_PARENT"
           echo "B1_SYNTHETIC_PARENT=$B1_TEST_PARENT" >> "$GITHUB_ENV"
       - name: B1 supervised entry delta (synthetic roots and PTYs)
