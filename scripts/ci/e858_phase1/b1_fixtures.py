@@ -91,6 +91,9 @@ def run():
 
 if __name__=='__main__':
     try:value=run();code=0
-    except BaseException:
+    except BaseException as error:
+        if not Path('/b1/failure.json').exists():
+            import traceback
+            Path('/b1/failure.json').write_text(json.dumps(dict(type=type(error).__name__,frames=[(Path(f.filename).name,f.lineno) for f in traceback.extract_tb(error.__traceback__)])))
         value=dict(result='BLOCK',code='ISOLATED_B1_FIXTURE_BLOCK',real_aiven_connected=False);code=2
     print(json.dumps(value,sort_keys=True));raise SystemExit(code)

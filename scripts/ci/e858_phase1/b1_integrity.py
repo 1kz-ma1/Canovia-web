@@ -9,7 +9,6 @@ from importlib import metadata
 import io
 import os
 from pathlib import Path
-import re
 import sys
 import zipfile
 
@@ -59,11 +58,15 @@ def checkout(root,head,archive,archive_sha):
     """Clean Git AND actual library bytes; unknown Git-ignored source rejects."""
     try:
         pins=integrity(root,head)
-        d.verify(archive,archive_sha,pins)
-        with zipfile.ZipFile(io.BytesIO(archive)) as package:
-            for name in d.FILES:
+        from . import b1_package as bp
+        bp.verify(archive,archive_sha,pins)
+        with zipfile.ZipFile(io.BytesIO(archive)) as outer:
+            members={name:outer.read(name) for name in bp.FILES}
+            with zipfile.ZipFile(io.BytesIO(outer.read('library.zip'))) as inner:
+                members.update({name:inner.read(name) for name in d.FILES})
+            for name,expected in members.items():
                 observed=d._public_file(Path(root)/name,4*1024*1024,allow_empty=True)
-                if observed!=package.read(name) or observed!=git(root,'show',head+':'+name):raise Block()
+                if observed!=expected or observed!=git(root,'show',head+':'+name):raise Block()
         # Including ignored files prevents cached/extra source from hiding behind git status.
         known=set(git(root,'ls-files','scripts/ci').decode('utf-8').splitlines())
         for subtree in ('e858_phase1','e858_tls'):
@@ -114,13 +117,14 @@ def native_graph():
                     target=Path(sys.executable).resolve().parent/value[len('@executable_path/'):]
                 elif value.startswith('/'):
                     target=Path(value)
-                else:unresolved+=1;continue
+                elif value.startswith('@rpath/'):
+                    matches=[p for p in paths if p.name==Path(value).name]
+                    if len(matches)!=1:raise Block()
+                    target=matches[0]
+                else:raise Block()
                 dependencies.append(target)
             queue.extend(dependencies)
             # Signature identity is separately observed, never auto-trusted.
-            code,raw=_invoke('/usr/bin/codesign',('-d','--verbose=4',str(path)))
-            # codesign metadata commonly uses stderr, so no identity is inferred
-            # from an empty stdout even if exit=0.
             nodes.append(dict(observation,signature_identity='OWNER_PROVENANCE_REVIEW_REQUIRED'))
         if count()!=start or [Path(os.fsdecode(image(i))) for i in range(start)]!=paths:raise Block()
         return dict(kind='B1_DARWIN_LOADED_AND_DECLARED_LINK_GRAPH',nodes=nodes,
