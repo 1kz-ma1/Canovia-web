@@ -1,0 +1,58 @@
+name: PHP 8.4.27 Emergency Promotion Source Preflight (NO-GO)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/ops/php8427_emergency_promotion_preflight.py'
+      - 'tests/ci/test_php8427_emergency_promotion_preflight.py'
+      - '.github/workflows/php8427-emergency-promotion-preflight.yml'
+      - 'docs/development/PHP_SECURITY_EMERGENCY_PROMOTION_GATE_2026_10_22.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-source-no-go:
+    name: PHP emergency source audit (not deployment approval)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run fail-closed synthetic negative controls
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests/ci -p 'test_php8427_emergency_promotion_preflight.py' -v
+
+      - name: Fetch immutable Live and candidate source refs only
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin \
+            +refs/heads/production:refs/remotes/origin/production \
+            +refs/heads/fix/php-8427-live-no-ddl-20261022:refs/remotes/origin/php8427-no-ddl
+          test "$(git rev-parse refs/remotes/origin/production)" = 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+          test "$(git rev-parse refs/remotes/origin/php8427-no-ddl)" = 0ac198acf3c087652d0a164c55602fb60922a8d0
+
+      - name: Verify frozen source and print deliberate NO-GO
+        run: |
+          set -euo pipefail
+          python3 scripts/ops/php8427_emergency_promotion_preflight.py > verdict.json
+          python3 - <<'PY'
+          import json
+          v = json.load(open("verdict.json", encoding="utf-8"))
+          assert v["verdict"] == "NO_GO", v
+          assert v["source_integrity"] == "PASS", v
+          assert "OWNER_PRODUCTION_GO_NOT_GRANTED" in v["reason_codes"]
+          assert "PRODUCTION_REQUIRED_PROMOTION_WORKFLOW_ABSENT" in v["reason_codes"]
+          print("SOURCE_INTEGRITY=PASS; PRODUCTION=NO_GO; LIVE_DB_QUERIES=0")
+          print("HOLD_REASON_CODES=" + ",".join(v["reason_codes"]))
+          PY
+
+      - name: Confirm CI never becomes a production release signal
+        run: |
+          echo 'This check is OFFLINE evidence only, not a protected production check.'
+          echo 'No production PR, deploy, database connection or branch mutation is authorized.'
