@@ -46,8 +46,17 @@ jobs:
         run: php artisan test tests/Feature/MysqlConstraintRecoveryV5611Test.php
       - name: V56.10 production migration reconciliation
         run: php artisan test tests/Feature/ProductionMigrationReconciliationV5610Test.php
-      - name: V56.9 Render startup retry
-        run: php artisan test tests/Feature/RenderStartupMigrationRetryV569Test.php
+      # The old V56.9 retry contract describes auto-migration on every boot.
+      # That behavior is intentionally removed in this emergency prod-only
+      # image. Replace it with actual candidate image/no-DDL boot validation.
+      - name: PHP 8.4.27 actual image and no-DDL boot regression
+        run: |
+          set -euo pipefail
+          docker build --pull --no-cache --progress=plain -f Dockerfile -t canovia-php8427-no-ddl:ci .
+          docker run --rm --network none --entrypoint php canovia-php8427-no-ddl:ci -r 'if (PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500) { exit(1); }'
+          docker run --rm --network none -e CANOVIA_HOTFIX_CI_ISOLATED=yes \
+            --entrypoint sh canovia-php8427-no-ddl:ci \
+            scripts/ci/php_8427_no_ddl_live_boot_test.sh
       - name: V56.8 migration recovery
         run: php artisan test tests/Feature/IntelligenceDecisionTraceMigrationRecoveryV568Test.php
       - name: V53.2 decision readiness regression
