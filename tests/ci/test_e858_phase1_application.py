@@ -41,8 +41,8 @@ class ApplicationReview(unittest.TestCase):
                     close();raise PermissionError(CANARY)
                 with contextlib.ExitStack() as stack:
                     stack.enter_context(contextlib.redirect_stdout(out));stack.enter_context(contextlib.redirect_stderr(err))
-                    stack.enter_context(patch('socket.getaddrinfo',side_effect=AssertionError('NO_DNS')))
-                    stack.enter_context(patch('socket.socket',side_effect=AssertionError('NO_SOCKET')))
+                    dns=stack.enter_context(patch('socket.getaddrinfo',side_effect=AssertionError('NO_DNS')))
+                    socket=stack.enter_context(patch('socket.socket',side_effect=AssertionError('NO_SOCKET')))
                     capture=stack.enter_context(patch.object(p.Entry,'capture',side_effect=AssertionError('NO_INPUT')))
                     driver=stack.enter_context(patch.object(p.PrivateBoundary,'factory',side_effect=AssertionError('NO_DRIVER')))
                     identity=stack.enter_context(patch.object(p.Candidate,'observe_identity',side_effect=AssertionError('NO_LIVE_IDENTITY')))
@@ -53,6 +53,10 @@ class ApplicationReview(unittest.TestCase):
                     if fault=='TTY':stack.enter_context(patch.object(entry.terminal,'check',side_effect=PermissionError(CANARY)))
                     if fault=='RUNTIME':stack.enter_context(patch.object(p,'stdlib_identity',return_value={'changed':'SYNTHETIC'}))
                     if fault=='EXPIRED':entry.until=0
+                    secret=None
+                    if fault=='PRIOR_INPUT':
+                        entry.secret=fixture.tty.PrivateTTYAttempt()  # synthetic buffer only, no input
+                        secret=entry.secret._password;secret.extend(b'SYNTHETIC_ALREADY_CAPTURED')
                     if fault=='CLEANUP':stack.enter_context(patch.object(entry,'close',side_effect=failed_close))
                     application=Phase1ApplicationReview(entry,'f'*40 if fault=='TOOLING' else self.head,
                         '0'*64 if fault=='BUNDLE' else self.program.sha)
@@ -65,11 +69,16 @@ class ApplicationReview(unittest.TestCase):
                         self.assertEqual(result['effective_principal'],'REAL_SESSION_UNVERIFIED')
                         self.assertEqual(result['remote_termination'],'REMOTE_TERMINATION_UNVERIFIED')
                         self.assertNotIn(CANARY,str(result)+repr(application))
+                        for private_value in (*self.record['target'].values(),self.review_hash,self.review['binding_sha256'],
+                                              self.record['tls']['ca_sha256'],self.program.runtime):
+                            if type(private_value) is str:self.assertNotIn(private_value,str(result))
                     else:
                         with self.assertRaises(Block) as caught:application.review()
                         self.assertEqual(str(caught.exception),'PRIVATE_CANDIDATE_BLOCK')
-                    if fault in ('TOOLING','BUNDLE','TARGET','CA','ACL','TTY','RUNTIME','EXPIRED','METADATA'):setup.assert_not_called()
+                    if fault in ('TOOLING','BUNDLE','TARGET','CA','ACL','TTY','RUNTIME','EXPIRED','METADATA','PRIOR_INPUT'):setup.assert_not_called()
                     capture.assert_not_called();driver.assert_not_called();identity.assert_not_called()
+                    dns.assert_not_called();socket.assert_not_called()
+                    if secret is not None:self.assertFalse(secret)
                 self.assertEqual(out.getvalue()+err.getvalue(),'')
                 self.assertIsNone(application.entry);self.assertTrue(entry.closed);self.assertTrue(review.closed)
                 self.assertIsNone(entry.target);self.assertIsNone(entry.secret)
@@ -104,7 +113,7 @@ class ApplicationReview(unittest.TestCase):
         self.review['scope']='metadata';self.write();self._trial('METADATA')
 
     def test_changed_private_runtime_or_tty_stops_before_setup(self):
-        for fault in ('TARGET','CA','ACL','TTY','RUNTIME','EXPIRED'):
+        for fault in ('TARGET','CA','ACL','TTY','RUNTIME','EXPIRED','PRIOR_INPUT'):
             with self.subTest(fault=fault):self._trial(fault)
 
     def test_interrupt_and_cleanup_error_are_private_terminal(self):
