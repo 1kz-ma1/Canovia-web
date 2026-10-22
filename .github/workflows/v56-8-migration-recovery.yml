@@ -1,12 +1,11 @@
 name: Production Migration Recovery Validation
 
 on:
-  push:
-    branches:
-      - fix/v56-8-migration-recovery
   pull_request:
-    branches:
-      - main
+    branches: [production]
+  push:
+    branches: [production, fix/php8427-protected-ci-rehearsal-20261022]
+  workflow_dispatch:
 
 jobs:
   migration-recovery:
