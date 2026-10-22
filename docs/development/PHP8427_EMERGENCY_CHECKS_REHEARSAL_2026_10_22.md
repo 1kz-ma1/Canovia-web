@@ -8,7 +8,7 @@
 - Original Live / GitHub `production`: `15abdc9de6f24b5250fb255c579d1aa55facaf1a`.
 - Original PHP 8.4.27 + no-auto-DDL candidate: `0ac198acf3c087652d0a164c55602fb60922a8d0`. Its runtime `Dockerfile` blob remains `03ead1ab2823f1345ffb237a68fb26a75b656edd` and `docker/render-start.sh` blob remains `97b9de037130e15989dc411db368e48c35580110`.
 - Rehearsal branch: `fix/php8427-protected-ci-rehearsal-20261022`, forked from the original candidate. Never reuse as a normal main-derived release without a separately approved emergency exception.
-- Changed *only* three existing GitHub CI event trigger blocks, new `.github/workflows/production-promotion-policy.yml` and this document, on top of the original candidate five paths. No app, migration, Composer, authentication, real database, entitlement, payment, or runtime boot changes.
+- Additional changes on top of the original candidate are limited to three existing GitHub CI workflow event/compatibility blocks, the new `.github/workflows/production-promotion-policy.yml`, this record, and **the historical learning test `tests/Feature/StudyAdaptiveActionV536Test.php` only**. Its three `evaluate($plan)` calls now explicitly pass the already-frozen `now()` clock, without changing production application logic. Runtime `Dockerfile`, startup guard, migrations, Composer, auth, business behavior, or database are untouched.
 - This is an **unapproved rehearsal branch**, not a production pull request. No PR to production is opened as part of this work.
 
 ## 2. Existing GitHub Ruleset stays active, and check names stay exact
@@ -39,6 +39,12 @@ The production-promotion job is a candidate-specific alternative to the normal `
 Branch push tests should exercise the original `workspace-resume`, `migration-recovery` and disposable MySQL jobs with their real old-Live code. The emergency `source-integrity` job must confirm exact runtime blobs and allowed diff. The `Production promotion contract` job is intentionally **skipped for the rehearsal branch only**, not passed: it is required and cannot be skipped for a future `production` PR/push. Do not misread a skipped rehearsal status as satisfying any protected Ruleset requirement.
 
 Even if all branch-specific jobs pass, GitHub's real `pull_request` check association and post-merge `push` checks still need verification via a separate owner-authorized **draft production PR**, and later a separate protected merge-SHA check. This rehearsal has neither. The GitHub official required-check rule can reject manual-only, path-skipped, wrong SHA or wrong GitHub App status; only actual events can establish check satisfaction.
+
+### Inherited test-clock regression found in rehearsal
+
+The unchanged old-Live `StudyAdaptiveActionV536Test.php` froze Carbon time at `2026-10-04`, with an exam deadline of `2026-10-20`, but its calls to `StudyAdaptiveActionService::evaluate($plan)` omitted `capturedAt`. The legacy `StudyPlanIntelligenceService` deliberately uses `new DateTimeImmutable()` when `capturedAt` is omitted, so a real CI run after October 20 classifies the task as `reduce_deadline_risk` rather than `establish_scope_baseline`. This explains the existing behavior without changing production logic.
+
+The candidate modifies only the three test invocations to `evaluate($plan, now())`, making those tests use the intentional October 4 clock. The exact reviewed test blob `2dfe9ea91bf944f114ec558004046476b320a124` is enforced by the emergency source guard. This is a **test-only deterministic fixture repair**, not an adjustment to user study priorities. Await the rerun CI before treating the affected Workspace test as passing.
 
 ## 4. Hold gates before any real protected release
 
