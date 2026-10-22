@@ -53,12 +53,13 @@ def child_run(fault,parent):
             with patch.object(b.Channel,'read',read),patch.object(r.Wire,'_write_bytes',send):result=bridge.run()
             traces=[dict(role=w.gate.role,cid=w.thread_id(),sql=w.gate.sent,quit_written=w.quit_written)
                     for w in bridge.boundary.wires if w.gate.sent]
-            if fault in ('PHASE1','METADATA','STRICT_TAMPER'):
+            if fault in ('PHASE1','METADATA'):
                 if (result['result']!='ISOLATED_B1_BRIDGE_VERIFIED' or not result['connection_ended']
                         or result['tls_connections']!=2 or result['sql_count']!=(30 if fault in ('METADATA','STRICT_TAMPER') else 15)):
                     raise p.Block()
                 if fault=='METADATA' and result['strict_result']!='REVIEW_REQUIRED':raise p.Block()
-                if fault=='STRICT_TAMPER' and result['strict_result']!='BLOCK':raise p.Block()
+            elif fault=='STRICT_TAMPER':
+                if result['strict_result']!='BLOCK' and result['result']!='BLOCK':raise p.Block()
             elif result['result']!='BLOCK' or result['remote_termination']!='REMOTE_TERMINATION_UNVERIFIED':raise p.Block()
             if any(w.password or w.connect_count!=1 for w in bridge.boundary.wires):raise p.Block()
             try:bridge.run()

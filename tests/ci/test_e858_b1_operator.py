@@ -19,7 +19,7 @@ from e858_phase1.r1_adapter import SYNTHETIC_PASSWORD
 
 class EntryTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory(prefix='.b1-synthetic-',dir=Path.cwd().resolve())
+        self.temp=tempfile.TemporaryDirectory(prefix='.b1-synthetic-',dir=(Path.home() if os.environ.get('GITHUB_ACTIONS')=='true' else Path.cwd().resolve()))
         self.addCleanup(self.temp.cleanup)
         self.path=self.temp.name
         os.chmod(self.path,0o700)
