@@ -103,32 +103,36 @@ class Bridge:
         self.entry=entry;self.scope=scope;self.started=False;self.channels=[]
         self.boundary=None;self.validator=None;self.data={};self.proof=False;self.quit=False
 
+    def prepare(self):
+        self.entry.check()
+        config=r.load()
+        self.boundary=BoundAttempt(config,None,self.entry.target)
+        self.boundary.until=self.entry.until
+        self.boundary.seal()  # fixed Docker IP/CA, not an Aiven dynamic-IP policy
+        target=self.entry.target
+        if (target is None or (target.host,target.port,target.database,target.principal)!=(r.HOST,3306,r.DB,r.USER)
+                or hashlib.sha256(target.ca).hexdigest()!=config['r1']['ca_sha256']
+                or target.tooling_sha!=config['pins']['tooling_sha']):raise Block()
+        self.validator=Candidate(target,config['q0'],config['q1'])
+        bundle={}
+        if self.scope=='metadata':
+            manifest=json.loads(Path('/synthetic/manifest.json').read_text())
+            if tuple(manifest['order'])!=ORDER:raise Block()
+            bundle={k:(Path('/synthetic/queries')/(k+'.sql')).read_bytes() for k in config['sql_digests']}
+            if any(hashlib.sha256(raw).hexdigest()!=config['sql_digests'][k] for k,raw in bundle.items()):raise Block()
+            # Comparator assets verify the fixed Reference, source seal and SQL pins.
+            from e858_tls.bridge import assets
+            self.inputs=assets()
+        return config,bundle
+
     def run(self):
         if self.started:raise Block()
         self.started=True
         try:
             if self.scope not in ('phase1','metadata'):raise Block()
-            self.entry.check()
-            config=r.load()
-            self.boundary=BoundAttempt(config,None,self.entry.target)
-            self.boundary.until=self.entry.until
-            self.boundary.seal()  # fixed Docker IP/CA, not an Aiven dynamic-IP policy
-            target=self.entry.target
-            if (target is None or (target.host,target.port,target.database,target.principal)!=(r.HOST,3306,r.DB,r.USER)
-                    or hashlib.sha256(target.ca).hexdigest()!=config['r1']['ca_sha256']
-                    or target.tooling_sha!=config['pins']['tooling_sha']):raise Block()
-            self.validator=Candidate(target,config['q0'],config['q1'])
-            bundle={}
-            if self.scope=='metadata':
-                manifest=json.loads(Path('/synthetic/manifest.json').read_text())
-                if tuple(manifest['order'])!=ORDER:raise Block()
-                bundle={k:(Path('/synthetic/queries')/(k+'.sql')).read_bytes() for k in config['sql_digests']}
-                if any(hashlib.sha256(raw).hexdigest()!=config['sql_digests'][k] for k,raw in bundle.items()):raise Block()
-                # Comparator assets verify the fixed Reference, source seal and SQL pins.
-                from e858_tls.bridge import assets
-                self.inputs=assets()
+            config,bundle=self.prepare()
             secret=self.entry.capture()
-            if secret._password!=SYNTHETIC_PASSWORD:raise Block()
+            self.validate_secret(secret._password)
             self.boundary.secret=secret._password
             budget=r.SharedBudget();budget.until=self.entry.until
             control=Channel('control',config,budget,self.boundary,self.entry,bundle);self.channels.append(control)
@@ -145,7 +149,7 @@ class Bridge:
                 self.validator.observe_identity('control',ci,control.cid,cg)
                 raw=control.read(control.gate.expected())
                 fields=raw.rstrip('\n').split('\t') if raw else []
-                if fields and (len(fields)!=4 or fields[:3]!=[str(data.cid),r.USER,r.DB]):raise Block()
+                if fields and (len(fields)!=4 or fields[:3]!=[str(data.cid),self.validator.target.principal,self.validator.target.database]):raise Block()
                 if not fields and not data.closed:raise Block()
                 return fields
             if observe()[3]!='Sleep':raise Block()
@@ -183,6 +187,9 @@ class Bridge:
             except BaseException:okay=False
             self.data.clear()
             if not okay:raise Block() from None
+
+    def validate_secret(self,secret):
+        if secret!=SYNTHETIC_PASSWORD:raise Block()
 
     def report(self,success):
         return dict(result='ISOLATED_B1_BRIDGE_VERIFIED' if success else 'BLOCK',scope=self.scope,
