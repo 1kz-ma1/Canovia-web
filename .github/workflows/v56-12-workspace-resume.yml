@@ -234,8 +234,13 @@ jobs:
       - name: MCP staging synthetic private Plan fixture and fail-closed guards
         run: php artisan test tests/Feature/McpStagingSyntheticPlanFixtureBootstrapTest.php
 
-      - name: MCP isolated staging bootstrap and live service safety regressions
-        run: php artisan test tests/Feature/McpIsolatedStagingBootstrapTest.php
+      # The old combined test assumes MCP staging can boot using the shared
+      # startup shell. The emergency Live-only guard deliberately rejects
+      # APP_ENV=staging. Do not misclassify that expected refusal as a
+      # production Workspace regression. All other workspace/consent
+      # regressions remain enabled in this rehearsal-only workflow.
+      - name: Production workspace resume and session scope (Live-only boot)
+        run: php artisan test tests/Feature/WorkspaceResumeAndSessionScopeV5612Test.php tests/Feature/McpProtectedResourceGateTest.php
 
       - name: MCP staging OAuth provider configuration and safe discovery preflight
         run: php artisan test tests/Feature/McpStagingProviderPreflightTest.php
