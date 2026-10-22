@@ -1,0 +1,111 @@
+name: PHP 8.4.27 Emergency Promotion Contract (HOLD by default)
+
+on:
+  pull_request:
+    branches: [production]
+  push:
+    branches: [production, fix/php8427-protected-ci-rehearsal-20261022]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-integrity:
+    name: PHP emergency frozen source integrity
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Reject anything beyond the pinned Legacy Live runtime and reviewed CI scope
+        shell: bash
+        env:
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          TARGET_REPO: ${{ github.repository }}
+          EVENT_KIND: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          live=15abdc9de6f24b5250fb255c579d1aa55facaf1a
+          original=0ac198acf3c087652d0a164c55602fb60922a8d0
+          if [ "$EVENT_KIND" = 'pull_request' ]; then
+            test "$PR_HEAD_REPO" = "$TARGET_REPO"
+            source_sha="$PR_HEAD_SHA"
+          elif [ "$GITHUB_REF" = 'refs/heads/production' ]; then
+            read -r first_parent second_parent rest <<< "$(git show -s --format=%P HEAD)"
+            test -n "$first_parent" && test -n "$second_parent" && test -z "${rest:-}"
+            source_sha="$second_parent"
+          else
+            test "$GITHUB_REF" = 'refs/heads/fix/php8427-protected-ci-rehearsal-20261022'
+            source_sha="$(git rev-parse HEAD)"
+          fi
+
+          git merge-base --is-ancestor "$live" "$source_sha"
+          git merge-base --is-ancestor "$original" "$source_sha"
+          test "$(git rev-parse "$source_sha:Dockerfile")" = 03ead1ab2823f1345ffb237a68fb26a75b656edd
+          test "$(git rev-parse "$source_sha:docker/render-start.sh")" = 97b9de037130e15989dc411db368e48c35580110
+
+          git diff --name-only "$live" "$source_sha" | LC_ALL=C sort > actual-paths.txt
+          cat > allowed-paths.txt <<'PATHS'
+          .github/workflows/p0-disposable-mysql-schema.yml
+          .github/workflows/php-8427-live-no-ddl-candidate.yml
+          .github/workflows/production-promotion-policy.yml
+          .github/workflows/v56-12-workspace-resume.yml
+          .github/workflows/v56-8-migration-recovery.yml
+          Dockerfile
+          docker/render-start.sh
+          docs/development/PHP8427_EMERGENCY_CHECKS_REHEARSAL_2026_10_22.md
+          docs/development/PHP_SECURITY_LIVE_NO_DDL_CANDIDATE_2026_10_22.md
+          scripts/ci/php_8427_no_ddl_live_boot_test.sh
+          PATHS
+          # No unknown file may appear, especially no migration or auth/data change.
+          while IFS= read -r file; do
+            if ! grep -Fxq -- "$file" allowed-paths.txt; then
+              echo "UNREVIEWED_PROMOTION_PATH: $file" >&2
+              exit 1
+            fi
+          done < actual-paths.txt
+          for required in Dockerfile docker/render-start.sh \
+              .github/workflows/production-promotion-policy.yml \
+              .github/workflows/p0-disposable-mysql-schema.yml \
+              .github/workflows/v56-12-workspace-resume.yml \
+              .github/workflows/v56-8-migration-recovery.yml; do
+            git cat-file -e "$source_sha:$required"
+          done
+          echo "EMERGENCY_SOURCE_SCOPE=PASS; RUNTIME_BLOBS=PINNED; NO_NEW_DDL_FILES"
+
+  promotion-contract:
+    name: Production promotion contract
+    needs: source-integrity
+    if: ${{ github.event_name == 'pull_request' || github.ref == 'refs/heads/production' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      APPROVED_SOURCE_SHA: ${{ vars.CANOVIA_PHP8427_EMERGENCY_APPROVED_SHA }}
+      SCHEMA_ATTESTED: ${{ vars.CANOVIA_PHP8427_LIVE_SCHEMA_ATTESTED }}
+      RECOVERY_ATTESTED: ${{ vars.CANOVIA_PHP8427_RECOVERY_ATTESTED }}
+      EVENT_KIND: ${{ github.event_name }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail closed without owner-controlled exact SHA and live evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_KIND" = 'pull_request' ]; then
+            source_sha="$PR_HEAD_SHA"
+          else
+            read -r first_parent second_parent rest <<< "$(git show -s --format=%P HEAD)"
+            test -n "$first_parent" && test -n "$second_parent" && test -z "${rest:-}"
+            source_sha="$second_parent"
+          fi
+          test -n "$APPROVED_SOURCE_SHA"
+          test "$APPROVED_SOURCE_SHA" = "$source_sha"
+          test "$SCHEMA_ATTESTED" = 'VERIFIED'
+          test "$RECOVERY_ATTESTED" = 'VERIFIED'
+          echo 'MANUAL_ATTESTATIONS_PRESENT; THIS_IS_NOT_A_LIVE_DB_AUDIT'
