@@ -66,7 +66,7 @@ class StudyAdaptiveActionV536Test extends TestCase
 
         $task = $this->task($plan, '二次関数を演習する');
 
-        $result = app(StudyAdaptiveActionService::class)->evaluate($plan);
+        $result = app(StudyAdaptiveActionService::class)->evaluate($plan, now());
 
         $action = $result->primaryAction();
 
@@ -94,7 +94,7 @@ class StudyAdaptiveActionV536Test extends TestCase
         [$user, $plan] = $this->studyPlan();
         $this->scope($plan, '英語', 'Lesson 4');
 
-        $result = app(StudyAdaptiveActionService::class)->evaluate($plan);
+        $result = app(StudyAdaptiveActionService::class)->evaluate($plan, now());
         $action = $result->primaryAction();
 
         $this->assertSame('project_task', data_get($action?->metadata, 'route_kind'));
@@ -217,7 +217,7 @@ class StudyAdaptiveActionV536Test extends TestCase
             progress: 100,
         );
 
-        $result = app(StudyAdaptiveActionService::class)->evaluate($plan);
+        $result = app(StudyAdaptiveActionService::class)->evaluate($plan, now());
         $action = $result->primaryAction();
 
         $this->assertNull(data_get($action?->metadata, 'target_task_id'));
