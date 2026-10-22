@@ -56,6 +56,8 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python3 -m pip install PyMySQL==1.1.2 cryptography==46.0.3
+      - name: B1 supervised entry delta (synthetic roots and PTYs)
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_b1_operator.py -v
       - name: Private adapter delta without connection
         run: python3 -B -m unittest discover -s tests/ci -p test_e858_private_candidate.py -v
       - name: Inert private-root FD boundary (synthetic only)
