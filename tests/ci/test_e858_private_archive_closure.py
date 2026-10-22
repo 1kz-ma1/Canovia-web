@@ -40,7 +40,8 @@ sys.addaudithook(deny)
 from e858_phase1.private_candidate import Candidate, DisabledWire
 from e858_phase1.private_binding import Target
 from e858_phase1.private_root import open_private_root
-from e858_phase1.private_operator import observe_foreground_terminal\nfrom e858_phase1.private_native_runtime import observe_native_runtime
+from e858_phase1.private_operator import observe_foreground_terminal
+from e858_phase1.private_acceptance import review_inert_receipts\nfrom e858_phase1.private_native_runtime import observe_native_runtime
 from e858_phase1.private_acl import inspect_native_acl
 from e858_phase1.private_distribution import runtime_components
 print('INERT_IMPORT_CLOSURE_VERIFIED')
