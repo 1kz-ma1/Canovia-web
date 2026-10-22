@@ -22,6 +22,7 @@ on:
       - 'tests/ci/test_e858_private_root.py'
       - 'tests/ci/test_e858_private_acl.py'
       - 'tests/ci/test_e858_private_operator.py'
+      - 'tests/ci/test_e858_private_entry.py'
       - 'tests/ci/test_e858_private_archive_closure.py'
       - 'tests/ci/test_e858_private_runtime_lock.py'
       - 'tests/ci/test_e858_private_native_runtime.py'
@@ -65,6 +66,8 @@ jobs:
         run: python3 -B -m unittest discover -s tests/ci -p test_e858_private_operator.py -v
       - name: Owner adoption gap stays HOLD with forged synthetic receipts
         run: python3 -B -m unittest discover -s tests/ci -p test_e858_private_acceptance.py -v
+      - name: Supervised B entry FD ACL and TTY rehearsal (offline only)
+        run: python3 -B -m unittest discover -s tests/ci -p test_e858_private_entry.py -v
       - name: Accepted adapter and driver scope
         id: accepted-scope
         env:
