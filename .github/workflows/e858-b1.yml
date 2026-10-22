@@ -39,6 +39,12 @@ jobs:
           echo "B1_BUILD_DIR=$RUNNER_TEMP/b1-review" >> "$GITHUB_ENV"
           mkdir -m 700 "$RUNNER_TEMP/b1-review"
           python3 -m pip download --no-deps --only-binary=:all: --dest "$RUNNER_TEMP/b1-review" PyMySQL==1.1.2
+      - name: Own a synthetic Linux directory under trusted ancestors
+        if: runner.os == 'Linux'
+        run: |
+          B1_TEST_PARENT="/opt/canovia-b1-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          sudo install -d -m 700 -o "$(id -u)" -g "$(id -g)" "$B1_TEST_PARENT"
+          echo "B1_SYNTHETIC_PARENT=$B1_TEST_PARENT" >> "$GITHUB_ENV"
       - run: |
           python3 -B -m unittest discover -s tests/ci -p test_e858_b1_operator.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b1_integrity.py -v

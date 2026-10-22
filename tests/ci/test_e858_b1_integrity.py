@@ -47,7 +47,8 @@ class Integrity(unittest.TestCase):
         with self.assertRaises(Block):b.wheel_tree(self.wheel+b'x',self.root)
     def test_native_not_fake_cross_platform_pass(self):
         if sys.platform=='darwin':
-            result=b.native_graph()
+            try:result=b.native_graph()
+            except Block as error:self.fail('FIXED_NATIVE_STAGE='+getattr(error,'boundary','UNKNOWN'))
             self.assertFalse(result['runtime_complete']);self.assertFalse(result['execution_allowed'])
             self.assertGreater(result['node_count'],0)
         else:

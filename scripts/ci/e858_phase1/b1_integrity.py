@@ -87,9 +87,11 @@ def native_graph():
     recorded as unresolved unless the loaded-image view independently covers
     it; owner review must reject unexplained images. No raw paths are returned.
     """
+    boundary='PLATFORM_OR_LOADER_ENV'
     try:
         if (sys.platform!='darwin' or any(k.startswith('DYLD_') or k in ('LD_PRELOAD','LD_LIBRARY_PATH') for k in os.environ)):
             raise Block()
+        boundary='DYLD_ENUMERATION'
         lib=ctypes.CDLL(None)
         count=lib._dyld_image_count;count.restype=ctypes.c_uint32
         image=lib._dyld_get_image_name;image.argtypes=[ctypes.c_uint32];image.restype=ctypes.c_char_p
@@ -106,7 +108,9 @@ def native_graph():
             if not path.is_absolute():raise Block()
             if str(path).startswith(('/usr/lib/','/System/Library/')):
                 system+=1;continue  # dyld cache is the owner's OS trust boundary
+            boundary='NATIVE_COMPONENT'
             observation=_observe_component(path)
+            boundary='LINK_PARSER'
             code,raw=_invoke('/usr/bin/otool',('-L',str(path)))
             if code:raise Block()
             dependencies=[]
@@ -120,16 +124,21 @@ def native_graph():
                     target=Path(value)
                 elif value.startswith('@rpath/'):
                     matches=[p for p in paths if p.name==Path(value).name]
-                    if len(matches)!=1:raise Block()
+                    if len(matches)!=1:
+                        boundary='RPATH_NOT_UNIQUE';raise Block()
                     target=matches[0]
-                else:raise Block()
+                else:
+                    boundary='UNKNOWN_INSTALL_NAME';raise Block()
                 dependencies.append(target)
             queue.extend(dependencies)
             # Signature identity is separately observed, never auto-trusted.
             nodes.append(dict(observation,signature_identity='OWNER_PROVENANCE_REVIEW_REQUIRED'))
+        boundary='LOADED_IMAGES_CHANGED'
         if count()!=start or [Path(os.fsdecode(image(i))) for i in range(start)]!=paths:raise Block()
         return dict(kind='B1_DARWIN_LOADED_AND_DECLARED_LINK_GRAPH',nodes=nodes,
             node_count=len(nodes),system_os_trust_dependencies=system,unresolved_loader_references=unresolved,
             graph_sha256=digest(nodes),os_provenance='OWNER_MACHINE_UNVERIFIED',
             runtime_complete=False,execution_allowed=False,real_aiven_connected=False)
-    except BaseException:raise Block() from None
+    except BaseException:
+        error=Block();error.boundary=boundary
+        raise error from None
