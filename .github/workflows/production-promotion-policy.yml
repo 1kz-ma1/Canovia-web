@@ -47,6 +47,9 @@ jobs:
           git merge-base --is-ancestor "$original" "$source_sha"
           test "$(git rev-parse "$source_sha:Dockerfile")" = 03ead1ab2823f1345ffb237a68fb26a75b656edd
           test "$(git rev-parse "$source_sha:docker/render-start.sh")" = 97b9de037130e15989dc411db368e48c35580110
+          # Existing historical test used a Carbon-frozen date but omitted the
+          # capturedAt argument; pin the reviewed test-only clock repair.
+          test "$(git rev-parse "$source_sha:tests/Feature/StudyAdaptiveActionV536Test.php")" = 2dfe9ea91bf944f114ec558004046476b320a124
 
           git diff --name-only "$live" "$source_sha" | LC_ALL=C sort > actual-paths.txt
           cat > allowed-paths.txt <<'PATHS'
@@ -60,6 +63,7 @@ jobs:
           docs/development/PHP8427_EMERGENCY_CHECKS_REHEARSAL_2026_10_22.md
           docs/development/PHP_SECURITY_LIVE_NO_DDL_CANDIDATE_2026_10_22.md
           scripts/ci/php_8427_no_ddl_live_boot_test.sh
+          tests/Feature/StudyAdaptiveActionV536Test.php
           PATHS
           # No unknown file may appear, especially no migration or auth/data change.
           while IFS= read -r file; do
