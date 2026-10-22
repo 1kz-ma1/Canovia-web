@@ -21,7 +21,10 @@ Ruleset `24954459` currently requires a PR, merge commit, no force push, and pre
 4. `P0 schema integrity (MySQL 8.0)`
 5. `P0 schema integrity (MySQL 8.4)`
 
-Changes *inside this rehearsal branch only* provide an unconditional `pull_request: production` and `push: production` trigger to each relevant workflow, **without** path filters. The three old jobs retain their original test bodies; in particular the MySQL 8.0 and 8.4 jobs use disposable, synthetic databases.
+Changes *inside this rehearsal branch only* provide an unconditional `pull_request: production` and `push: production` trigger to each relevant workflow, **without** path filters. The disposable MySQL 8.0 and 8.4 jobs retain their original test bodies. Two legacy expectations were incompatible with the intentionally production-only no-DDL boot policy and have narrowly scoped replacements in this rehearsal branch:
+
+- The former `V56.9 Render startup retry` test assumed automatic startup migrations. The `migration-recovery` job instead **builds the actual patched Docker image and executes `php_8427_no_ddl_live_boot_test.sh` within a disposable container using `--network none`**. Other recovery tests remain enabled.
+- The combined `McpIsolatedStagingBootstrapTest` expects `APP_ENV=staging` to boot through the shared script; the new hotfix deliberately refuses staging to prevent unintended deployments. The `workspace-resume` job substitutes explicit production Workspace/Session and MCP authorization gate regressions, leaving the remaining workspace and consent tests enabled. The isolated MCP staging bootstrap capability is therefore **NOT ACCEPTED** for this production-only emergency image and must not be deployed to the MCP staging Render service.
 
 The production-promotion job is a candidate-specific alternative to the normal `main` ancestry contract; it is never a general `fix/*` bypass. It verifies the original Live ancestor, the validated candidate ancestor, runtime Git blob equality, and an exact changed-file allowlist. It runs when proposed to `production` or pushed on `production` after merge. It also demands separate, owner-controlled proof of exact SHA and real Aiven schema/recovery attestations. The following GitHub repository variables must be explicitly reviewed/established **in a separate owner-approved step**; do not set them during rehearsal:
 
