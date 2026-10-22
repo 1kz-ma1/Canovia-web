@@ -116,10 +116,19 @@ class Program:
                     or self.pins['source_sha']!=SOURCE or self.pins['release_ref']!=RELEASE
                     or native_identity()!=self.native or stdlib_identity()!=self.stdlib
                     or digest(dict(components=dist.runtime_components(),stdlib=self.stdlib,native=self.native,graph=self.graph))!=self.runtime):raise Block()
+            # Recheck the installed tree and loaded package origins, not just
+            # the version observed before the private attempt began.
+            installed_wheel(self.wheel)
             directory=Path(__file__).resolve().parents[1]
             for name in set(dist.FILES)|set(pkg.FILES):
                 path=directory/name[len('scripts/ci/'):]
                 if dist._public_file(path,4*1024*1024,allow_empty=True)!=self.files[name]:raise Block()
+                module=sys.modules.get(name[len('scripts/ci/'):-3].replace('/','.'))
+                if module is not None:
+                    origin=getattr(module,'__file__',None)
+                    spec_origin=getattr(getattr(module,'__spec__',None),'origin',None)
+                    if (not origin or not spec_origin or not os.path.samefile(path,origin)
+                            or not os.path.samefile(path,spec_origin)):raise Block()
             # Frozen comparator may be mounted separately, but its loaded bytes
             # cannot be replaced by moving-main implementations or import hooks.
             for module_name,file_name in [('e858_audit.core','e858_audit/core.py'),
@@ -153,7 +162,7 @@ class PrivateReview:
     synthetic review roots and values only. No argv/env/credential input API.
     """
     def __init__(self,path,expected_digest,program):
-        self.root=None;self.value=None
+        self.root=None;self.value=None;self.closed=False
         try:
             if type(program) is not Program or type(expected_digest) is not str or not HEX.fullmatch(expected_digest):raise Block()
             self.program=program;self.expected_digest=expected_digest;self.root=Root(path)
@@ -163,6 +172,7 @@ class PrivateReview:
 
     def check(self):
         try:
+            if self.closed:raise Block()
             self.program.check()
             raw=_read(self.root.check(),'review.json',16384,native_acl)
             if dist._sha(raw)!=self.expected_digest:raise Block()
@@ -187,10 +197,12 @@ class PrivateReview:
                     or self.value is not None and value!=self.value):raise Block()
             self.value=value
             return value
-        except BaseException:raise Block() from None
+        except BaseException:
+            try:self.close()
+            finally:raise Block() from None
 
     def close(self):
-        self.value=None
+        self.closed=True;self.value=None
         if self.root is not None:
             root=self.root;self.root=None;root.close()
     def __repr__(self):return '<private review draft; no approval>'
@@ -214,10 +226,14 @@ class ReviewedEntry(Entry):
             self.check();return self.target
         except BaseException:self.close();raise Block() from None
     def check(self):
-        super().check()
-        if self.review is not None:
-            value=self.review.check()
-            if self.target!=read_binding(self.root.check(),value['binding_sha256'],value['tooling_sha'],int(time.time()),inspect_acl=native_acl):raise Block()
+        try:
+            super().check()
+            if self.review is not None:
+                value=self.review.check()
+                if self.target!=read_binding(self.root.check(),value['binding_sha256'],value['tooling_sha'],int(time.time()),inspect_acl=native_acl):raise Block()
+        except BaseException:
+            try:self.close()
+            finally:raise Block() from None
     def close(self):
         okay=True
         if self.review is not None:
