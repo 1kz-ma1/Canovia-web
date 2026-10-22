@@ -1,12 +1,11 @@
 name: V56.12 Workspace Resume Validation
 
 on:
-  push:
-    branches:
-      - fix/v56-12-workspace-resume-and-session-scope
   pull_request:
-    branches:
-      - main
+    branches: [production]
+  push:
+    branches: [production, fix/php8427-protected-ci-rehearsal-20261022]
+  workflow_dispatch:
 
 jobs:
   workspace-resume:
