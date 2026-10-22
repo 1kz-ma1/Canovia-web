@@ -7,6 +7,7 @@ on:
       - 'scripts/ci/e858_b1_host.py'
       - 'scripts/ci/e858_practical_host.py'
       - 'tests/ci/test_e858_practical.py'
+      - 'tests/ci/test_e858_practical_stop.py'
       - 'tests/ci/test_e858_b1_*.py'
       - '.github/workflows/e858-b1.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
@@ -55,6 +56,7 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_b1_integrity.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b1_bundle.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_practical.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_practical_stop.py -v
       - uses: actions/upload-artifact@v4
         with:
           name: b1-offline-bundle-${{ matrix.os }}-${{ matrix.python }}

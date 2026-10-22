@@ -84,7 +84,7 @@ class IsolatedAdapter(p.Adapter):
 
 
 CASES=('PHASE1','METADATA','WRONG_CA','WRONG_HOST','AUTH_FAILURE','GRANTS_EXCESS','GRANTS_MISSING',
-       'SERVER_CHANGED','CONTROL_LOST','RECONNECT','SQL','EXPORT','TIMEOUT','INTERRUPT','QUIT_FAILURE')
+       'SERVER_CHANGED','CONTROL_LOST','RECONNECT','SQL','EXPORT','TIMEOUT','INTERRUPT','QUIT_FAILURE','REVIEW_REVOKED')
 
 
 def child_case(fault,parent):
@@ -119,6 +119,7 @@ def child_case(fault,parent):
         def read(channel,sql,cap=1):
             role=channel.gate.role;used=channel.gate.used
             if role=='data' and used==4:
+                if fault=='REVIEW_REVOKED':(independent/'review.json').write_bytes(b'{}')
                 if fault=='INTERRUPT':raise KeyboardInterrupt()
                 if fault=='TIMEOUT':channel.query_seconds=0
                 if fault=='RECONNECT':channel.conn.connect()
@@ -157,6 +158,7 @@ def child_case(fault,parent):
             if fault in ('GRANTS_EXCESS','GRANTS_MISSING') and result['sql_count']!=3:raise Block()
             if fault in ('SERVER_CHANGED','CONTROL_LOST') and result['sql_count']!=7:raise Block()
             if fault in ('SQL','EXPORT','INTERRUPT','RECONNECT') and result['sql_count']!=10:raise Block()
+            if fault=='REVIEW_REVOKED' and (result['sql_count']!=10 or not review.closed):raise Block()
             if fault=='TIMEOUT' and not 10<=result['sql_count']<=11:raise Block()
             if fault=='QUIT_FAILURE' and result['sql_count']!=12:raise Block()
             if any(w.password for w in wires) or any(secret_refs) or not entry.closed:raise Block()
