@@ -122,7 +122,7 @@ class Practical(unittest.TestCase):
             with self.assertRaises(binding.Block):self.program.check()
         spec=unittest.mock.Mock(origin=str(self.private/'target.json'))
         with patch.object(ssl,'__spec__',spec):
-            with self.assertRaises((binding.Block,ValueError)):p.stdlib_identity()
+            with self.assertRaises(binding.Block):p.stdlib_identity()
 
     def test_program_fixed_14_sql_and_inputs(self):
         self.assertEqual(len(self.program.queries),14)

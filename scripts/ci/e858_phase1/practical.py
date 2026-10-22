@@ -34,7 +34,7 @@ CAPS=dict(engine=1,identity=1,grants=8,ledger=115,table=512,column=4096,index=40
           semantic_index=4096,semantic_foreign_key=2048,column_extra=4096)
 
 
-def native_identity():
+def _native_identity():
     """Private live-process image snapshot; paths are hashed, never rendered.
 
     OS/shared-cache images remain external managed-OS trust, not file proofs.
@@ -56,7 +56,7 @@ def native_identity():
     return dict(kind='DARWIN_LOADED_IMAGES_NOT_OS_PROVENANCE',os_release=platform.release(),images=values)
 
 
-def stdlib_identity():
+def _stdlib_identity():
     """Critical loaded stdlib origins/content, tied to this Python install.
 
     Frozen/built-in code belongs to the pinned Python binary. This is a drift
@@ -77,6 +77,16 @@ def stdlib_identity():
         if relative not in (stem+'.py',stem+'/__init__.py') and not (relative.startswith('lib-dynload/'+name+'.') and relative.endswith(('.so','.dylib'))):raise Block()
         result[name]=dict(kind='OBSERVED_STDLIB_FILE',relative=relative,sha256=dist._sha(dist._public_file(path,4*1024*1024)))
     return result
+
+
+def native_identity():
+    try:return _native_identity()
+    except BaseException:raise Block() from None
+
+
+def stdlib_identity():
+    try:return _stdlib_identity()
+    except BaseException:raise Block() from None
 
 
 class Program:
@@ -228,7 +238,8 @@ class PrivateWire(r.Wire):
     def initialize(self,gate,secret,target):
         try:self._initialize(gate,secret,target)
         except BaseException:
-            self.close();raise Block() from None
+            try:self.close()
+            finally:raise Block() from None
     def _initialize(self,gate,secret,target):
         if (type(target) is not Target or not target.valid(int(time.time()))
                 or type(secret) is not bytearray or not 0<len(secret)<=1024
