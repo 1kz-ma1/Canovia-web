@@ -117,6 +117,13 @@ class Practical(unittest.TestCase):
         with patch.dict(sys.modules,{'e858_audit.core':module}):
             with self.assertRaises(binding.Block):self.program.check()
 
+    def test_stdlib_origin_or_content_drift_is_block(self):
+        with patch.object(p,'stdlib_identity',return_value={'changed':'SYNTHETIC_ONLY'}):
+            with self.assertRaises(binding.Block):self.program.check()
+        spec=unittest.mock.Mock(origin=str(self.private/'target.json'))
+        with patch.object(ssl,'__spec__',spec):
+            with self.assertRaises((binding.Block,ValueError)):p.stdlib_identity()
+
     def test_program_fixed_14_sql_and_inputs(self):
         self.assertEqual(len(self.program.queries),14)
         self.assertEqual(p.digest({k:d._sha(v) for k,v in self.program.queries.items()}),binding.SQL)

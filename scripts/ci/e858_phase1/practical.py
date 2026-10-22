@@ -8,6 +8,8 @@ import ctypes
 import hashlib
 import platform
 import io
+import importlib
+import sysconfig
 import json
 import os
 from pathlib import Path
@@ -54,6 +56,29 @@ def native_identity():
     return dict(kind='DARWIN_LOADED_IMAGES_NOT_OS_PROVENANCE',os_release=platform.release(),images=values)
 
 
+def stdlib_identity():
+    """Critical loaded stdlib origins/content, tied to this Python install.
+
+    Frozen/built-in code belongs to the pinned Python binary. This is a drift
+    check, not a proof that the managed OS/distribution provider is trusted.
+    """
+    root=Path(sysconfig.get_path('stdlib')).resolve(strict=True)
+    result={}
+    names=('ssl','socket','hashlib','json','json.decoder','json.encoder','ctypes','threading',
+           'termios','select','time','os','stat','pathlib','io','zipfile','struct','importlib.metadata')
+    for name in names:
+        module=importlib.import_module(name);origin=getattr(module.__spec__,'origin',None)
+        if origin in ('built-in','frozen'):
+            result[name]={'kind':origin};continue
+        if type(origin) is not str:raise Block()
+        path=Path(origin).resolve(strict=True)
+        relative=path.relative_to(root).as_posix()
+        stem=name.replace('.','/')
+        if relative not in (stem+'.py',stem+'/__init__.py') and not (relative.startswith('lib-dynload/'+name+'.') and relative.endswith(('.so','.dylib'))):raise Block()
+        result[name]=dict(kind='OBSERVED_STDLIB_FILE',relative=relative,sha256=dist._sha(dist._public_file(path,4*1024*1024)))
+    return result
+
+
 class Program:
     """Actual public code/wheel/runtime comparison, never an owner attestation."""
     def __init__(self,archive,expected_sha,pins):
@@ -67,8 +92,8 @@ class Program:
                     self.wheel=inner.read(dist.WHEEL_PATH)
             installed_wheel(self.wheel)
             self.graph=native_graph() if sys.platform=='darwin' else None
-            self.native=native_identity()
-            self.runtime=digest(dict(components=dist.runtime_components(),native=self.native,graph=self.graph))
+            self.native=native_identity();self.stdlib=stdlib_identity()
+            self.runtime=digest(dict(components=dist.runtime_components(),stdlib=self.stdlib,native=self.native,graph=self.graph))
             self.queries={k:self.files['scripts/ci/e858_audit/queries/'+k+'.sql'] for k in pkg.KEYS}
             if digest({k:dist._sha(v) for k,v in self.queries.items()})!=pins['sql_sha256']:raise Block()
             self.check()
@@ -78,8 +103,8 @@ class Program:
         try:
             if (version('PyMySQL')!='1.1.2' or connections.DEBUG or _auth.DEBUG
                     or self.pins['source_sha']!=SOURCE or self.pins['release_ref']!=RELEASE
-                    or native_identity()!=self.native
-                    or digest(dict(components=dist.runtime_components(),native=self.native,graph=self.graph))!=self.runtime):raise Block()
+                    or native_identity()!=self.native or stdlib_identity()!=self.stdlib
+                    or digest(dict(components=dist.runtime_components(),stdlib=self.stdlib,native=self.native,graph=self.graph))!=self.runtime):raise Block()
             directory=Path(__file__).resolve().parents[1]
             for name in set(dist.FILES)|set(pkg.FILES):
                 path=directory/name[len('scripts/ci/'):]
@@ -201,6 +226,10 @@ class PrivateWire(r.Wire):
     internal networks, never a token/flag-enabled production implementation.
     """
     def initialize(self,gate,secret,target):
+        try:self._initialize(gate,secret,target)
+        except BaseException:
+            self.close();raise Block() from None
+    def _initialize(self,gate,secret,target):
         if (type(target) is not Target or not target.valid(int(time.time()))
                 or type(secret) is not bytearray or not 0<len(secret)<=1024
                 or any(c<32 or c==127 for c in secret)):raise Block()
