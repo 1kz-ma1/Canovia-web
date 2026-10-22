@@ -111,7 +111,8 @@ class Program:
 
     def check(self):
         try:
-            if (version('PyMySQL')!='1.1.2' or connections.DEBUG or _auth.DEBUG
+            if (any(k.startswith('DYLD_') or k in ('LD_PRELOAD','LD_LIBRARY_PATH','SSLKEYLOGFILE','OPENSSL_CONF','OPENSSL_MODULES') for k in os.environ)
+                    or version('PyMySQL')!='1.1.2' or connections.DEBUG or _auth.DEBUG
                     or self.pins['source_sha']!=SOURCE or self.pins['release_ref']!=RELEASE
                     or native_identity()!=self.native or stdlib_identity()!=self.stdlib
                     or digest(dict(components=dist.runtime_components(),stdlib=self.stdlib,native=self.native,graph=self.graph))!=self.runtime):raise Block()
@@ -249,7 +250,7 @@ class PrivateWire(r.Wire):
         context=target.tls_context()
         context.hostname_checks_common_name=False  # require SAN; no CN fallback
         if (context.verify_mode!=ssl.CERT_REQUIRED or not context.check_hostname
-                or context.minimum_version<ssl.TLSVersion.TLSv1_2):raise Block()
+                or context.minimum_version<ssl.TLSVersion.TLSv1_2 or context.keylog_filename is not None):raise Block()
         r.StrictConnection.__init__(self,host=target.host,port=target.port,user=target.principal,
             database=target.database,password=secret,ssl=context,charset='ascii',autocommit=None,
             sql_mode=None,connect_timeout=2,read_timeout=10,write_timeout=10,cursorclass=pymysql.cursors.SSCursor)

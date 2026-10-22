@@ -118,6 +118,10 @@ class Practical(unittest.TestCase):
             with self.assertRaises(binding.Block):self.program.check()
 
     def test_stdlib_origin_or_content_drift_is_block(self):
+        for key in ('SSLKEYLOGFILE','OPENSSL_CONF','OPENSSL_MODULES','DYLD_INSERT_LIBRARIES'):
+            with patch.dict(os.environ,{key:CANARY}):
+                with self.assertRaises(binding.Block) as caught:self.program.check()
+                self.assertNotIn(CANARY,str(caught.exception))
         with patch.object(p,'stdlib_identity',return_value={'changed':'SYNTHETIC_ONLY'}):
             with self.assertRaises(binding.Block):self.program.check()
         spec=unittest.mock.Mock(origin=str(self.private/'target.json'))
