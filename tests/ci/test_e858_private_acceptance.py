@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'scripts/ci'))
 from e858_phase1 import private_acceptance as acceptance
 from e858_phase1.private_binding import Block
+import e858_b_offline as b
 
 CANARY = 'SYNTHETIC_PRIVATE_CANARY_MUST_NOT_APPEAR'
 
@@ -67,6 +68,23 @@ class OwnerReadinessHold(unittest.TestCase):
             item['synthetic_case'] = forged
             with self.assertRaises(Block):
                 acceptance.review_inert_receipts({'b1_offline': item})
+
+    def test_existing_804_b1_packet_receipt_integrates_without_go(self):
+        now = 1000
+        pins = {'source_sha': b.SOURCE, 'release_ref': b.RELEASE}
+        packet = b.template(pins, now)
+        packet['declarations'] = dict(b.DECLARATIONS)
+        packet['attempt_id'] = 'd' * 32
+        receipt = b.receipt(packet, pins, now)
+        result = acceptance.review_inert_receipts({'b1_offline': receipt})
+        self.assertEqual(result['result'], 'OWNER_ADOPTION_HOLD')
+        self.assertEqual(result['observations']['b1_offline'],
+                         'UNTRUSTED_RECEIPT_SHAPE_ONLY')
+        self.assertEqual(result['b_stages']['B0'],
+                         'DESIGN_BASELINE_ADOPTED_2026_10_20')
+        self.assertEqual(result['b_stages']['B2'], 'FRESH_OWNER_GO_NOT_GRANTED')
+        self.assertFalse(result['execution_allowed'])
+        self.assertFalse(result['real_aiven_connected'])
 
     def test_a_authority_is_future_not_a_b1_or_b2_gate(self):
         result = acceptance.review_inert_receipts({})
