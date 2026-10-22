@@ -24,6 +24,8 @@ on:
       - 'tests/ci/test_e858_private_operator.py'
       - 'tests/ci/test_e858_private_archive_closure.py'
       - 'tests/ci/test_e858_private_runtime_lock.py'
+      - 'tests/ci/test_e858_private_native_runtime.py'
+      - 'scripts/ci/e858_native_runtime_review.py'
       - '.github/workflows/e858-phase1.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
   workflow_dispatch:
@@ -95,6 +97,13 @@ jobs:
           cmp "$BUILD_DIR/candidate.zip" "$BUILD_DIR/repeated.zip"
           python3 -B -m unittest discover -s tests/ci -p test_e858_private_archive_closure.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_private_runtime_lock.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_private_native_runtime.py -v
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            python3 -I -B scripts/ci/e858_native_runtime_review.py > "$BUILD_DIR/native-observation.json"
+            python3 -I -B -c 'import json,sys; x=json.load(open(sys.argv[1])); assert x["execution_allowed"] is False and x["runtime_complete"] is False' "$BUILD_DIR/native-observation.json"
+          else
+            test "$(python3 -I -B scripts/ci/e858_native_runtime_review.py ignored-arg 2>/dev/null | grep -c INERT_NATIVE_RUNTIME_OBSERVATION_BLOCKED)" -eq 1
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: inert-candidate-${{ matrix.os }}-${{ matrix.python }}
