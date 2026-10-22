@@ -1,0 +1,76 @@
+name: PHP 8.4.27 Pinned Live Baseline Candidate (No Live Access)
+
+on:
+  push:
+    branches:
+      - fix/php-8427-live-baseline-20261022
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: php-8427-live-baseline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scope-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reject all changes outside the reviewed emergency-candidate scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          baseline=15abdc9de6f24b5250fb255c579d1aa55facaf1a
+          git merge-base --is-ancestor "$baseline" HEAD
+          git diff --name-only "$baseline" HEAD > changed-paths.txt
+          test -s changed-paths.txt
+          while IFS= read -r path; do
+            case "$path" in
+              Dockerfile|.github/workflows/php-8427-live-baseline-candidate.yml|docs/development/PHP_SECURITY_LIVE_BASELINE_CANDIDATE_2026_10_22.md) ;;
+              *) echo "UNREVIEWED_PATH: $path" >&2; exit 1 ;;
+            esac
+          done < changed-paths.txt
+          grep -Fxq Dockerfile changed-paths.txt
+          test "$(git hash-object Dockerfile)" = dbdb69eb4041841cbec6808c8ab1327ac44b63be
+          grep -Fxq 'FROM php:8.4.27-fpm-bookworm AS app' Dockerfile
+          grep -Fq 'PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500' Dockerfile
+          # The old Live boot script still runs migrations unconditionally.
+          # Its preservation is deliberate; this job is NOT deploy approval.
+          grep -Fq 'php artisan migrate --force' docker/render-start.sh
+          echo "CANDIDATE_SCOPE=PASS; LIVE_BOOT_MIGRATION_RISK=HOLD"
+
+  isolated-image:
+    needs: scope-guard
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull PHP patched image and print immutable repository digest
+        run: |
+          set -euo pipefail
+          docker pull php:8.4.27-fpm-bookworm
+          docker image inspect php:8.4.27-fpm-bookworm --format '{{json .RepoDigests}}'
+      - name: Build the unchanged Live Laravel application against patched PHP
+        run: |
+          set -euo pipefail
+          docker build --pull --no-cache --progress=plain -f Dockerfile -t canovia-live-php-8427-candidate:ci .
+      - name: Validate built image offline, never run the boot script or touch a DB
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint php canovia-live-php-8427-candidate:ci -r '
+            if (PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500) {
+              fwrite(STDERR, "Vulnerable/unsupported PHP detected\n");
+              exit(1);
+            }
+            echo "PATCHED_LIVE_CANDIDATE_PHP=", PHP_VERSION, "\n";
+          '
+          docker run --rm --network none --entrypoint php-fpm canovia-live-php-8427-candidate:ci -t
+          docker run --rm --network none --entrypoint nginx canovia-live-php-8427-candidate:ci -t
+          docker run --rm --network none --entrypoint composer canovia-live-php-8427-candidate:ci check-platform-reqs --no-dev
+          docker run --rm --network none --entrypoint sh canovia-live-php-8427-candidate:ci -c 'test -f /var/www/html/artisan && test -f /var/www/html/vendor/autoload.php'
+          echo 'ISOLATED_BUILD=PASS; NO_LIVE_DEPLOY=TRUE'
