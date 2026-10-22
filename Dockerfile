@@ -16,7 +16,11 @@ RUN npm run build
 # -----------------------------
 # 2) Laravel runtime (Nginx + PHP-FPM)
 # -----------------------------
-FROM php:8.4-fpm-bookworm AS app
+# PHP 8.4.27 security hotfix (CVE-2026-109618 / CVE-2026-109619)
+FROM php:8.4.27-fpm-bookworm AS app
+
+# Reject an outdated or wrong-major PHP image at build time.
+RUN php -r 'if (PHP_VERSION_ID < 80427 || PHP_VERSION_ID >= 80500) { fwrite(STDERR, "Patched PHP 8.4 required\n"); exit(1); }'
 
 ENV APP_ENV=production \
     APP_DEBUG=false \
