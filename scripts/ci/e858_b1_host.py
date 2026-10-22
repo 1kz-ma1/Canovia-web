@@ -54,7 +54,11 @@ def exercise(work,stem,token,network,image,owned,head,series):
         '-v',str(h.ROOT/'scripts/ci')+':/code:ro','-v',str(client)+':/synthetic:ro',
         '-v',str(work/'out')+':/b1:rw','-e','PYTHONPATH=/synthetic/legacy:/code/e858_tls:/code',
         image,'python','-B','-m','e858_phase1.b1_fixtures']
-    result=json.loads(h.run(args,timeout=240))
+    try:result=json.loads(h.run(args,timeout=240))
+    except Exception:
+        if os.environ.get('GITHUB_ACTIONS')!='true' and (work/'out/failure.json').exists():
+            dest=Path('/tmp/canovia-b1-failure.json');dest.write_bytes((work/'out/failure.json').read_bytes());dest.chmod(0o600)
+        raise
     if result.get('result')!='B1_INTEGRATION_VERIFIED':raise h.Block('ISOLATED_B1_WORKER_REJECTED')
     traces=json.loads((work/'out/traces.json').read_text())
     actual={int(x) for x in mysql(server,"SELECT DISTINCT thread_id FROM mysql.general_log WHERE command_type='Query' AND argument='SET NAMES ascii';").decode().splitlines()}
@@ -72,4 +76,10 @@ def exercise(work,stem,token,network,image,owned,head,series):
     return result
 
 
-if __name__=='__main__':raise SystemExit(h.main(profile='b1'))
+if __name__=='__main__':
+    # Reuse the unchanged, accepted owned network/Full94 lifecycle. Only the
+    # synthetic exercise is replaced; there is no live factory selection.
+    from unittest.mock import patch
+    import e858_full94_tls
+    with patch.object(e858_full94_tls,'exercise',exercise):
+        raise SystemExit(h.main(profile='full94'))

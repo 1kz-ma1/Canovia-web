@@ -107,7 +107,7 @@ def assets(directory, head, series):
 
 
 def rehearse(series, head, profile='minimal'):
-    if profile not in ('minimal', 'full94', 'b1'): raise Block('ISOLATED_PROFILE_REJECTED')
+    if profile not in ('minimal', 'full94'): raise Block('ISOLATED_PROFILE_REJECTED')
     token = uuid.uuid4().hex
     stem = 'canovia-e858-tls-' + token[:12]
     network, image = stem + '-network', stem + '-client'
@@ -119,7 +119,7 @@ def rehearse(series, head, profile='minimal'):
         work = Path(temp).resolve(); work.chmod(0o700)
         certificate_material(work)
         facts, old, new, reference = assets(work / 'client', head, series)
-        if profile in ('full94','b1'):
+        if profile == 'full94':
             from e858_full94_tls import prepare
             prepare(work, head, series, facts, old, new, reference)
         output = work / 'out'; output.mkdir(mode=0o700)
@@ -174,10 +174,7 @@ def rehearse(series, head, profile='minimal'):
                         or not net['Internal'] or net['Labels'].get(LABEL) != token
                         or set(state['NetworkSettings']['Networks']) != {network}):
                     raise Block('ISOLATION_OWNERSHIP_REJECTED')
-            if profile == 'b1':
-                from e858_b1_host import exercise
-                result = exercise(work, stem, token, network, image, owned, head, series)
-            elif profile == 'full94':
+            if profile == 'full94':
                 from e858_full94_tls import exercise
                 result = exercise(work, stem, token, network, image, owned, head, series)
             else:

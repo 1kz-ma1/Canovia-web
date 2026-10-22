@@ -16,7 +16,7 @@ from . import r1_driver_fixtures as tty
 CASES=('PHASE1','METADATA','SQL','POSTFLIGHT_IDENTITY','CONTROL_LOST','INTERRUPT','QUERY_TIMEOUT','QUIT_FAILURE')
 
 
-def child(fault,parent):
+def child_run(fault,parent):
     if os.getppid()!=parent:raise p.Block()
     entry=Entry();bridge=None
     with tempfile.TemporaryDirectory(dir='/b1',prefix='private-') as private:
@@ -65,6 +65,16 @@ def child(fault,parent):
             result['traces']=traces
             return result
         finally:entry.close()
+
+
+def child(fault,parent):
+    try:return child_run(fault,parent)
+    except BaseException as error:
+        import traceback
+        Path('/b1/failure.json').write_text(json.dumps(dict(case=fault,type=type(error).__name__,
+            frames=[(Path(f.filename).name,f.lineno) for f in traceback.extract_tb(error.__traceback__)])))
+        os.chmod('/b1/failure.json',0o600)
+        raise
 
 
 def run():
