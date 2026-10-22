@@ -25,6 +25,16 @@ class PinnedWheelInstallation(unittest.TestCase):
         if hashlib.sha256(cls.wheel).hexdigest() != dist.WHEEL_SHA:
             raise AssertionError('PINNED_WHEEL_MISSING')
 
+    def test_wheel_and_installed_metadata_source_set_agree(self):
+        with zipfile.ZipFile(__import__('io').BytesIO(self.wheel)) as archive:
+            wheel_names = {i.filename for i in archive.infolist()
+                           if i.filename.startswith('pymysql/') and i.filename.endswith('.py')}
+        dist_names = {str(file) for file in dist.metadata.distribution('PyMySQL').files
+                      if str(file).startswith('pymysql/') and str(file).endswith('.py')}
+        self.assertEqual(wheel_names, dist_names,
+                         'SOURCE_FILE_SET_MISMATCH_COUNTS_%d_%d_%d' %
+                         (len(wheel_names), len(dist_names), len(wheel_names & dist_names)))
+
     def test_real_installed_record_sources_match_verified_wheel(self):
         result = dist.verify_pymysql_wheel_installation(self.wheel)
         self.assertEqual(result['result'], 'PINNED_WHEEL_RECORD_SOURCES_MATCH_OBSERVED')
