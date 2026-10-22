@@ -13,7 +13,7 @@ from .b1_operator import Entry
 from .r1_driver_fixtures import trial
 from . import r1_driver_fixtures as tty
 
-CASES=('PHASE1','METADATA','SQL','POSTFLIGHT_IDENTITY','CONTROL_LOST','INTERRUPT','QUERY_TIMEOUT','QUIT_FAILURE')
+CASES=('PHASE1','METADATA','STRICT_TAMPER','SQL','POSTFLIGHT_IDENTITY','CONTROL_LOST','INTERRUPT','QUERY_TIMEOUT','QUIT_FAILURE')
 
 
 def child_run(fault,parent):
@@ -42,26 +42,31 @@ def child_run(fault,parent):
             if fault=='CONTROL_LOST' and role=='control' and used==3:channel.conn.close()
             result=original(channel,sql,cap)
             if fault=='POSTFLIGHT_IDENTITY' and role=='data' and used==5:return result.replace(r.DB,'synthetic_other')
+            if fault=='STRICT_TAMPER' and sql==Path('/synthetic/queries/index.sql').read_bytes():
+                lines=result.splitlines();fields=lines[0].split('\t');fields[2]='SYNTHETIC_DIFFERENT_INDEX'
+                lines[0]='\t'.join(fields);result='\n'.join(lines)+'\n'
             return result
         def send(wire,data):
             if fault=='QUIT_FAILURE' and wire.gate.role=='data' and data==b'\x01\x00\x00\x00\x01':raise OSError()
             return write(wire,data)
         try:
-            bridge=b.Bridge(entry,'metadata' if fault=='METADATA' else 'phase1')
+            bridge=b.Bridge(entry,'metadata' if fault in ('METADATA','STRICT_TAMPER') else 'phase1')
             with patch.object(b.Channel,'read',read),patch.object(r.Wire,'_write_bytes',send):result=bridge.run()
             traces=[dict(role=w.gate.role,cid=w.thread_id(),sql=w.gate.sent,quit_written=w.quit_written)
                     for w in bridge.boundary.wires if w.gate.sent]
-            if fault in ('PHASE1','METADATA'):
+            if fault in ('PHASE1','METADATA','STRICT_TAMPER'):
                 if (result['result']!='ISOLATED_B1_BRIDGE_VERIFIED' or not result['connection_ended']
-                        or result['tls_connections']!=2 or result['sql_count']!=(30 if fault=='METADATA' else 15)):
+                        or result['tls_connections']!=2 or result['sql_count']!=(30 if fault in ('METADATA','STRICT_TAMPER') else 15)):
                     raise p.Block()
                 if fault=='METADATA' and result['strict_result']!='REVIEW_REQUIRED':raise p.Block()
+                if fault=='STRICT_TAMPER' and result['strict_result']!='BLOCK':raise p.Block()
             elif result['result']!='BLOCK' or result['remote_termination']!='REMOTE_TERMINATION_UNVERIFIED':raise p.Block()
             if any(w.password or w.connect_count!=1 for w in bridge.boundary.wires):raise p.Block()
             try:bridge.run()
             except p.Block:pass
             else:raise p.Block()
             if entry.secret is not None or bridge.boundary.secret is not None:raise p.Block()
+            result['transport_result']=result['result'];result['result']='B1_CASE_VERIFIED'
             result['traces']=traces
             return result
         finally:entry.close()
