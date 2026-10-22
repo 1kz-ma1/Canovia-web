@@ -58,7 +58,7 @@ def _identity(st):
             st.st_size, st.st_mtime_ns, st.st_ctime_ns)
 
 
-def _read(directory, name, cap):
+def _read(directory, name, cap, inspect_acl=None):
     fd = None
     try:
         fd = os.open(name, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=directory)
@@ -66,6 +66,7 @@ def _read(directory, name, cap):
         if (not stat.S_ISREG(before.st_mode) or stat.S_IMODE(before.st_mode) != 0o600
                 or before.st_uid != os.geteuid() or before.st_nlink != 1 or not 0 < before.st_size <= cap):
             raise Block()
+        if inspect_acl is not None: inspect_acl(fd)
         raw = bytearray()
         while len(raw) <= cap:
             chunk = os.read(fd, min(4096, cap + 1 - len(raw)))
@@ -73,12 +74,14 @@ def _read(directory, name, cap):
             raw.extend(chunk)
         if len(raw) != before.st_size or len(raw) > cap or _identity(before) != _identity(os.fstat(fd)):
             raise Block()
+        if inspect_acl is not None: inspect_acl(fd)
+        if _identity(before)!=_identity(os.stat(name,dir_fd=directory,follow_symlinks=False)): raise Block()
         return bytes(raw)
     finally:
         if fd is not None: os.close(fd)
 
 
-def read_binding(directory_fd, expected_record_hash, tooling_sha, now):
+def read_binding(directory_fd, expected_record_hash, tooling_sha, now, *, inspect_acl=None):
     """Own a dup of an already privately acquired directory FD, fixed basenames.
 
     Parent path acquisition/owner authenticity are not proved by fstat. No path,
@@ -95,7 +98,7 @@ def read_binding(directory_fd, expected_record_hash, tooling_sha, now):
         ds = os.fstat(owned)
         if (not stat.S_ISDIR(ds.st_mode) or ds.st_uid != os.geteuid()
                 or stat.S_IMODE(ds.st_mode) != 0o700): raise Block()
-        raw = _read(owned, 'target.json', 16384)
+        raw = _read(owned, 'target.json', 16384) if inspect_acl is None else _read(owned, 'target.json', 16384, inspect_acl)
         if sha(raw) != expected_record_hash: raise Block()
         value = decode(raw)  # Existing size/duplicate/depth/type-safe JSON boundary.
         required = {'kind','provenance','source_sha','release_ref','tooling_sha','sql_sha256',
@@ -122,7 +125,7 @@ def read_binding(directory_fd, expected_record_hash, tooling_sha, now):
                 or type(tls['ca_sha256']) is not str or not HEX.fullmatch(tls['ca_sha256'])): raise Block()
         if (type(value['starts_at']) is not int or type(value['expires_at']) is not int
                 or value['expires_at'] <= value['starts_at']): raise Block()
-        ca = _read(owned, 'ca.pem', 65536)
+        ca = _read(owned, 'ca.pem', 65536) if inspect_acl is None else _read(owned, 'ca.pem', 65536, inspect_acl)
         if sha(ca) != tls['ca_sha256'] or b'PRIVATE KEY' in ca: raise Block()
         if _identity(ds) != _identity(os.fstat(owned)): raise Block()
         target = Target(**t, ca=ca, record_hash=expected_record_hash, tooling_sha=tooling_sha,
