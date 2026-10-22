@@ -13,7 +13,7 @@ from .b1_operator import Entry
 from .r1_driver_fixtures import trial
 from . import r1_driver_fixtures as tty
 
-CASES=('PHASE1','METADATA','STRICT_TAMPER','SQL','POSTFLIGHT_IDENTITY','CONTROL_LOST','INTERRUPT','QUERY_TIMEOUT','QUIT_FAILURE')
+CASES=('PHASE1','METADATA','STRICT_TAMPER','GRANTS_EXCESS','GRANTS_MISSING','SQL','POSTFLIGHT_IDENTITY','CONTROL_LOST','INTERRUPT','QUERY_TIMEOUT','QUIT_FAILURE')
 
 
 def child_run(fault,parent):
@@ -41,6 +41,9 @@ def child_run(fault,parent):
                 if fault=='QUERY_TIMEOUT':channel.query_seconds=0
             if fault=='CONTROL_LOST' and role=='control' and used==3:channel.conn.close()
             result=original(channel,sql,cap)
+            if role=='control' and used==2 and fault=='GRANTS_EXCESS':
+                return 'GRANT ALL PRIVILEGES ON *.* TO `e858_tls_inspector`@`%`\n'
+            if role=='control' and used==2 and fault=='GRANTS_MISSING':return ''
             if fault=='POSTFLIGHT_IDENTITY' and role=='data' and used==5:return result.replace(r.DB,'synthetic_other')
             if fault=='STRICT_TAMPER' and sql==Path('/synthetic/queries/index.sql').read_bytes():
                 result=result.replace('\tPRIMARY\t','\tSYNTHETIC_DIFFERENT_INDEX\t')
@@ -62,6 +65,8 @@ def child_run(fault,parent):
                 if result['strict_result']!='BLOCK' and result['result']!='BLOCK':raise p.Block()
             elif result['result']!='BLOCK' or result['remote_termination']!='REMOTE_TERMINATION_UNVERIFIED':raise p.Block()
             if any(w.password or w.connect_count!=1 for w in bridge.boundary.wires):raise p.Block()
+            if fault in ('PHASE1','METADATA') and not all(w.alias_verified and w.tls_verified for w in bridge.boundary.wires):raise p.Block()
+            if fault=='PHASE1' and not bridge.boundary.wires[0].full_auth_packet_seen:raise p.Block()
             try:bridge.run()
             except p.Block:pass
             else:raise p.Block()

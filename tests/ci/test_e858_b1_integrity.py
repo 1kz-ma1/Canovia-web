@@ -60,6 +60,34 @@ class Integrity(unittest.TestCase):
         with patch('socket.getaddrinfo',side_effect=AssertionError('NETWORK_FORBIDDEN')):
             result=bridge.Bridge(entry).run()
         self.assertEqual(result['result'],'BLOCK');self.assertFalse(result['real_aiven_connected'])
+    def test_fixed_error_redacts_secret_and_uncertain_cleanup_blocks(self):
+        import json
+        for error in (PermissionError('SYNTHETIC_SECRET'),KeyboardInterrupt()):
+            entry=unittest.mock.Mock();entry.check.side_effect=error
+            result=bridge.Bridge(entry).run()
+            self.assertEqual(result['result'],'BLOCK');self.assertNotIn('SYNTHETIC_SECRET',json.dumps(result))
+        entry=unittest.mock.Mock();entry.check.side_effect=Block()
+        entry.close.side_effect=PermissionError('SYNTHETIC_SECRET')
+        with self.assertRaises(Block) as caught:bridge.Bridge(entry).run()
+        self.assertNotIn('SYNTHETIC_SECRET',str(caught.exception))
+    def test_rpath_requires_unique_explicit_library(self):
+        directory=Path(self.temp.name)
+        binary=directory/'python';binary.write_bytes(b'public')
+        library=directory/'libSynthetic.dylib';library.write_bytes(b'public')
+        with patch.object(b,'_rpaths',return_value=[directory]):
+            self.assertEqual(b._resolve_rpath('@rpath/libSynthetic.dylib',binary,binary,[]),library)
+            with self.assertRaises(Block):b._resolve_rpath('@rpath/missing.dylib',binary,binary,[])
+            other=directory/'other';other.mkdir();(other/library.name).write_bytes(b'other')
+            with patch.object(b,'_rpaths',return_value=[directory,other]):
+                with self.assertRaises(Block):b._resolve_rpath('@rpath/libSynthetic.dylib',binary,binary,[])
+    def test_rpath_loaded_install_id_and_exact_loader_path(self):
+        directory=Path(self.temp.name);binary=directory/'python';binary.write_bytes(b'public')
+        library=directory/'DifferentFileName';library.write_bytes(b'public')
+        with patch.object(b,'_rpaths',return_value=[]),patch.object(b,'_invoke',return_value=(0,b'public:\n@rpath/libSynthetic.dylib\n')):
+            self.assertEqual(b._resolve_rpath('@rpath/libSynthetic.dylib',binary,binary,[library]),library)
+        output=b'public:\n cmd LC_RPATH\n cmdsize 32\n path @loader_path (offset 12)\n'
+        with patch.object(b,'_invoke',return_value=(0,output)):
+            self.assertEqual(b._rpaths(binary,binary),[directory])
     def test_bound_wire_never_accepts_private_target(self):
         wire=object.__new__(bridge.BoundWire)
         target=Target('synthetic','private_db','private.synthetic.invalid',3306,'inspector',b'fake CA','0'*64,'a'*40,0,2**31)

@@ -88,10 +88,10 @@ def _rpaths(path,executable):
         if text.startswith(b'cmd '):active=text==b'cmd LC_RPATH'
         elif active and text.startswith(b'path '):
             value=os.fsdecode(text[5:].split(b' (offset ',1)[0])
-            if value.startswith('@loader_path/'):
-                target=path.parent/value[len('@loader_path/'):]
-            elif value.startswith('@executable_path/'):
-                target=executable.parent/value[len('@executable_path/'):]
+            if value=='@loader_path' or value.startswith('@loader_path/'):
+                target=path.parent/(value[len('@loader_path/'): ] if value!='@loader_path' else '')
+            elif value=='@executable_path' or value.startswith('@executable_path/'):
+                target=executable.parent/(value[len('@executable_path/'): ] if value!='@executable_path' else '')
             elif value.startswith('/'):
                 target=Path(value)
             else:raise Block()
