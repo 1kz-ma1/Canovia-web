@@ -43,6 +43,15 @@ class StopBoundary(unittest.TestCase):
     def test_loaded_public_spec_origin_after_start_blocks(self):
         with patch.object(p.r.__spec__,'origin',str(self.private/'unreviewed.py')):
             with self.assertRaises(Block):self.program.check()
+        # Full94 legitimately loads byte-identical helpers from its separate
+        # frozen-assets mount. Origin equality alone must not admit changed code.
+        name='p0_mysql_metadata_grants_guard'
+        module=sys.modules[name];copy=self.private/'copied_helper.py'
+        copy.write_bytes(self.program.files['scripts/ci/'+name+'.py'])
+        with patch.object(module,'__file__',str(copy)),patch.object(module.__spec__,'origin',str(copy)):
+            self.program.check()
+            copy.write_bytes(b'# synthetic unreviewed replacement\n')
+            with self.assertRaises(Block):self.program.check()
 
     def test_review_acl_failure_cannot_resume_after_repair(self):
         review=self.load()

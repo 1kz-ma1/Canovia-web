@@ -127,8 +127,11 @@ class Program:
                 if module is not None:
                     origin=getattr(module,'__file__',None)
                     spec_origin=getattr(getattr(module,'__spec__',None),'origin',None)
-                    if (not origin or not spec_origin or not os.path.samefile(path,origin)
-                            or not os.path.samefile(path,spec_origin)):raise Block()
+                    # The existing frozen harness mounts reviewed helper
+                    # copies separately. Bind their actual bytes and both
+                    # origin declarations, not a particular mount pathname.
+                    if (not origin or not spec_origin or not os.path.samefile(origin,spec_origin)
+                            or dist._public_file(origin,4*1024*1024,allow_empty=True)!=self.files[name]):raise Block()
             # Frozen comparator may be mounted separately, but its loaded bytes
             # cannot be replaced by moving-main implementations or import hooks.
             for module_name,file_name in [('e858_audit.core','e858_audit/core.py'),
