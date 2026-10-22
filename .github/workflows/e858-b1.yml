@@ -48,6 +48,9 @@ jobs:
           sudo install -d -m 700 -o "$(id -u)" -g "$(id -g)" "$B1_TEST_PARENT"
           echo "B1_SYNTHETIC_PARENT=$B1_TEST_PARENT" >> "$GITHUB_ENV"
       - run: |
+          # setup-python injects this Linux loader override. Start the test
+          # interpreter without it; Program must keep rejecting overrides.
+          unset LD_LIBRARY_PATH
           python3 -B -m unittest discover -s tests/ci -p test_e858_b1_operator.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b1_integrity.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b1_bundle.py -v

@@ -118,7 +118,7 @@ class Practical(unittest.TestCase):
             with self.assertRaises(binding.Block):self.program.check()
 
     def test_stdlib_origin_or_content_drift_is_block(self):
-        for key in ('SSLKEYLOGFILE','OPENSSL_CONF','OPENSSL_MODULES','DYLD_INSERT_LIBRARIES'):
+        for key in ('SSLKEYLOGFILE','OPENSSL_CONF','OPENSSL_MODULES','DYLD_INSERT_LIBRARIES','LD_LIBRARY_PATH','LD_PRELOAD'):
             with patch.dict(os.environ,{key:CANARY}):
                 with self.assertRaises(binding.Block) as caught:self.program.check()
                 self.assertNotIn(CANARY,str(caught.exception))
