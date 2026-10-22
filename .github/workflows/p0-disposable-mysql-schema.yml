@@ -2,32 +2,9 @@ name: P0 Disposable MySQL Migration Integrity
 
 on:
   pull_request:
-    branches: [main]
-    paths:
-      - 'database/migrations/**'
-      - 'tests/Feature/ProductionMysqlSchemaP0Test.php'
-      - 'scripts/sql/p0_mysql_readonly_schema_inventory.sql'
-      - 'scripts/ci/p0_mysql_readonly_schema_inventory_check.php'
-      - 'scripts/ci/p0_mysql_inventory_offline_triage.py'
-      - 'tests/ci/test_p0_mysql_inventory_offline_triage.py'
-      - 'scripts/ci/p0_mysql_inventory_tsv_import.py'
-      - 'tests/ci/test_p0_mysql_inventory_tsv_import.py'
-      - 'scripts/sql/p0_mysql_readonly_full_migration_ledger.sql'
-      - 'scripts/ci/p0_mysql_full_ledger_offline_check.py'
-      - 'scripts/ci/p0_mysql_disposable_restore_smoke.sh'
-      - 'scripts/ops/p0_mysql_readonly_preflight.php'
-      - 'scripts/ops/p0_mysql_operator_select_only_collect.sh'
-      - 'scripts/ci/p0_mysql_metadata_grants_guard.py'
-      - 'tests/ci/test_p0_mysql_metadata_grants_guard.py'
-      - 'scripts/ci/p0_mysql_metadata_visibility_smoke.sh'
-      - 'scripts/ops/p0_aiven_zero_grants_payload.py'
-      - 'tests/ci/test_p0_aiven_zero_grants_payload.py'
-      - 'scripts/sql/p0_mysql_select_only_data_preflight.sql'
-      - 'scripts/ci/p0_mysql_select_only_data_preflight_import.py'
-      - 'tests/ci/test_p0_mysql_select_only_data_preflight_import.py'
-      - 'scripts/sql/p0_mysql_disposable_full_schema_fingerprint.sql'
-      - 'tests/ci/test_p0_mysql_full_ledger_offline_check.py'
-      - '.github/workflows/p0-disposable-mysql-schema.yml'
+    branches: [production]
+  push:
+    branches: [production, fix/php8427-protected-ci-rehearsal-20261022]
   workflow_dispatch:
 
 permissions:
