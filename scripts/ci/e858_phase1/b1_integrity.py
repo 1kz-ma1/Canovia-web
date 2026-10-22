@@ -79,6 +79,44 @@ def checkout(root,head,archive,archive_sha):
     except BaseException:raise Block() from None
 
 
+def _rpaths(path,executable):
+    code,raw=_invoke('/usr/bin/otool',('-l',str(path)))
+    if code:raise Block()
+    values=[];active=False
+    for line in raw.splitlines():
+        text=line.strip()
+        if text.startswith(b'cmd '):active=text==b'cmd LC_RPATH'
+        elif active and text.startswith(b'path '):
+            value=os.fsdecode(text[5:].split(b' (offset ',1)[0])
+            if value.startswith('@loader_path/'):
+                target=path.parent/value[len('@loader_path/'):]
+            elif value.startswith('@executable_path/'):
+                target=executable.parent/value[len('@executable_path/'):]
+            elif value.startswith('/'):
+                target=Path(value)
+            else:raise Block()
+            values.append(target)
+    if len(values)>64:raise Block()
+    return values
+
+
+def _resolve_rpath(value,path,executable,loaded):
+    # No default search paths, environment lookup or basename-only acceptance.
+    candidates=[]
+    for parent in (path,executable):
+        for base in _rpaths(parent,executable):
+            target=base/value[len('@rpath/'):]
+            if target.is_file():candidates.append(target.resolve(strict=True))
+    for image in loaded:
+        if str(image).startswith(('/usr/lib/','/System/Library/')):continue
+        code,raw=_invoke('/usr/bin/otool',('-D',str(image)))
+        if code==0 and os.fsencode(value) in [line.strip() for line in raw.splitlines()[1:]]:
+            candidates.append(image.resolve(strict=True))
+    matches=set(candidates)
+    if len(matches)!=1:raise Block()
+    return matches.pop()
+
+
 def native_graph():
     """Actual dyld images plus transitive otool declarations on THIS Mac.
 
@@ -123,10 +161,9 @@ def native_graph():
                 elif value.startswith('/'):
                     target=Path(value)
                 elif value.startswith('@rpath/'):
-                    matches=[p for p in paths if p.name==Path(value).name]
-                    if len(matches)!=1:
-                        boundary='RPATH_NOT_UNIQUE';raise Block()
-                    target=matches[0]
+                    boundary='RPATH_NOT_UNIQUE'
+                    target=_resolve_rpath(value,path,Path(sys.executable).resolve(),paths)
+                    boundary='LINK_PARSER'
                 else:
                     boundary='UNKNOWN_INSTALL_NAME';raise Block()
                 dependencies.append(target)
