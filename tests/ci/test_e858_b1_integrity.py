@@ -71,7 +71,7 @@ class Integrity(unittest.TestCase):
         with self.assertRaises(Block) as caught:bridge.Bridge(entry).run()
         self.assertNotIn('SYNTHETIC_SECRET',str(caught.exception))
     def test_rpath_requires_unique_explicit_library(self):
-        directory=Path(self.temp.name)
+        directory=Path(self.temp.name).resolve()
         binary=directory/'python';binary.write_bytes(b'public')
         library=directory/'libSynthetic.dylib';library.write_bytes(b'public')
         with patch.object(b,'_rpaths',return_value=[directory]):
@@ -81,7 +81,7 @@ class Integrity(unittest.TestCase):
             with patch.object(b,'_rpaths',return_value=[directory,other]):
                 with self.assertRaises(Block):b._resolve_rpath('@rpath/libSynthetic.dylib',binary,binary,[])
     def test_rpath_loaded_install_id_and_exact_loader_path(self):
-        directory=Path(self.temp.name);binary=directory/'python';binary.write_bytes(b'public')
+        directory=Path(self.temp.name).resolve();binary=directory/'python';binary.write_bytes(b'public')
         library=directory/'DifferentFileName';library.write_bytes(b'public')
         with patch.object(b,'_rpaths',return_value=[]),patch.object(b,'_invoke',return_value=(0,b'public:\n@rpath/libSynthetic.dylib\n')):
             self.assertEqual(b._resolve_rpath('@rpath/libSynthetic.dylib',binary,binary,[library]),library)
