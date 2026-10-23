@@ -15,6 +15,9 @@ import shutil
 import stat
 import sys
 
+# Isolated -I invokes this file by absolute path, not from repo root.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 from scripts.ci.php8427_live94_offline_source_gate import (
     Block, LIVE_SHA, LIVE_MIGRATION_COUNT, verify_source,
 )
@@ -114,7 +117,7 @@ def preflight(
         # This checker reads local Git/fs metadata only. It never executes
         # the old collector/SQL, mysql, or anything involving Aiven secrets.
         checker(checkout)
-    except (OSError, Block, ValueError, TypeError):
+    except Exception:  # Any unanticipated local verifier failure is a fixed-code HOLD.
         return result(
             "SOURCE_PIN_OR_LOCAL_EXECUTABLE_CHECK_FAILED",
             mac_platform=True, local_binary_permissions_sane=True,
