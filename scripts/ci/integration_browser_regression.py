@@ -25,6 +25,10 @@ def run(name, artifacts, executable=None, engine='chromium'):
     # Retain tool activation, not provider credentials or production DB values.
     env = {k: os.environ[k] for k in ['PATH', 'PHPRC', 'PHP_INI_SCAN_DIR', 'LD_LIBRARY_PATH',
            'LANG', 'NODE_EXTRA_CA_CERTS'] if k in os.environ}
+    # The pinned official Playwright container supplies browsers here. Retain
+    # only that fixed test-asset path; never pass arbitrary target/DB settings.
+    if os.environ.get('PLAYWRIGHT_BROWSERS_PATH') == '/ms-playwright':
+        env['PLAYWRIGHT_BROWSERS_PATH'] = '/ms-playwright'
     with tempfile.TemporaryDirectory(prefix='canovia-integration-') as private:
         database = Path(private) / ('learning-v621-browser.sqlite' if name == 'study' else 'synthetic.sqlite')
         database.touch(mode=0o600)
