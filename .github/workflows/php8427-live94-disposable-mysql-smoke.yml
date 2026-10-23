@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - scripts/ci/php8427_live94_ci_single_session_executor.py
+      - tests/ci/test_php8427_live94_ci_single_session_executor.py
+      - docs/development/PHP8427_LIVE94_CI_ONE_CLIENT_EXECUTOR_2026_10_23.md
       - scripts/ci/php8427_live94_disposable_positive_san_tls.sh
       - tests/ci/test_php8427_live94_disposable_positive_san_tls.py
       - docs/development/PHP8427_LIVE94_DISPOSABLE_POSITIVE_SAN_TLS_2026_10_23.md
@@ -61,6 +64,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_disposable_mysql_smoke.py -v
+
+      - name: Reject unapproved target, default credentials and SQL drift in executor
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci \
+            -p test_php8427_live94_ci_single_session_executor.py -v
 
       - name: Reject SAN test outside disposable environment and validate Bash
         run: |
