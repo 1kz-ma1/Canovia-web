@@ -1,0 +1,115 @@
+name: PHP 8.4.27 Legacy Live94 Audit Source Gate (Offline)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/ci/php8427_live94_offline_source_gate.py
+      - tests/ci/test_php8427_live94_offline_source_gate.py
+      - .github/workflows/php8427-live94-offline-source-gate.yml
+      - docs/development/PHP8427_LIVE94_AUDIT_SOURCE_ONLY_2026_10_23.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live94-source-only:
+    name: Legacy Live94 source and negative controls (not Aiven GO)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out PR source, without private input
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Unit negative controls (synthetic only)
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_offline_source_gate.py -v
+
+      - name: Isolate exact old Live94 source tree
+        run: |
+          set -euo pipefail
+          test "$(git cat-file -t 15abdc9de6f24b5250fb255c579d1aa55facaf1a)" = commit
+          git worktree add --detach "$RUNNER_TEMP/canovia-live94-offline-ci" 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+
+      - name: Frozen source must pass but never report DB or release GO
+        run: |
+          set -euo pipefail
+          live="$RUNNER_TEMP/canovia-live94-offline-ci"
+          python3 -I -B scripts/ci/php8427_live94_offline_source_gate.py --checkout "$live" > "$RUNNER_TEMP/live94-result.json"
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          a=json.loads((Path(os.environ["RUNNER_TEMP"])/"live94-result.json").read_text())
+          assert a["result"]=="REVIEW_REQUIRED"
+          assert a["code"]=="LIVE94_SOURCE_PINNED_NO_AIVEN"
+          assert a["migration_source_count"]==94
+          assert a["audit_source_count"]==7
+          assert a["real_aiven_connected"] is False
+          assert a["live_db_schema_verified"] is False
+          assert a["backup_restore_verified"] is False
+          assert a["release_authorized"] is False
+          print("EXACT_LIVE94_GIT_SOURCE=PASS; REAL_AIVEN=NOT_ATTEMPTED; PRODUCTION=NO_GO")
+          PY
+
+      - name: Tamper the executable SQL; exact-source preflight MUST fail
+        run: |
+          set -euo pipefail
+          live="$RUNNER_TEMP/canovia-live94-offline-ci"
+          printf '\n-- synthetic unauthorized change\n' >> "$live/scripts/sql/p0_mysql_readonly_schema_inventory.sql"
+          if python3 -I -B scripts/ci/php8427_live94_offline_source_gate.py --checkout "$live" > "$RUNNER_TEMP/tamper-result.json"; then
+            echo "UNEXPECTED_SQL_TAMPER_ACCEPTED" >&2
+            exit 1
+          fi
+          grep -Fq '"result": "BLOCK"' "$RUNNER_TEMP/tamper-result.json"
+          git -C "$live" restore -- scripts/sql/p0_mysql_readonly_schema_inventory.sql
+
+      - name: Even ignored, extra migration PHP must fail
+        run: |
+          set -euo pipefail
+          live="$RUNNER_TEMP/canovia-live94-offline-ci"
+          printf '<?php // synthetic unexpected migration\n' > "$live/database/migrations/2026_12_01_000000_unexpected.php"
+          if python3 -I -B scripts/ci/php8427_live94_offline_source_gate.py --checkout "$live" > "$RUNNER_TEMP/extra-result.json"; then
+            echo "UNEXPECTED_MIGRATION_ACCEPTED" >&2
+            exit 1
+          fi
+          grep -Fq '"result": "BLOCK"' "$RUNNER_TEMP/extra-result.json"
+          rm -- "$live/database/migrations/2026_12_01_000000_unexpected.php"
+
+      - name: Sanitized legacy 94/94 is strictly offline and not a release approval
+        run: |
+          set -euo pipefail
+          live="$RUNNER_TEMP/canovia-live94-offline-ci"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ["RUNNER_TEMP"])
+          baseline=dict(
+              result="REVIEW_REQUIRED",code="FULL_MIGRATION_LEDGER_MATCH_NOT_RELEASE",
+              release_authorized=False,production_database_modified=False,
+              expected_count=94,applied_count=94,pending_count=0,
+              forward_repair_pending=False,other_pending_count=0,
+          )
+          (root/"synthetic-summary.json").write_text(json.dumps(baseline))
+          pending={**baseline,"code":"KNOWN_PENDING_MIGRATIONS","applied_count":93,
+                   "pending_count":1,"other_pending_count":1}
+          (root/"synthetic-pending.json").write_text(json.dumps(pending))
+          PY
+          python3 -I -B scripts/ci/php8427_live94_offline_source_gate.py --checkout "$live" \
+            --sanitized-ledger-summary "$RUNNER_TEMP/synthetic-summary.json" > "$RUNNER_TEMP/summary-result.json"
+          if python3 -I -B scripts/ci/php8427_live94_offline_source_gate.py --checkout "$live" \
+            --sanitized-ledger-summary "$RUNNER_TEMP/synthetic-pending.json" > "$RUNNER_TEMP/summary-pending-result.json"; then
+            echo 'UNEXPECTED_PENDING_LEDGER_ACCEPTED' >&2
+            exit 1
+          fi
+          grep -Fq '"result": "BLOCK"' "$RUNNER_TEMP/summary-pending-result.json"
+          grep -Fq '"code": "LIVE94_SANITIZED_LEDGER_CONSISTENT_UNAUTHENTICATED"' "$RUNNER_TEMP/summary-result.json"
+          echo "SYNTHETIC_LEDGER_94_EXACT=PASS; KNOWN_PENDING=BLOCK; NO_REAL_DB"
+
+      - name: State the boundary
+        run: |
+          echo "OFFLINE_ONLY; GITHUB_REPO_FILES_ONLY; NO_SQL; NO_SOCKET; NO_AIVEN_LOGIN"
+          echo "No local owner authorization, real target identity or recovery is established."
