@@ -1,0 +1,82 @@
+name: PHP 8.4.27 Live94 Mac Operator Offline Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/ops/php8427_live94_mac_offline_preflight.py
+      - tests/ci/test_php8427_live94_mac_offline_preflight.py
+      - .github/workflows/php8427-live94-mac-offline-preflight.yml
+      - docs/development/PHP8427_LIVE94_MAC_OPERATOR_OFFLINE_PREFLIGHT_2026_10_23.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inert-operator-review:
+    name: "Offline operator sanity checks (NO Aiven; always HOLD)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Check out reviewed feature branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Test simulated Mac acceptance and negative scenarios
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover \
+            -s tests/ci -p test_php8427_live94_mac_offline_preflight.py -v
+
+      - name: Test old Live94 pinned Git checkout independently
+        run: |
+          set -euo pipefail
+          test "$(git cat-file -t 15abdc9de6f24b5250fb255c579d1aa55facaf1a)" = commit
+          git worktree add --detach "$RUNNER_TEMP/live94-operator-offline-source" \
+            15abdc9de6f24b5250fb255c579d1aa55facaf1a
+          python3 -I -B scripts/ci/php8427_live94_offline_source_gate.py \
+            --checkout "$RUNNER_TEMP/live94-operator-offline-source" \
+            > "$RUNNER_TEMP/source-only.json"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          d=json.loads((Path(os.environ['RUNNER_TEMP'])/'source-only.json').read_text())
+          assert d['result']=='REVIEW_REQUIRED'
+          assert d['code']=='LIVE94_SOURCE_PINNED_NO_AIVEN'
+          assert d['migration_source_count']==94
+          assert d['audit_source_count']==7
+          assert d['real_aiven_connected'] is False
+          assert d['release_authorized'] is False
+          print('OLD_LIVE94_SOURCE=PASS; AIVEN=NOT_RUN; RELEASE=NO_GO')
+          PY
+
+      - name: Actual Linux CI cannot impersonate operator Mac
+        run: |
+          set -euo pipefail
+          if python3 -I -B scripts/ops/php8427_live94_mac_offline_preflight.py \
+              --checkout "$RUNNER_TEMP/live94-operator-offline-source" > "$RUNNER_TEMP/mac-result.json"; then
+            echo 'UNEXPECTED_CI_OPERATOR_APPROVAL' >&2
+            exit 2
+          fi
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          d=json.loads((Path(os.environ['RUNNER_TEMP'])/'mac-result.json').read_text())
+          assert d['verdict']=='HOLD'
+          assert d['code']=='NOT_PRIVATE_OPERATOR_MAC'
+          assert d['source_exact'] is False
+          assert d['mysql_invoked'] is False
+          assert d['network_access_attempted'] is False
+          assert d['credential_material_read'] is False
+          assert d['owner_connection_go'] is False
+          assert d['production_go'] is False
+          print('CI_OPERATOR_IMPERSONATION=DENIED; AIVEN=NOT_RUN')
+          PY
+
+      - name: Explicit security boundary
+        run: |
+          echo 'NO_MYSQL_EXECUTION; NO_AIVEN_READ; NO_PRIVATE_CREDS_OR_CERTS'
+          echo 'CI MAC TESTS ARE MOCKED; OPERATOR RUNTIME PROVENANCE UNVERIFIED'
+          echo 'OWNER_CONNECTION_APPROVAL=NOT_GRANTED; PRODUCTION=NO_GO'
