@@ -24,7 +24,7 @@ class ChildSupervisor(unittest.TestCase):
         return process
 
     def failure(self,code,status,seconds=.6):
-        process=self.launch(code);out,err=io.StringIO(),io.StringIO();start=time.monotonic()
+        process=self.launch('import sys;sys.stdin.buffer.read()\n'+code);out,err=io.StringIO(),io.StringIO();start=time.monotonic()
         with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
             with self.assertRaises(Block) as error:b.exchange(process,b'{}',start+seconds)
         self.assertEqual(error.exception.dns_status,status)
@@ -74,7 +74,7 @@ class ChildSupervisor(unittest.TestCase):
         finally:kill();process.wait(timeout=2)
 
     def test_unknown_cleanup_overrides_even_successful_output(self):
-        process=self.launch("import sys;sys.stdout.write('{}')")
+        process=self.launch("import sys;sys.stdin.buffer.read();sys.stdout.write('{}')")
         with patch.object(b,'reap',return_value=False):
             with self.assertRaises(Block) as error:b.exchange(process,b'{}',time.monotonic()+2)
         self.assertEqual(error.exception.dns_status,'DNS_CHILD_CLEANUP_UNVERIFIED')
