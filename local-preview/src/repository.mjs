@@ -18,7 +18,7 @@ export class Repository {
       };
       let blocked = false;
       request.onblocked = () => { blocked = true; reject(new LocalError('VERSION_BLOCKED')); };
-      request.onerror = () => reject(new LocalError('STORAGE_UNAVAILABLE'));
+      request.onerror = () => reject(new LocalError(request.error?.name === 'VersionError' ? 'UNSUPPORTED_SCHEMA' : 'STORAGE_UNAVAILABLE'));
       request.onsuccess = async () => {
         if (blocked) { request.result.close(); return; }
         const repo = new Repository(request.result);

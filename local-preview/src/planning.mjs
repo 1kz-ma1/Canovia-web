@@ -1,11 +1,11 @@
 import {record,requireValue,localDay} from './model.mjs';
 export function createPlan(state, values) {
-  const p=record(state,{title:values.title.trim(),description:values.description||'',domain:values.domain,start_date:values.start_date,deadline:values.deadline||null,priority:values.priority??1});
+  const p=record(state,{title:values.title.trim(),description:values.description||'',domain:values.domain,start_date:values.start_date,deadline:values.deadline||null,priority:Number(values.priority??1)});
   state.plans.push(p);return p;
 }
 export function createTask(state, values) {
   requireValue(state.plans.some(p=>p.id===values.plan_id),'BROKEN_REFERENCE');
-  const task=record(state,{plan_id:values.plan_id,title:values.title.trim(),description:values.description||'',estimated_minutes:Number(values.estimated_minutes),remaining_minutes:Number(values.estimated_minutes),progress_percent:0,status:'todo',priority:values.priority??1,sort_order:state.tasks.filter(t=>t.plan_id===values.plan_id).length});
+  const task=record(state,{plan_id:values.plan_id,title:values.title.trim(),description:values.description||'',estimated_minutes:Number(values.estimated_minutes),remaining_minutes:Number(values.estimated_minutes),progress_percent:0,status:'todo',priority:Number(values.priority??1),sort_order:state.tasks.filter(t=>t.plan_id===values.plan_id).length});
   state.tasks.push(task);return task;
 }
 export function updatePlan(state,id,values) {
