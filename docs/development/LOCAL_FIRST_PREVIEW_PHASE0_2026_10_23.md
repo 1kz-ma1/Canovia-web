@@ -139,3 +139,9 @@
 作業は単一active WorkSession、保存した秒数と本人確認Task進捗を分離。UIの単調時計で5秒ごとにcheckpoint（同一revision transaction）し、pause/resume/finishを状態機械で処理、同sessionのLogは1件のみ。見積加重進捗・残分・実績分を別表示、取消を進捗から除外。推薦は本人priority/doing/実績未記録/順序の決定的な参考候補。
 
 離席visibilitychangeでpauseを試みるがpage closeの非同期書込成功は保証しない。reload/別タブ復帰では保存済みactive秒数だけを残してrunningをpausedにし、未観測の離席時間を加算しない。古いタブはCAS失敗で停止。時計差5秒超/観測間隔15秒超は未観測時間を加算せずpause、書込失敗はpulseを停止し成功表示しない。Task状態・進捗は実績時間や正答率では更新しない。これは稼働率/勤怠保証ではなく、短い未保存区間が失われ得る保守的な個人記録。
+
+## 13. Phase 3 学習ループ・教材境界
+
+既存QuestionBankGraderのexact_choice意味論を、1問LearningRun相当の独立ローカルsessionに移植。選択時にdraftだけ保存、本人の確定操作でsnapshotに対して決定的採点しAttemptを1件作成、二重採点拒否。全選択肢/回答本文/正答/解説を表示し、後のpack変更で履歴を再採点しない。分野別集計は実Attemptのみ、2問以上かつ70%未満を参考弱点候補とする。未出題を優先、同じ出題回数なら弱点分野を優先。原因や習熟/Task完了は推測しない。同一問題再回答を別問題確認と区別する。
+
+同梱は第三者素材を含まない新規オリジナルの**動作検証専用**6問（簡単な数・論理）。review_status=validation_only、AP試験教材の承認とは扱わない。既存AP Core/IPA/AP80 JSONは一切コピーしない。一般向けrelease artifactの作成には、別途人間レビュー・教材公開承認と静的release gate通過を必須とする。本コードのGitHub統合/ローカル動作は教材公開ではない。
