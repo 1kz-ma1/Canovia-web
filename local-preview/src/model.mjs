@@ -43,5 +43,13 @@ export function validate(state) {
   const logged = new Set();
   for (const l of state.work_logs) {const session=sessions.get(l.session_id);requireValue(session && session.status === 'finished' && session.task_id === l.task_id && session.plan_id === l.plan_id && !logged.has(l.session_id) && date(l.worked_on) && number(l.actual_seconds,31536000) && l.actual_seconds === session.active_seconds && l.actual_minutes === l.actual_seconds/60 && text(l.memo) && number(l.progress_before,100) && number(l.progress_after,100));logged.add(l.session_id);}
   requireValue(state.work_sessions.filter(s => s.status === 'finished').every(s => logged.has(s.id)));
+  const practice = new Map(state.practice_sessions.map(s=>[s.id,s]));
+  for(const s of state.practice_sessions) {
+    const q=s.question;requireValue(plans.get(s.plan_id).domain==='study' && ['draft','submitted'].includes(s.status) && text(s.pack_id,120) && Number.isSafeInteger(s.pack_version) && s.pack_version>0 && Array.isArray(s.question_ids) && s.question_ids.length===1 && q && text(q.id,120) && q.id===s.question_ids[0] && text(q.prompt,4000) && q.prompt.trim() && text(q.topic,120) && text(q.explanation,4000) && q.choices && Object.getPrototypeOf(q.choices)===Object.prototype && Object.keys(q.choices).length>=2 && Object.keys(q.choices).length<=8 && Object.entries(q.choices).every(([k,v])=>/^[a-z]$/.test(k)&&text(v,2000)) && Object.hasOwn(q.choices,q.answer));
+    requireValue(s.draft_answers && Object.getPrototypeOf(s.draft_answers)===Object.prototype && Object.keys(s.draft_answers).length<=1 && Object.entries(s.draft_answers).every(([k,v])=>k===q.id&&Object.hasOwn(q.choices,v)) && (s.status==='draft'?s.submitted_at===null:instant(s.submitted_at)));
+  }
+  const graded=new Set();
+  for(const a of state.practice_attempts){const s=practice.get(a.session_id);requireValue(s && s.status==='submitted' && !graded.has(s.id) && a.question_id===s.question.id && a.pack_version===s.pack_version && Object.hasOwn(s.question.choices,a.answer) && s.draft_answers[a.question_id]===a.answer && a.correct===(a.answer===s.question.answer) && Array.isArray(a.topic_keys) && a.topic_keys.length===1 && a.topic_keys[0]===s.question.topic && instant(a.graded_at) && a.graded_at===s.submitted_at);graded.add(s.id);}
+  requireValue(state.practice_sessions.filter(s=>s.status==='submitted').every(s=>graded.has(s.id)));
   return state;
 }
