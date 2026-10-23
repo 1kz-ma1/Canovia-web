@@ -48,6 +48,8 @@ from e858_phase1.b1_bridge import Bridge
 from e858_phase1.practical import Adapter, PrivateReview, PrivateWire, Program, ReviewedEntry
 from e858_phase1.phase1_application import Phase1ApplicationReview
 from e858_phase1.opener_candidate import OpenerCandidate, select_peer
+from e858_phase1.backend_candidate import exchange
+from e858_phase1.launcher_candidate import LauncherCandidate
 from e858_phase1.b1_integrity import installed_wheel
 from e858_tls.bridge import assets,assess
 print('B1_IMPORT_CLOSURE_VERIFIED')
