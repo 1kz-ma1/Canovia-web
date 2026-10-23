@@ -77,8 +77,10 @@ final class PreparationCompatibilityMatrixTest extends TestCase
             $response = $this->get(route("workspace.{$mode}.index", ['plan_id' => $plan->id]));
             if ($preparation) {
                 $response->assertNotFound();
-            } elseif ($level === 0 || $actor === 'anonymous') {
-                $this->assertNotSame(200, $response->status());
+            } elseif ($level === 0) {
+                $response->assertRedirect();
+            } elseif ($actor === 'anonymous') {
+                $response->assertNotFound();
             } else {
                 $response->assertOk();
             }
@@ -90,7 +92,7 @@ final class PreparationCompatibilityMatrixTest extends TestCase
         } elseif ($actor !== 'anonymous' && $level === 1) {
             $history->assertOk();
         } else {
-            $this->assertNotSame(200, $history->status());
+            $history->assertForbidden();
         }
         if ($actor !== 'anonymous') {
             $this->get(route('plans.show', $study))->assertOk();
