@@ -145,3 +145,9 @@
 既存QuestionBankGraderのexact_choice意味論を、1問LearningRun相当の独立ローカルsessionに移植。選択時にdraftだけ保存、本人の確定操作でsnapshotに対して決定的採点しAttemptを1件作成、二重採点拒否。全選択肢/回答本文/正答/解説を表示し、後のpack変更で履歴を再採点しない。分野別集計は実Attemptのみ、2問以上かつ70%未満を参考弱点候補とする。未出題を優先、同じ出題回数なら弱点分野を優先。原因や習熟/Task完了は推測しない。同一問題再回答を別問題確認と区別する。
 
 同梱は第三者素材を含まない新規オリジナルの**動作検証専用**6問（簡単な数・論理）。review_status=validation_only、AP試験教材の承認とは扱わない。既存AP Core/IPA/AP80 JSONは一切コピーしない。一般向けrelease artifactの作成には、別途人間レビュー・教材公開承認と静的release gate通過を必須とする。本コードのGitHub統合/ローカル動作は教材公開ではない。
+
+## 14. Phase 4 JSON保護・隔離復元
+
+exportはcommit済みsnapshotを読み、format/schema_version/exported_at/source_installation_id/dataと**canonical payload（キー順整列）のSHA-256**を持つJSONを作る。空白やキー順の違いは破損と扱わない。checksumは署名/暗号化/本人証明ではない。8MiB/深さ12/要素1,000,000/レコード20,000まで、unknown schema・参照/採点矛盾・prototype key・重複IDを拒否。保存状態そのものも6MiB以内に制限し、compact exportが8MiB内に収まる余裕を維持する。schema1より古い未定義形式は勝手に変換せず元データを保持し案内する。
+
+Importは全件検査→追加/一致件数preview→本人confirm→raw/hashを再検査しpreview時revisionのCAS transactionで一括merge。同ID同内容は保持、別内容/異なるprofile競合は全件拒否、上書きなし。file hash receiptと全件一致検査で二重取込を拒否。受入先installation_idは独立のまま、各recordのsource_installation_id/UUIDを保持し、将来の専用Cloud importerの対応キーにできる（本番import機能は作らない）。running作業は未観測時間を加算せずpausedへ復旧するため、active状態の完全再開を約束しない。表の事実データの一致は別ブラウザcontext E2Eで確認する。保存先JSONは非暗号化と説明し、バックアップ作成成功と実際の端末ファイル保管/復元受入を分ける。
