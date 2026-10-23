@@ -193,7 +193,16 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
                 # Classify in private memory; NEVER emit raw CLI stderr.
                 message = err.read_bytes()[:8192].lower()
                 if b"unknown option" in message or b"unknown variable" in message:
-                    code = "UNSUPPORTED_OPTION"
+                    # Never print raw MySQL errors, only a locally whitelisted
+                    # argument token; no target, account or message leaks.
+                    allowed = (
+                        b"no-login-paths", b"skip-reconnect",
+                        b"local-infile", b"skip-system-command",
+                        b"skip-named-commands", b"no-defaults",
+                    )
+                    bad = next((v.decode("ascii").upper().replace("-", "_")
+                                for v in allowed if v in message), "OTHER")
+                    code = "UNSUPPORTED_OPTION_" + bad
                 elif b"access denied" in message:
                     code = "AUTH_DENIED"
                 elif b"ssl" in message or b"certificate" in message or b"tls" in message:
