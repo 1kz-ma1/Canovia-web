@@ -31,7 +31,8 @@ final class PersonalizationController extends Controller
             withinMinutes: 30,
         );
 
-        return view('personalization.show', [
+        return view(app(\App\Services\ReleaseLevelService::class)->preparationOnly()
+            ? 'preparation.diagnosis' : 'personalization.show', [
             'context' => $contexts->current($request),
             'source' => $this->source($request),
         ]);
@@ -190,6 +191,9 @@ final class PersonalizationController extends Controller
         }
 
         $seeds = $bootstrap->seeds($context);
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return view('preparation.diagnosis-result', compact('context', 'seeds'));
+        }
         $githubPreview = $bootstrap->githubPreview($context);
 
         if ($seeds !== []) {

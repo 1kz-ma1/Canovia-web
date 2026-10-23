@@ -46,6 +46,9 @@ class PlanController extends Controller
         WorkspaceModeRegistry $workspaceModes,
     ) {
         $prefill = $request->session()->pull('plan_create_prefill', []);
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return view('preparation.form', ['prefill' => $prefill, 'plan' => null]);
+        }
         $workspaceModeContext = $this->workspaceModeCreateContext(
             $request->query('workspace_mode'),
             $workspaceModes,
@@ -321,7 +324,9 @@ class PlanController extends Controller
         }
 
         return redirect()->route('plans.show', $plan)
-            ->with('status', '目標を保存しました。まず今できることから始めましょう。タスクやロードマップは必要になった時点で整理できます。');
+            ->with('status', app(\App\Services\ReleaseLevelService::class)->preparationOnly()
+                ? '目標を保存しました。同じアカウントで、いつでも準備を続けられます。'
+                : '目標を保存しました。まず今できることから始めましょう。タスクやロードマップは必要になった時点で整理できます。');
     }
 
     /**
@@ -375,6 +380,10 @@ class PlanController extends Controller
         WorkspaceModeRegistry $workspaceModes,
         bool $alreadyExists = false,
     ): ?RedirectResponse {
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return null;
+        }
+
         $profile = $categoryProfiles->forPlan($plan);
         $explicitMode = trim((string) $rawMode);
         // A generic Plan form must not funnel every new Plan through AI Task
@@ -454,6 +463,12 @@ class PlanController extends Controller
         // the full Plan detail even when is_public is enabled.
         if (! $canView) {
             abort(404);
+        }
+
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            abort_unless($canManage, 404);
+
+            return view('preparation.show', ['plan' => $plan]);
         }
 
         $plan->load([
@@ -540,6 +555,9 @@ class PlanController extends Controller
         PlanPriorityService $priorityService,
     ) {
         $ownership->authorizePlan($request, $plan);
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return view('preparation.form', ['plan' => $plan, 'prefill' => []]);
+        }
         $priorityEvaluation = $priorityService->evaluate($plan);
 
         return view('plans.edit', compact('plan', 'priorityEvaluation'));

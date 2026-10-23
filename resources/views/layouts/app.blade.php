@@ -1,3 +1,6 @@
+@if(app(\App\Services\ReleaseLevelService::class)->preparationOnly())
+    @include('layouts.preparation')
+@else
 @php
     $focusMode = request()->routeIs('work_sessions.active');
     // Question answering and an active exam use a quiet activity shell.
@@ -603,3 +606,5 @@
     @include('layouts.partials.onboarding')
 </body>
 </html>
+
+@endif

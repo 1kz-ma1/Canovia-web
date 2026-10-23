@@ -12,6 +12,7 @@ from urllib.request import build_opener, ProxyHandler
 
 ROOT = Path(__file__).resolve().parents[2]
 JOURNEYS = {
+    'preparation_surface': (18802, 'preparation_surface_browser_smoke.mjs', 'CANOVIA_PREPARATION_SURFACE'),
     'preparation': (18801, 'preparation_plan_ownership_browser_smoke.mjs', 'CANOVIA_PREPARATION'),
     'welcome': (8796, 'prelaunch_ia2d_browser_smoke.mjs', 'CANOVIA_IA2_BROWSER'),
     'development': (8791, 'development_v69_browser_smoke.mjs', 'CANOVIA_V69'),
@@ -57,6 +58,10 @@ def run(name, artifacts, executable=None, engine='chromium'):
         with (artifacts / f'{name}.log').open('w') as log:
             subprocess.run(['php', 'artisan', 'migrate', '--force', '--no-interaction'],
                            cwd=ROOT, env=env, stdout=log, stderr=log, check=True)
+            if name == 'preparation_surface':
+                # Schema preparation precedes the restrictive runtime profile.
+                # No production migration or configuration change is run here.
+                env['CANOVIA_PREPARATION_ONLY'] = 'true'
             server = subprocess.Popen(['php', 'artisan', 'serve', '--no-reload',
                                        '--host=127.0.0.1', f'--port={port}'],
                                       cwd=ROOT, env=env, stdout=log, stderr=log, start_new_session=True)

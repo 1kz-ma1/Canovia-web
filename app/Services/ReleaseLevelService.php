@@ -12,6 +12,13 @@ final class ReleaseLevelService
 {
     public const ADMIN_PREVIEW_SESSION_KEY = 'canovia_admin_release_preview_level';
 
+    public function preparationOnly(): bool
+    {
+        // Only the explicit boolean false disables this restrictive profile.
+        // Malformed cached configuration must not widen the surface.
+        return config('release_levels.preparation_only', false) !== false;
+    }
+
     public function __construct(
         private readonly AdminAccessService $adminAccess,
     ) {}
@@ -163,6 +170,10 @@ final class ReleaseLevelService
         ?User $user = null,
         ?Request $request = null,
     ): bool {
+        if ($this->preparationOnly()) {
+            return false;
+        }
+
         return $this->levelFor($user, $request)
             ->isAtLeast($this->minimumForFeature($feature));
     }
@@ -184,6 +195,10 @@ final class ReleaseLevelService
         ?User $user = null,
         ?Request $request = null,
     ): bool {
+        if ($this->preparationOnly() && $mode !== WorkspaceMode::Overview) {
+            return false;
+        }
+
         return $this->levelFor($user, $request)
             ->isAtLeast($this->minimumForWorkspace($mode));
     }
