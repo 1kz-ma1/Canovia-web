@@ -148,4 +148,35 @@ assert r["real_aiven_connected"] is False
 assert r["production_go"] is False
 print("DISPOSABLE_POSITIVE_HOST_VERIFIED_7_PINNED_SQL=PASS; SCHEMA=HOLD")
 PY
+# New client is CI-only and intentionally lacks any arbitrary host or
+# operator/live login path. It constructs the source-frozen SQL itself, starts
+# exactly one MySQL process, disallows reconnect and verifies identity/grants.
+if ! python3 -I -B scripts/ci/php8427_live94_ci_single_session_executor.py \
+  --checkout "$RUNNER_TEMP/old-live94-mysql-fixture" \
+  --ca "$scratch/ca.pem" > "$scratch/single-client-report.json"; then
+  # Only a fixed stage classification; never echo SQL, raw output or stderr.
+  python3 - "$scratch/single-client-report.json" <<'PY_FAIL'
+import json,sys
+r=json.load(open(sys.argv[1], encoding="utf-8"))
+code=r.get("code","MALFORMED")
+assert isinstance(code,str) and code.startswith("DISPOSABLE_SINGLE_CLIENT_REJECTED_")
+print("SEALED_CI_CLIENT_BLOCK=" + code)
+PY_FAIL
+  exit 2
+fi
+python3 - "$scratch/single-client-report.json" <<'PY'
+import json, sys
+from pathlib import Path
+r=json.loads(Path(sys.argv[1]).read_text())
+assert r["verdict"]=="HOLD"
+assert r["code"]=="DISPOSABLE_ONE_CLIENT_VERIFIED_TLS_FROZEN_SQL_NO_LIVE_GO"
+assert r["synthetic_one_client_finished"] is True
+assert r["synthetic_tls_verify_identity_exercised"] is True
+assert r["pinned_select_count"]==7
+assert r["synthetic_migration_ledger_count"]==94
+assert r["physical_schema_intentionally_incomplete"] is True
+for key in ("real_aiven_connected","owner_connection_go","production_go"):
+    assert r[key] is False
+print("SOURCE_BOUND_SINGLE_PROCESS_TLS_AND_SQL=PASS; REAL_AIVEN_NOT_RUN")
+PY
 echo 'REAL_AIVEN_TLS=NOT_TESTED; REMOTE_END=UNVERIFIED; PRODUCTION_GO=NO'
