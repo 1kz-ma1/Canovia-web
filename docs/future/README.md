@@ -190,6 +190,8 @@ Spatial exploration / user-controlled presentation of authorized Context, distin
 
 Developer Pro remains a dedicated Future Design because its development-orchestration details are substantial.
 
+- **Security Intelligence / Continuous Security Improvement (Concept, 2026-10-23):** the [Developer Pro Future Design](DEVELOPER_PRO_AI_DEVELOPMENT_ORCHESTRATION.md) now includes §56 on trusted vulnerability feeds, repository-specific applicability, evidence freshness, prioritized human-approved remediation, Draft PR verification, and ongoing rechecks. **No API integration, monitoring, auto-remediation, production release or change to the Local-first preview scope is authorized by this Future Design.**
+
 ## Current-vs-Future Rule
 
 Do not use a Future document to redefine current behavior.
