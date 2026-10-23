@@ -49,6 +49,10 @@ jobs:
       - run: npm ci --ignore-scripts && npm run build
       - name: Existing publication, voting and new carousel PHP regressions
         run: php artisan test --compact tests/Feature/CanoviaFutureV407Test.php tests/Feature/CanoviaFutureCarouselTest.php
+      - name: Use signed official Ubuntu archive for disposable browser dependencies
+        run: |
+          test -f /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
       - name: Install pinned test browser without changing lockfiles
         run: |
           npm install --prefix "$RUNNER_TEMP/future-browser" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1

@@ -67,6 +67,10 @@ jobs:
           php artisan migrate --force --no-interaction
           node --check scripts/ci/prelaunch_ia2d_browser_smoke.mjs
           for f in scripts/ci/*_browser_smoke.mjs; do node --check "$f"; done
+      - name: Use signed official Ubuntu archive for disposable browser dependencies
+        run: |
+          test -f /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
       - name: Install pinned headless Chromium
         run: |
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1

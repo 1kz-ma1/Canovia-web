@@ -83,6 +83,10 @@ jobs:
           tests/Feature/PersonalizationBootstrapV5825Test.php
           tests/Feature/InitialReleaseAudienceTest.php
           tests/Feature/P0DatabaseSessionLoginRegressionTest.php --colors=never
+      - name: Use signed official Ubuntu archive for disposable browser dependencies
+        run: |
+          test -f /etc/apt/sources.list.d/ubuntu.sources
+          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
       - name: Install pinned headless Chromium (CI only)
         run: |
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
