@@ -20,7 +20,8 @@ export function install(ctx){
      form.querySelectorAll('input').forEach(e=>e.disabled=false);form.querySelector('button').disabled=!okay;form.querySelector('#draft-status').textContent=okay?'回答を保存済み':'保存できませんでした。確定せず、入力と保存状態を確認してください。';
    };form.onsubmit=e=>{e.preventDefault();ctx.act(state=>submitPractice(state,s.id))};}
   }
-  panel.insertAdjacentHTML('beforeend',`<h3>学習履歴</h3>${ctx.state().practice_attempts.filter(a=>sessions.some(s=>s.id===a.session_id)).slice().reverse().map(a=>`<p>${ctx.escape(new Date(a.graded_at).toLocaleString())} ／ ${a.correct?'正解':'誤答'} — ${ctx.escape(sessions.find(s=>s.id===a.session_id).question.prompt)}</p>`).join('')||'<p>確定した回答を記録します。下書きは履歴に含めません。</p>'}`);
+  panel.insertAdjacentHTML('beforeend',`<h3>学習履歴</h3>${ctx.state().practice_attempts.filter(a=>sessions.some(s=>s.id===a.session_id)).slice().reverse().map(a=>`<p>${ctx.escape(new Date(a.graded_at).toLocaleString())} ／ ${a.correct?'正解':'誤答'} — ${ctx.escape(sessions.find(s=>s.id===a.session_id).question.prompt)} <button class="secondary" data-practice-review="${a.session_id}">この回答を復習</button></p>`).join('')||'<p>確定した回答を記録します。下書きは履歴に含めません。</p>'}`);
+  panel.querySelectorAll('[data-practice-review]').forEach(b=>b.onclick=()=>{current=b.dataset.practiceReview;ctx.render()});
   document.querySelector('#extensions').append(panel);
  });
 }

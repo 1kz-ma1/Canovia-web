@@ -1,6 +1,7 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
 const browser=await chromium.launch({headless:true,...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH?{executablePath:process.env.CANOVIA_BROWSER_EXECUTABLE_PATH}:{})});
+const traffic=[],pageErrors=[];browser.on('context',c=>{c.on('request',r=>traffic.push({url:r.url(),method:r.method()}));c.on('page',p=>p.on('pageerror',e=>pageErrors.push(e.message)))});
 const context=await browser.newContext();const page=await context.newPage();
 try {
  await page.goto('http://127.0.0.1:18799/');await page.getByText('端末内の保存領域を利用できます。',{exact:true}).waitFor();
@@ -49,4 +50,13 @@ try {
  await rp.locator('#import-file').setInputFiles({name:'backup.json',mimeType:'application/json',buffer:bytes});await rp.getByText('同じデータは復元済みです。二重取込は行いません。',{exact:true}).waitFor();await rp.locator('#import-file').setInputFiles({name:'bad.json',mimeType:'application/json',buffer:Buffer.from('invalid')});await rp.getByText('復元できません。形式・破損・既存データとの衝突を確認してください。',{exact:true}).waitFor();
  await rp.reload();await rp.getByRole('heading',{name:'基礎を確かめる',exact:true}).waitFor();await restored.close();
  console.log('LOCAL_PREVIEW_BROWSER_RESTORE_ISOLATED=PASS');
+ // Fresh page has fetched and verified all static assets before the actual offline restart.
+ await page.evaluate(()=>navigator.serviceWorker.ready);await page.waitForFunction(()=>!!navigator.serviceWorker.controller);await context.setOffline(true);await page.reload();await page.locator('#backup').waitFor();await page.getByRole('button',{name:'Study',exact:true}).click();await page.getByText('観測された弱点候補',{exact:true}).waitFor();await page.locator('[data-practice-review]').first().click();await page.locator('#next-practice').waitFor();assert.ok((await page.locator('#study').innerText()).includes('正答：'));
+ await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));await context.setOffline(false);
+ console.log('LOCAL_PREVIEW_BROWSER_OFFLINE_MOBILE_KEYBOARD=PASS');
+ const bad=await browser.newContext();await bad.addInitScript(()=>Object.defineProperty(window,'indexedDB',{get(){throw new Error('synthetic storage blocked')}}));const bp=await bad.newPage();await bp.goto('http://127.0.0.1:18799/');await bp.getByText('保存領域を利用できません。データを削除せず、通常ブラウザでお試しください。',{exact:true}).waitFor();assert.equal(await bp.locator('#diagnosis').count(),0);await bad.close();
+ const legacy=await browser.newContext(),lp=await legacy.newPage();await lp.goto('http://127.0.0.1:18799/');await lp.locator('#backup').waitFor();await lp.evaluate(async()=>{const {repo}=await import('/src/app.mjs');repo.close();await new Promise((resolve,reject)=>{const q=indexedDB.open('canovia-local-preview-v1');q.onsuccess=()=>{const db=q.result,tx=db.transaction('state','readwrite'),r=tx.objectStore('state').get('root');r.onsuccess=()=>{r.result.schema_version=0;tx.objectStore('state').put(r.result,'root')};tx.oncomplete=()=>{db.close();resolve()};tx.onabort=reject}})});await lp.reload();await lp.getByText('このデータ形式はこの版では開けません。データを削除せず、対応する版を確認してください。',{exact:true}).waitFor();const version=await lp.evaluate(()=>new Promise(resolve=>{const q=indexedDB.open('canovia-local-preview-v1');q.onsuccess=()=>{const d=q.result,t=d.transaction('state'),r=t.objectStore('state').get('root');r.onsuccess=()=>{resolve(r.result.schema_version);d.close()}}}));assert.equal(version,0);await legacy.close();
+ console.log('LOCAL_PREVIEW_BROWSER_STORAGE_SCHEMA_SAFETY=PASS');
+ assert.deepEqual(pageErrors,[]);assert.ok(traffic.every(r=>r.method==='GET'&&new URL(r.url).origin==='http://127.0.0.1:18799'&&!/^\/(api|offline|mcp)(\/|$)/.test(new URL(r.url).pathname)));
+ console.log('LOCAL_PREVIEW_BROWSER_NO_SERVER_DATA_REQUESTS=PASS');
 } finally {await context.close();await browser.close()}

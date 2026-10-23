@@ -1,8 +1,8 @@
-# Canovia Local-first Preview — Phase 0 移植棚卸し・実装契約
+# Canovia Local-first Preview — Phase 0〜5 実装契約・受入ゲート
 
 > 2026-10-23 / Orchestrator（Learning・Development・Experience・Platform横断）
-> 状態: **PHASE0_SOURCE_REVIEWED / IMPLEMENTATION_NOT_STARTED / RELEASE_NO_GO**
-> 根拠: GitHub `main` `3dc91feae58d88513218d0d949f1a1efb95fa67b`（2026-10-23照合）。コード・文書の静的調査のみ。Local-first版のブラウザ動作、PWA/端末保存、iPhone、公開・本番環境は未検証。
+> 状態: **IMPLEMENTED_LOCAL_PREVIEW / DEVICE_UNVERIFIED / NOT_DEPLOYED / RELEASE_NO_GO**
+> 根拠: GitHub `main` `3dc91feae58d88513218d0d949f1a1efb95fa67b`（2026-10-23照合）。Phase 0は静的調査。Phase 1〜5の実装・ブラウザ受入は末尾に記録。実機・配備・公開は未検証。
 > 本書は2026-12-01の**限定Preview目標**に向けた新しい提供方式の検討・実装境界を記録する。既存Cloud本番の公開・`e858`統合GOを意味しない。再開前に最新`main`を再照合すること。
 
 ## 1. なぜ独立Previewにするか
@@ -108,7 +108,7 @@
 - **Recovery:** 故意に壊したバックアップはPreviewのみで拒否、元データ保持、再Export/再Import、将来移行用キーの保持。
 - **Access & Release:** 公開先URL/静的ホスティング設定、配布ソースとビルド物の一致、Browser+iPhoneの実機結果、既存Canovia本番の`production`・`e858`・Render・Aiven・Auth0を変更していないこと。
 
-**CIと手元E2Eはまだ実行していない。** 本書の作成・GitHub PRはPreview本体の実装、テスト成功、デプロイ、公開判断のどれも代替しない。
+**Phase 0作成時点ではCI/手元E2E未実行（歴史的記録）。Phase 1以降の最新受入は末尾・各PR・Issue #488を参照。** 本書の作成・GitHub PRはPreview本体の実装、テスト成功、デプロイ、公開判断のどれも代替しない。
 
 ## 8. 次の作業で確定する未解決点
 
@@ -151,3 +151,36 @@
 exportはcommit済みsnapshotを読み、format/schema_version/exported_at/source_installation_id/dataと**canonical payload（キー順整列）のSHA-256**を持つJSONを作る。空白やキー順の違いは破損と扱わない。checksumは署名/暗号化/本人証明ではない。8MiB/深さ12/要素1,000,000/レコード20,000まで、unknown schema・参照/採点矛盾・prototype key・重複IDを拒否。保存状態そのものも6MiB以内に制限し、compact exportが8MiB内に収まる余裕を維持する。schema1より古い未定義形式は勝手に変換せず元データを保持し案内する。
 
 Importは全件検査→追加/一致件数preview→本人confirm→raw/hashを再検査しpreview時revisionのCAS transactionで一括merge。同ID同内容は保持、別内容/異なるprofile競合は全件拒否、上書きなし。file hash receiptと全件一致検査で二重取込を拒否。受入先installation_idは独立のまま、各recordのsource_installation_id/UUIDを保持し、将来の専用Cloud importerの対応キーにできる（本番import機能は作らない）。running作業は未観測時間を加算せずpausedへ復旧するため、active状態の完全再開を約束しない。表の事実データの一致は別ブラウザcontext E2Eで確認する。保存先JSONは非暗号化と説明し、バックアップ作成成功と実際の端末ファイル保管/復元受入を分ける。
+
+## 15. Phase 5 PWA・統合受入・公開前ゲート
+
+### 実装と検証の分離
+
+専用manifest/192・512 icon/専用prefixのstatic shell cacheを追加。SWは同originの明示asset GETだけを扱い、個人データ/バックアップ/サーバーAPIをcacheしない。既存SW/cache/IndexedDBへ触れない。skipWaitingは行わず、新旧コードが開いているタブに無断切替しない。**公開originは未採用（configのPREVIEW_ORIGIN=null）**。localhost/127.0.0.1/[::1]の検証以外は起動拒否し、SWを登録しない。実配信先はHTTPSの独立originを別PR・本人承認で採用し、scope/headers/配布hashを実環境検証する。CLI/envで公開GOを発行しない。
+
+`node local-preview/readiness.mjs` は現時点で必ずRELEASE_NO_GO。理由は独立配信origin未採用、検証用問題の教材公開レビュー未承認、実機未受入、owner公開GOなし。main統合は一般配信/教材公開を意味しない。preview通常画面には内部監査票を表示しない。
+
+### 自動受入
+
+Nodeのmodel/進捗/作業状態/採点/backup/公開gateテストと、実Chromium/ChromeのブラウザE2Eを既存CIへ追加。ブラウザはStudy初回診断→Task→draft保存/reload→採点/履歴/弱点/次問、Development初回診断→start/pause/resume/finish→本人進捗/推薦/reload、混在データのJSON download→独立context restore→全論理record一致→二重/破損拒否、storage失敗/競合/unsupported schema保持、SW準備後の実network断/reload/復習、390px overflowなし/keyboard操作、サーバーデータ通信なしを検証する。quota失敗は実ブラウザ内の合成書込失敗注入であり、実端末ディスクを満杯にしたとは主張しない。旧schema0は新規の未定義形式なので消去/推測変換をせず明示拒否する。
+
+### ローカルでの再現
+
+Node22以上/Python3.9以上で、`node --test local-preview/test/*.test.mjs`、`python3 scripts/ci/local_preview_serve.py`、`http://127.0.0.1:18799/`。Laravel/MySQL/account/API keyは不要。ブラウザE2Eは固定Playwright1.56.1とChrome/Chromiumを使用し、`CANOVIA_BROWSER_EXECUTABLE_PATH=/path/to/chrome node tests/browser/local_preview.mjs`。CIはroot Laravel依存をinstallせず、専用temp領域のPlaywrightとrunner既存Chromeで試験する。exact検証HEAD/CI結果は各PRと#488に記録し、最新版mainの成功へ勝手に転用しない。
+
+### 本人実機受入（NOT_RUN、実データを使わない）
+
+1. 管理Mac Safari/Chromeで独立localhost fixtureを開く。検証用の目標/Taskだけを作り、Study/Developmentループ、pause/reload/再開、空/誤答/正答/履歴の復習、本人進捗が別管理であることを確認。
+2. JSONを安全なprivate領域へdownloadし、新規の隔離browser profileへpreview→restore。Plan/Task/実績/回答を照合、同じJSONの二重取込と破損JSONが拒否されることを確認。元データは上書き/消去しない。
+3. **別途採用・配備GO後だけ**、独立HTTPS Preview originの証明書/CSP/scope/配布hash/サーバーAPI通信なしを確認する。実Canovia originや既存PWAで試さない。iPhone Safariと「ホーム画面に追加」後のstandaloneそれぞれで初回/オフライン/強制終了再開/バックアップ復元/画面reader・文字拡大を確認。SafariタブとPWAの保存領域共有を仮定しない。
+4. 端末名ではなくOS/browser版・日付・PASS/FAIL分類を記録できる。個人データ/JSON本体をGitHubへ貼らない。終了後は検証JSON/当該独立originの合成データだけを削除し、既存Canoviaのsite dataを巻き込まない。
+
+### 現在の判定と残る作業
+
+- IMPLEMENTED：Local-firstの保存/診断/Plan・Task/作業/進捗・推薦/学習/backup・restore/PWA shell。
+- CI VERIFIED / BROWSER VERIFIED：成功したexact HEADのCI・ローカルChromium証拠だけを各PR/#488に記録。各PRは全CI成功・全差分レビュー・mergeability成立時のみmainへSquash。
+- DEVICE VERIFIED：**未実施**。iPhone/Android・Safari/インストール済みPWA・ストレージ消失/OS強制停止の実機保証なし。
+- DEPLOYED / RELEASE APPROVED：**なし**。独立静的origin/同等security headers・教材の人間レビュー/公開承認・実機受入・本人公開GOが揃うまでNO-GO。自動公開workflow/外部resource/課金は作らない。
+- Cloud統合・本番データimport・AI/共同編集/GitHub自動同期・高度Mapは未実装の別工程。source_installation_id/UUID/immutable履歴を保持して将来の本人認可importへ引き継ぐ。
+
+既存production/e858/Aiven/Render/Auth0/BillingとRelease Issue #488のHOLDを維持する。Local Previewの完成度やCIでCloud releaseの未達を解除しない。
