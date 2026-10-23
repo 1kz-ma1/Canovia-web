@@ -130,6 +130,8 @@ def _policy_values(path: Path, checkout: Path, uid: int) -> dict[str, object]:
     db, user = data["database"], data["reader_user"]
     if (type(host) is not str or HOST_RE.fullmatch(host) is None
             or host.startswith("localhost") or host.endswith(".localhost")
+            or not host.rsplit(".", 1)[-1].isalpha()
+            or host.endswith((".local", ".invalid"))
             or type(port) is not int or not 1 <= port <= 65535
             or type(db) is not str or IDENT_RE.fullmatch(db) is None
             or type(user) is not str or IDENT_RE.fullmatch(user) is None
