@@ -119,6 +119,22 @@ def cli_arguments(executable: str, ca: Path) -> list[str]:
     ]
 
 
+def container_client_arguments(docker: str, container_id: str) -> list[str]:
+    """Exactly one official MySQL CLI process inside the disposable server.
+
+    The CI host's mysql command may be an incompatible distro client.
+    The docker CLI is only the transport to the throwaway DB service.
+    The password in docker argv is FIXED/FICTIONAL and NOT for live use.
+    """
+    if not CONTAINER_ID_RE.fullmatch(container_id):
+        raise Block()
+    return [
+        docker, "exec", "-i", "--env=MYSQL_PWD=" + PASSWORD,
+        container_id,
+        *cli_arguments("mysql", Path("/var/lib/mysql/ca.pem")),
+    ]
+
+
 def secure_ca(path: Path, runner_temp: Path) -> Path:
     if not path.is_absolute() or path.is_symlink() or not path.is_file():
         raise Block()
@@ -161,9 +177,9 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
         packet = immutable_packet(checkout)
     except BaseException:
         raise SafeStage("SOURCE") from None
-    binary = shutil.which("mysql")
+    binary = shutil.which("docker")
     if binary is None or not Path(binary).is_file():
-        raise SafeStage("MYSQL_BINARY")
+        raise SafeStage("DOCKER_BINARY")
     with tempfile.TemporaryDirectory(prefix="live94-single-session-", dir=runner) as name:
         private = Path(name)
         os.chmod(private, 0o700)
@@ -173,9 +189,13 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
         # scrub entire inherited environment and use only CI fake password.
         mysql_env = {
             "PATH": os.defpath, "HOME": str(private), "LC_ALL": "C",
-            "MYSQL_PWD": PASSWORD,
         }
-        args = cli_arguments(binary, safe_ca)
+        # The generated CI test CA was copied to /var/lib/mysql/ca.pem
+        # in THIS disposable MySQL service container in the preceding step.
+        # Never use runner-provided mysql, whose option support may differ.
+        args = container_client_arguments(
+            binary, os.environ["MYSQL_SERVICE_CONTAINER"]
+        )
         try:
             with out.open("xb") as f, err.open("xb") as error_file:
                 proc = subprocess.Popen(
