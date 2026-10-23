@@ -56,6 +56,9 @@ final class EnsurePreparationSurface
             // Shared/public Plan mutations are outside the preparation scope.
             // Do not silently strip them or overwrite a legacy visibility bit.
             abort_if($request->boolean('is_public') || $request->boolean('is_collaborative'), 403);
+            // Legacy Goal Discovery has its own claim/AI workflow. Its private
+            // IDs must not re-enter that deferred workflow through Plan POST.
+            abort_if($request->filled('goal_context_id'), 403);
 
             return $next($request);
         }

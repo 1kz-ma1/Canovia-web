@@ -167,6 +167,18 @@ final class PreparationOnlyBoundaryTest extends TestCase
         $this->assertSame('旧AccountのPlan', $plan->fresh()->title);
     }
 
+    public function test_deferred_goal_discovery_cannot_reenter_through_generic_plan_post(): void
+    {
+        $owner = User::factory()->create();
+        $goal = \App\Models\GoalContext::query()->create([
+            'user_id' => $owner->id, 'desired_state' => '既存の目標', 'status' => 'discovery',
+        ]);
+        $before = $goal->fresh()->getRawOriginal();
+        $this->actingAs($owner)->post('/plans', ['title' => '接続要求', 'goal_context_id' => $goal->id])->assertForbidden();
+        $this->assertSame($before, $goal->fresh()->getRawOriginal());
+        $this->assertDatabaseCount('plans', 0);
+    }
+
     public function test_direct_old_job_handlers_and_generic_queue_dispatch_are_closed(): void
     {
         foreach ([new BootstrapGitHubDevelopmentActivity(999), new ProcessGitHubWebhookDelivery(999)] as $job) {
