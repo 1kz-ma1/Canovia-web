@@ -1,0 +1,191 @@
+name: PHP 8.4.27 Old Live94 Disposable MySQL Single-Session Smoke
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/ci/php8427_live94_disposable_mysql_smoke.py
+      - tests/ci/test_php8427_live94_disposable_mysql_smoke.py
+      - .github/workflows/php8427-live94-disposable-mysql-smoke.yml
+      - docs/development/PHP8427_LIVE94_DISPOSABLE_MYSQL_SMOKE_2026_10_23.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  disposable-live94:
+    name: "Old Live94 synthetic-only MySQL ${{ matrix.mysql_series }} (HOLD)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mysql_series: ['8.0', '8.4']
+    services:
+      mysql:
+        image: mysql:${{ matrix.mysql_series }}
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_DATABASE: canovia_live94_synth_ci
+          MYSQL_USER: canovia_ci
+          MYSQL_PASSWORD: ci-only-ephemeral-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    env:
+      APP_ENV: testing
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_DATABASE: canovia_live94_synth_ci
+      DB_USERNAME: canovia_ci
+      DB_PASSWORD: ci-only-ephemeral-password
+      CANOVIA_P0_DISPOSABLE_MYSQL_CI: '1'
+      CANOVIA_LIVE94_DISPOSABLE_CI: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Offline session parser and negative tests
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_disposable_mysql_smoke.py -v
+
+      - name: Check out exact historical Live94 source, never main-derived SQL
+        run: |
+          set -euo pipefail
+          test "$(git cat-file -t 15abdc9de6f24b5250fb255c579d1aa55facaf1a)" = commit
+          git worktree add --detach "$RUNNER_TEMP/old-live94-mysql-fixture" 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+
+      - name: Prepare only a local fictional 94 ledger and seven reviewed queries
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 -I -B scripts/ci/php8427_live94_disposable_mysql_smoke.py prepare \
+            --checkout "$RUNNER_TEMP/old-live94-mysql-fixture" --path "$RUNNER_TEMP" \
+            > "$RUNNER_TEMP/prepare-result.json"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=json.loads((Path(os.environ["RUNNER_TEMP"])/"prepare-result.json").read_text())
+          assert r["verdict"]=="HOLD"
+          assert r["pinned_query_count"]==7 and r["synthetic_migration_count"]==94
+          assert r["real_aiven_connected"] is False and r["production_go"] is False
+          print("PINNED_OLD_LIVE94_PACKET=PASS; AIVEN_NOT_RUN")
+          PY
+
+      - name: Set up minimal synthetic CI tables and restrictive reader
+        env:
+          MYSQL_PWD: ci-only-root-password
+          EXPECTED_MYSQL_SERIES: ${{ matrix.mysql_series }}
+        run: |
+          set -euo pipefail
+          test "$GITHUB_ACTIONS" = true
+          test "$CANOVIA_LIVE94_DISPOSABLE_CI" = 1
+          test "$DB_HOST" = 127.0.0.1
+          test "$DB_DATABASE" = canovia_live94_synth_ci
+          mysql_root() {
+            mysql --no-defaults --protocol=TCP --host=127.0.0.1 \
+              --port=3306 --connect-timeout=5 --user=root \
+              --database=canovia_live94_synth_ci --batch --raw --skip-column-names "$@"
+          }
+          version="$(mysql_root -e 'SELECT VERSION()')"
+          case "$version" in
+            "${EXPECTED_MYSQL_SERIES}."*) echo "SYNTHETIC_ENGINE=PASS" ;;
+            *) echo 'WRONG_DISPOSABLE_MYSQL_VERSION' >&2; exit 2 ;;
+          esac
+          mysql_root < "$RUNNER_TEMP/setup.sql" > /dev/null
+          echo 'SYNTHETIC_94_MIGRATIONS_AND_MINIMAL_GRANTS=PASS'
+
+      - name: Negative privileges personal row read, INSERT and DDL are denied
+        env:
+          MYSQL_PWD: ci-only-live94-password
+        run: |
+          set -euo pipefail
+          mysql_restricted() {
+            mysql --no-defaults --protocol=TCP --host=127.0.0.1 \
+              --port=3306 --connect-timeout=5 --user=live94_ci \
+              --database=canovia_live94_synth_ci --batch --raw --skip-column-names "$@"
+          }
+          if mysql_restricted -e 'SELECT id FROM users LIMIT 1' >/dev/null 2>&1; then
+            echo 'PERSONAL_ROWS_READABLE' >&2; exit 2
+          fi
+          if mysql_restricted -e "INSERT INTO migrations(migration,batch) VALUES ('ci_denial',1)" >/dev/null 2>&1; then
+            echo 'UNAUTHORIZED_DML_ACCEPTED' >&2; exit 2
+          fi
+          if mysql_restricted -e 'CREATE TABLE ci_write_probe(id INT)' >/dev/null 2>&1; then
+            echo 'UNAUTHORIZED_DDL_ACCEPTED' >&2; exit 2
+          fi
+          echo 'PERSONAL_READ_DML_DDL=DENIED'
+
+      - name: Execute seven fixed SQL SELECTs on one bounded local client session
+        env:
+          MYSQL_PWD: ci-only-live94-password
+        run: |
+          set -euo pipefail
+          umask 077
+          timeout -k 5s 65s mysql --no-defaults --protocol=TCP \
+            --host=127.0.0.1 --port=3306 --connect-timeout=5 \
+            --user=live94_ci --database=canovia_live94_synth_ci \
+            --batch --raw --skip-column-names \
+            < "$RUNNER_TEMP/audit.sql" > "$RUNNER_TEMP/observations.tsv"
+          python3 -I -B scripts/ci/php8427_live94_disposable_mysql_smoke.py verify \
+            --checkout "$RUNNER_TEMP/old-live94-mysql-fixture" \
+            --path "$RUNNER_TEMP/observations.tsv" > "$RUNNER_TEMP/verify-result.json"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          r=json.loads((Path(os.environ["RUNNER_TEMP"])/"verify-result.json").read_text())
+          assert r["verdict"]=="HOLD"
+          assert r["code"]=="DISPOSABLE_SAME_SESSION_94_LEDGER_NO_SCHEMA_GO"
+          assert r["same_client_connection_observed"] is True
+          assert r["scope_limited_grants_observed"] is True
+          assert r["synthetic_physical_metadata_intentionally_incomplete"] is True
+          assert r["pinned_live94_migrations_observed_in_fixture"]==94
+          for flag in ("real_tls_peer_authenticated","remote_session_termination_verified",
+                       "real_aiven_connected","real_schema_verified","production_go"):
+              assert r[flag] is False
+          print('ONE_DISPOSABLE_CLIENT_SESSION=PASS; INCOMPLETE_PHYSICAL_SCHEMA=HOLD')
+          print('REMOTE_END_UNVERIFIED; REAL_AIVEN_NOT_RUN; PRODUCTION_NO_GO')
+          PY
+
+      - name: Give synthetic account unauthorized SELECT on users for negative control
+        env:
+          MYSQL_PWD: ci-only-root-password
+        run: |
+          set -euo pipefail
+          mysql --no-defaults --protocol=TCP --host=127.0.0.1 \
+            --port=3306 --connect-timeout=5 --user=root \
+            --database=canovia_live94_synth_ci \
+            -e "GRANT SELECT ON canovia_live94_synth_ci.users TO 'live94_ci'@'%'"
+
+      - name: Detect excess synthetic grant in same-session audit, fail closed
+        env:
+          MYSQL_PWD: ci-only-live94-password
+        run: |
+          set -euo pipefail
+          umask 077
+          timeout -k 5s 65s mysql --no-defaults --protocol=TCP \
+            --host=127.0.0.1 --port=3306 --connect-timeout=5 \
+            --user=live94_ci --database=canovia_live94_synth_ci \
+            --batch --raw --skip-column-names \
+            < "$RUNNER_TEMP/audit.sql" > "$RUNNER_TEMP/overgrant.tsv"
+          if python3 -I -B scripts/ci/php8427_live94_disposable_mysql_smoke.py verify \
+            --checkout "$RUNNER_TEMP/old-live94-mysql-fixture" \
+            --path "$RUNNER_TEMP/overgrant.tsv" > "$RUNNER_TEMP/overgrant-result.json"; then
+            echo 'UNEXPECTED_OVERGRANT_ACCEPTANCE' >&2; exit 2
+          fi
+          grep -Fq '"verdict": "BLOCK"' "$RUNNER_TEMP/overgrant-result.json"
+          echo 'DISPOSABLE_OVERGRANT=BLOCK; REAL_AIVEN_NOT_RUN'
+
+      - name: Explicitly reject live acceptance inference
+        run: |
+          echo 'MYSQL_TLS_NOT_TESTED; REMOTE_TERMINATION_NOT_PROVEN'
+          echo 'OLD_LIVE94_LEDGER_IS_FICTIONAL; PHYSICAL_SCHEMA_INTENTIONALLY_INCOMPLETE'
+          echo 'NO_AIVEN; NO_PRODUCTION; NO_OWNER_APPROVAL'
