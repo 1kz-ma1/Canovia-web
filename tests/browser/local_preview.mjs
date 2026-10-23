@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 const browser=await chromium.launch({headless:true,...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH?{executablePath:process.env.CANOVIA_BROWSER_EXECUTABLE_PATH}:{})});
 const context=await browser.newContext();const page=await context.newPage();
 try {
- await page.goto('http://127.0.0.1:8799/');await page.getByText('端末内の保存領域を利用できます。',{exact:true}).waitFor();
+ await page.goto('http://127.0.0.1:18799/');await page.getByText('端末内の保存領域を利用できます。',{exact:true}).waitFor();
  const result=await page.evaluate(async()=>{
   const {Repository}=await import('/src/repository.mjs'); const {record}=await import('/src/model.mjs');
   const a=await Repository.open(),b=await Repository.open(); const old=await a.read();

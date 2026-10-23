@@ -128,4 +128,4 @@
 
 独立`local-preview/`を静的rootとし、既存Laravel/public/SWは変更しない。依存なしのES moduleと専用IndexedDBを採用。論理Object群は本書のモデルを維持するが、**物理的には単一state store/root snapshot**に格納する（schema1）。小規模Previewの上限20,000レコードで、参照整合性・関連更新・将来importを1 transactionで検証/確定するため。readwrite transaction内でrevisionを比較し、古いタブの更新は拒否、oncomplete後だけ成功を返す。BroadcastChannelは通知のみで排他の根拠にしない。unknown schemaは消去せずBLOCK、quota/abortで既存データを保持する。将来大容量化は別migration設計。
 
-ローカルfixtureは127.0.0.1:8799だけで静的rootを配信しCSPを設定する。配布先の独立origin/同等headers/HTTPSは公開前の未解決gate。repositoryの実ブラウザ試験は競合/abort/容量失敗/再読み込みを対象とする。実機・配備・公開承認は未実施。
+ローカルfixtureは127.0.0.1:18799だけで静的rootを配信しCSPを設定する。配布先の独立origin/同等headers/HTTPSは公開前の未解決gate。repositoryの実ブラウザ試験は競合/abort/容量失敗/再読み込みを対象とする。実機・配備・公開承認は未実施。

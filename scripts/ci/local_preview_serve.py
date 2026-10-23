@@ -13,4 +13,4 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Cache-Control', 'no-cache')
         super().end_headers()
-if __name__ == '__main__': http.server.ThreadingHTTPServer(('127.0.0.1', 8799), Handler).serve_forever()
+if __name__ == '__main__': http.server.ThreadingHTTPServer(('127.0.0.1', 18799), Handler).serve_forever()
