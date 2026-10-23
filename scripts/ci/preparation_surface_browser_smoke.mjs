@@ -32,7 +32,9 @@ try {
     if (!macLab) await page.locator('[name="password_confirmation"]').fill(password);
     await page.getByRole('button', { name: macLab ? 'ログイン' : '登録してそのまま続ける', exact: true }).click();
     await page.waitForURL(base + '/');
+    if (macLab) await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('link', { name: '現在地を整理する' }).click();
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.locator('[name="domains[]"]').selectOption('study');
     await page.locator('[name="study_goal"]').fill('同じAccountで目標を引き継ぐ');
     await page.locator('[name="study_stage"]').selectOption('started');
@@ -40,6 +42,7 @@ try {
     await page.getByRole('button', { name: '現在地を保存して候補を見る' }).click();
     await page.getByRole('heading', { name: '現在地を保存しました' }).waitFor();
     await page.getByRole('button', { name: 'この候補を編集する' }).first().click();
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.locator('[name="title"]').fill('正式版に向けた合成の準備目標');
     await page.locator('[name="description"]').fill('現在地と次に整理したいこと');
     await page.getByRole('button', { name: 'Planを保存する', exact: true }).click();
@@ -60,6 +63,8 @@ try {
     await stale.locator('[name="title"]').fill('古いタブからの上書き');
     await stale.getByRole('button', { name: '変更を保存する' }).click();
     await stale.locator('[data-preparation-conflict]').waitFor();
+    if (macLab) await stale.setViewportSize({ width: 390, height: 844 });
+    assert(await stale.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     assert.equal(await stale.locator('[name="title"]').inputValue(), '古いタブからの上書き');
     assert.equal(await stale.getByRole('button', { name: '変更を保存する' }).isDisabled(), true);
     await stale.close();
