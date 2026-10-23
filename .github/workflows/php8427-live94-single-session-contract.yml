@@ -24,7 +24,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_single_session_contract.py -v
-      - name: Static code boundary: import-free from networking/DB/execution
+      - name: "Static code boundary: import-free from networking/DB/execution"
         run: |
           set -euo pipefail
           python3 - <<'PY'
