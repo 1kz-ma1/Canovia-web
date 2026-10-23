@@ -42,7 +42,33 @@ def namespace():
     return value
 
 
-def owned_resolve(host,until,mode='normal'):
+def _reap(proc,until):
+    reaped=False
+    if proc is not None:
+        if proc.poll() is None:
+            try:
+                proc.kill();proc.wait(timeout=max(.001,min(.2,until-time.monotonic())))
+                reaped=proc.poll() is not None
+            except BaseException:reaped=False
+        else:reaped=True
+        for stream in (proc.stdin,proc.stdout,proc.stderr):
+            try:stream.close()
+            except BaseException:reaped=False
+    return reaped
+
+
+class DNSWorker:
+    """Fixed child starts BEFORE R1 capture; no password-bearing fork/exec."""
+    created=[]
+    def __init__(self):
+        self.used=False;self.process=subprocess.Popen([sys.executable,'-I','-B','-c',DNS_CHILD],stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,cwd='/',
+            env={'PYTHONDONTWRITEBYTECODE':'1'})
+        self.created.append(self)
+    def close(self,until):return _reap(self.process,until)
+
+
+def owned_resolve(host,until,mode='normal',worker=None):
     proc=None;reaped=False;failed=False;result=None;status='DNS_SCOPE_REJECTED'
     try:
         if host not in HOSTS or mode not in ('normal','timeout','malformed','oversize'):raise Block()
@@ -50,9 +76,11 @@ def owned_resolve(host,until,mode='normal'):
         remaining=until-time.monotonic()-.25  # reserve within same deadline for reaping
         if remaining<=0:raise Block()
         status='DNS_CHILD_ERROR'
-        proc=subprocess.Popen([sys.executable,'-I','-B','-c',DNS_CHILD],stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,cwd='/',
-            env={'PYTHONDONTWRITEBYTECODE':'1'})
+        # Direct creation is used only by the no-input unit tests. The real
+        # owned backend MUST pass its pre-input child, never spawn after R1.
+        if worker is None:worker=DNSWorker()
+        if type(worker) is not DNSWorker or worker.used:raise Block()
+        worker.used=True;proc=worker.process
         raw,error=proc.communicate(json.dumps(dict(host=host,mode=mode)).encode('ascii'),
             timeout=max(.001,until-time.monotonic()-.25))
         reaped=proc.poll() is not None
@@ -63,16 +91,7 @@ def owned_resolve(host,until,mode='normal'):
     except subprocess.TimeoutExpired:failed=True;status='DNS_TIMEOUT'
     except BaseException:failed=True
     finally:
-        if proc is not None:
-            if proc.poll() is None:
-                try:
-                    proc.kill();proc.wait(timeout=max(.001,min(.2,until-time.monotonic())))
-                    reaped=proc.poll() is not None
-                except BaseException:reaped=False
-            else:reaped=True
-            for stream in (proc.stdin,proc.stdout,proc.stderr):
-                try:stream.close()
-                except BaseException:reaped=False
+        if proc is not None:reaped=_reap(proc,until)
     if failed or not reaped:
         error=Block();error.dns_reaped=reaped
         error.dns_status=status if reaped or proc is None else 'DNS_CHILD_CLEANUP_UNVERIFIED'
@@ -108,12 +127,13 @@ class OwnedWire(old.FixtureWire):
     def connect(self,sock=None):
         raw=None
         try:
-            if sock is not None or self.connect_count or self.plan is not None:raise Block()
+            if (sock is not None or self.connect_count or self.plan is not None
+                    or type(self.worker) is not DNSWorker or self.worker.used):raise Block()
             self.plan=OpenerCandidate(self.entry,self.gate,self.ctx)
             mode={'DNS_TIMEOUT':'timeout','DNS_MALFORMED':'malformed','DNS_OVERSIZE':'oversize'}.get(self.fault,'normal')
             self.dns_started=True
             try:
-                answers=owned_resolve(self.target.host,self.plan.until,mode)
+                answers=owned_resolve(self.target.host,self.plan.until,mode,self.worker)
                 self.dns_reaped=True;self.dns_status='DNS_ANSWERED'
             except Block as error:
                 self.dns_reaped=getattr(error,'dns_reaped',False)
@@ -164,10 +184,23 @@ class OwnedWire(old.FixtureWire):
 
 
 class OwnedBoundary(old.FixtureBoundary):
+    def __init__(self,entry):
+        super().__init__(entry);self.workers=[]
+        try:
+            if entry.secret is not None or entry.target.host not in HOSTS:raise Block()
+            namespace()
+            for _ in range(2):
+                entry.check();self.workers.append(DNSWorker())
+        except BaseException:
+            self.close();raise Block() from None
     def factory(self,gate,fault=None):
         wire=super().factory(gate,fault)
-        wire.entry=self.entry
+        wire.entry=self.entry;wire.worker=self.workers[len(self.wires)-1]
         return wire
+    def close(self):
+        okay=super().close()
+        for worker in self.workers:okay=worker.close(self.entry.until) and okay
+        return okay
 
 
 class OwnedAdapter(old.IsolatedAdapter):
@@ -184,13 +217,14 @@ CASES=('NORMAL','DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_UNOWNED','DNS_
 
 
 def child_case(fault,parent):
-    OwnedWire.created=[];OwnedWire.fault=fault
+    OwnedWire.created=[];OwnedWire.fault=fault;DNSWorker.created=[]
     mapped='PHASE1' if fault=='NORMAL' else fault
     with patch.object(old,'FixtureWire',OwnedWire),patch.object(old,'IsolatedAdapter',OwnedAdapter):
         result=old.child(mapped,parent)
     wires=OwnedWire.created
     if fault in CASES[1:9] and (result['sql_count'] or any(w.authenticated for w in wires)):raise Block()
     if not wires or not all(w.dns_reaped for w in wires):raise Block()
+    if len(DNSWorker.created)!=2 or any(w.process.poll() is None for w in DNSWorker.created):raise Block()
     if fault in ('DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE'):
         expected='DNS_TIMEOUT' if fault=='DNS_TIMEOUT' else 'DNS_RESPONSE_INVALID'
         if len(wires)!=1 or wires[0].dns_status!=expected:raise Block()

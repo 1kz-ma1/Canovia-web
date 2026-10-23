@@ -32,12 +32,12 @@ def select_peer(answers,port):
         for row in answers:
             if type(row) not in (tuple,list) or len(row)!=5:raise Block()
             family,kind,protocol,canonical,address=row
-            if (family not in (socket.AF_INET,socket.AF_INET6) or kind!=socket.SOCK_STREAM
+            if (family not in (socket.AF_INET,socket.AF_INET6) or type(kind) is bool or kind!=socket.SOCK_STREAM
                     or protocol!=socket.IPPROTO_TCP or canonical!='' or type(address) not in (tuple,list)
                     or len(address)!=(2 if family==socket.AF_INET else 4)
                     or type(address[0]) is not str or len(address[0])>45
                     or type(address[1]) is not int or address[1]!=port
-                    or family==socket.AF_INET6 and tuple(address[2:])!=(0,0)):raise Block()
+                    or family==socket.AF_INET6 and (tuple(address[2:])!=(0,0) or any(type(v) is not int for v in address[2:]))):raise Block()
             ip=ipaddress.ip_address(address[0])
             if (ip.version!=(4 if family==socket.AF_INET else 6) or '%' in address[0]
                     or ip.is_unspecified or ip.is_multicast or ip.is_loopback or ip.is_link_local):raise Block()
