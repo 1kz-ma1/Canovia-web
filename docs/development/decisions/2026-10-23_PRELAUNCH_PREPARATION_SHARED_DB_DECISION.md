@@ -52,4 +52,4 @@ Product ownerは、先行公開では中核価値が直ちに体験できなく�
 
 再検討: Aのshared DB/auth/recovery gateの長期未達、Guest/Account継続性破綻、元UIでの診断・Plan準備UXが不十分、Bの安全性/総コストが明確に優位、正式版へのPlan互換性喪失、ユーザーの期待誤認。追加のOwner決定は日時と新IDを付け、この元の判断を黙って書き換えない。
 
-**Next work:** [実装/監査パケットと新チャット用プロンプト](../PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#5-codex向け実装監査の実行パケット次チャットからの起点)。
+**Next work:** [実装/監査パケットと新チャット用プロンプト](../PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md)。
