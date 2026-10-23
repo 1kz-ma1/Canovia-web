@@ -184,3 +184,7 @@ Node22以上/Python3.9以上で、`node --test local-preview/test/*.test.mjs`、
 - Cloud統合・本番データimport・AI/共同編集/GitHub自動同期・高度Mapは未実装の別工程。source_installation_id/UUID/immutable履歴を保持して将来の本人認可importへ引き継ぐ。
 
 既存production/e858/Aiven/Render/Auth0/BillingとRelease Issue #488のHOLDを維持する。Local Previewの完成度やCIでCloud releaseの未達を解除しない。
+
+### 配信・Cookie・保存寿命の追加境界
+
+異なるportだけではCookieを分離できず、サブドメインもDomain Cookieを共有し得る。fixtureは新しい隔離browser context/profileで使い、実配信は既存Canoviaの認証Cookie/同一SW scopeを受け継がない独立host境界を採用・確認する。静的serverはCookieを利用/記録せず、appはログイン・既存Accountを参照しない。6MiB/20,000件のPreview保存上限、ブラウザ/OSによる消去、同期・完全な暗号化・Cloud移行の未実装を認識し、暗黙の履歴削除で容量を空けない。履歴を持つTaskの削除は拒否し、取消で保持する。将来の大量記録整理/migrationは別の保護・復元設計とする。
