@@ -76,7 +76,8 @@ jobs:
       - name: Install pinned headless Chromium (CI only)
         run: |
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-          npx playwright install --with-deps chromium
+          test -x /usr/bin/google-chrome
+          /usr/bin/google-chrome --version
           git diff --exit-code -- package-lock.json package.json
       - name: Serve isolated app on loopback
         shell: bash
@@ -91,6 +92,8 @@ jobs:
           echo "Disposable browser server failed to start" >&2
           exit 1
       - name: Exercise Study real-browser Evidence and owner-confirmed next Action
+        env:
+          CANOVIA_BROWSER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: node scripts/ci/learning_v611_browser_smoke.mjs
       - name: Clarify browser-proof limits
         run: |

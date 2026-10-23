@@ -19,7 +19,8 @@ const email = 'v610-learning@example.invalid';
 const password = 'V610-learning-only!test-Password';
 const title = '応用情報技術者試験 合格 V610';
 const packTitle = 'V610 合成ネットワーク演習';
-const browser = await chromium.launch({headless: true, args: ['--no-sandbox']});
+const browser = await chromium.launch({headless: true, args: ['--no-sandbox'],
+    ...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH ? {executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH} : {})});
 const context = await browser.newContext({viewport:{width:1280,height:850},locale:'ja-JP'});
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
