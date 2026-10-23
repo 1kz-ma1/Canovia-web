@@ -1,0 +1,55 @@
+name: PHP 8.4.27 Live94 Single-Session Contract (Offline)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/ci/php8427_live94_single_session_contract.py
+      - tests/ci/test_php8427_live94_single_session_contract.py
+      - .github/workflows/php8427-live94-single-session-contract.yml
+      - docs/development/PHP8427_LIVE94_SINGLE_SESSION_OFFLINE_DESIGN_2026_10_23.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  single-session-only:
+    name: "Live94 inert contract: identity/time/roles/termination (not GO)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Synthetic negative tests without network, MySQL or credentials
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_single_session_contract.py -v
+      - name: "Static code boundary: import-free from networking/DB/execution"
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          p=Path('scripts/ci/php8427_live94_single_session_contract.py')
+          m=ast.parse(p.read_text(encoding='utf-8'))
+          forbidden={'socket','ssl','pymysql','MySQLdb','mysql','subprocess',
+                     'ctypes','requests','urllib','http','asyncio'}
+          imports=set()
+          for node in ast.walk(m):
+              if isinstance(node,ast.Import):
+                  imports.update(x.name.split('.')[0] for x in node.names)
+              elif isinstance(node,ast.ImportFrom) and node.module:
+                  imports.add(node.module.split('.')[0])
+          assert not (imports & forbidden), imports & forbidden
+          f={node.name:node for node in m.body if isinstance(node,(ast.FunctionDef,ast.AsyncFunctionDef))}
+          klass=next(n for n in m.body if isinstance(n,ast.ClassDef) and n.name=='Live94Contract')
+          names={x.name for x in klass.body if isinstance(x,ast.FunctionDef)}
+          assert {'connect','execute','observe_synthetic','report'} <= names
+          assert 'OPENAI_API_KEY' not in p.read_text()
+          print('NO_CONNECTION_CODE=PASS; SIMULATED_ONLY; REAL_AIVEN=NOT_ATTEMPTED')
+          PY
+      - name: CI is never an owner or release acceptance
+        run: |
+          echo "LIVE94_SYNTHETIC_SEQUENCE=ONLY"
+          echo "TLS_AND_ACTIVE_ROLES=UNOBSERVED; REMOTE_END=UNVERIFIED"
+          echo "AIVEN_NOT_RUN; PRODUCTION_NO_GO; CREDENTIALS_NOT_REQUESTED"
