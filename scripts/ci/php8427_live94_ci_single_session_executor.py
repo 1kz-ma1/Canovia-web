@@ -119,19 +119,27 @@ def cli_arguments(executable: str, ca: Path) -> list[str]:
     ]
 
 
-def container_client_arguments(docker: str, container_id: str) -> list[str]:
-    """Exactly one official MySQL CLI process inside the disposable server.
+def container_client_arguments(docker: str, container_id: str, ca: Path) -> list[str]:
+    """One MySQL 8.4 client against synthetic MySQL 8.0 OR 8.4 server.
 
-    The CI host's mysql command may be an incompatible distro client.
-    The docker CLI is only the transport to the throwaway DB service.
-    The password in docker argv is FIXED/FICTIONAL and NOT for live use.
+    --no-login-paths was introduced in MySQL 8.2 and is unavailable in 8.0.
+    Use MySQL 8.4 client image, sharing ONLY the approved disposable server's
+    network namespace. This is NOT an operator or real-provider transport.
+    The fake CI password in docker argv is never a real account credential.
     """
     if not CONTAINER_ID_RE.fullmatch(container_id):
         raise Block()
+    if not ca.is_absolute():
+        raise Block()
     return [
-        docker, "exec", "-i", "--env=MYSQL_PWD=" + PASSWORD,
-        container_id,
-        *cli_arguments("mysql", Path("/var/lib/mysql/ca.pem")),
+        docker, "run", "--rm", "-i",
+        "--network=container:" + container_id,
+        "--entrypoint=mysql",
+        "--env=MYSQL_PWD=" + PASSWORD,
+        "--mount=type=bind,source=" + str(ca)
+        + ",target=/tmp/live94-ci-ca.pem,readonly",
+        "mysql:8.4",
+        *cli_arguments("mysql", Path("/tmp/live94-ci-ca.pem"))[1:],
     ]
 
 
@@ -190,11 +198,11 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
         mysql_env = {
             "PATH": os.defpath, "HOME": str(private), "LC_ALL": "C",
         }
-        # The generated CI test CA was copied to /var/lib/mysql/ca.pem
-        # in THIS disposable MySQL service container in the preceding step.
-        # Never use runner-provided mysql, whose option support may differ.
+        # A single MySQL 8.4 client shares only this throwaway server's
+        # Docker network namespace; test CA is mounted read-only from runner.
+        # An 8.0 SERVER is valid, but its 8.0 CLIENT lacks --no-login-paths.
         args = container_client_arguments(
-            binary, os.environ["MYSQL_SERVICE_CONTAINER"]
+            binary, os.environ["MYSQL_SERVICE_CONTAINER"], safe_ca
         )
         try:
             with out.open("xb") as f, err.open("xb") as error_file:
