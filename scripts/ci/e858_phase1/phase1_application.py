@@ -11,6 +11,18 @@ from . import practical as p
 from .private_binding import Block, HEX, Q0_SHA, Q1_SHA
 
 
+def _phase1_program(entry,tooling_sha,bundle_sha256):
+    """Shared pre-input checks, not an activation API or approval decision."""
+    if type(entry) is not p.ReviewedEntry:raise Block()
+    entry.check()
+    if entry.secret is not None or type(entry.review) is not p.PrivateReview:raise Block()
+    private=entry.review.check();program=entry.review.program
+    if (private['scope']!='phase1' or type(program) is not p.Program
+            or program.pins['source_sha']!=SOURCE or program.pins['release_ref']!=RELEASE
+            or program.pins['tooling_sha']!=tooling_sha or program.sha!=bundle_sha256):raise Block()
+    return program
+
+
 class Phase1ApplicationReview:
     """Transfer one already acquired entry; public pins are not credentials.
 
@@ -38,14 +50,7 @@ class Phase1ApplicationReview:
             if self.used or self.entry is None:raise Block()
             self.used=True
             entry=self.entry
-            entry.check()  # trusted ancestor/ACL/TTY, seals/runtime/time
-            if entry.secret is not None or type(entry.review) is not p.PrivateReview:raise Block()
-            private=entry.review.check()
-            program=entry.review.program
-            if (private['scope']!='phase1' or type(program) is not p.Program
-                    or program.pins['source_sha']!=SOURCE or program.pins['release_ref']!=RELEASE
-                    or program.pins['tooling_sha']!=self.tooling_sha
-                    or program.sha!=self.bundle_sha256):raise Block()
+            _phase1_program(entry,self.tooling_sha,self.bundle_sha256)
             # Reuse the same fixed-target identity validator and sealed engine
             # setup as the owned fixture. It cannot capture or connect. The
             # default Adapter.prepare()/PrivateWire.connect() stay unchanged.

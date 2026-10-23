@@ -32,8 +32,17 @@ def exercise(work,stem,token,network,image,owned,head,series):
         namespace=dict(kind='OWNED_INTERNAL_DOCKER_ONLY',pins=pins,series=series,bundle_sha256=hashlib.sha256(archive).hexdigest(),
             owned_ips=[config['r1']['ipv4']],ca_hashes=[hashlib.sha256((client/name).read_bytes()).hexdigest() for name in ('ca.pem','wrong-ca.pem')])
         (client/'practical.json').write_text(json.dumps(namespace))
-        argv=list(argv);argv[-1]='e858_phase1.practical_fixture'
-        return original_run(argv,*args,**kwargs)
+        argv=list(argv);argv[-1]='e858_phase1.opener_fixture'
+        output=original_run(argv,*args,**kwargs)
+        # Include unauthenticated/failed-TLS sessions which sent no SQL. Their
+        # private CIDs come from the actual owned server handshake, not logs.
+        cids=json.loads((work/'out/opener-cids.json').read_text())
+        if type(cids) is not list or len(cids)>128:raise h.Block('ISOLATED_TRACE_REJECTED')
+        for cid in cids:
+            if type(cid) is not int or not 0<cid<2**32:raise h.Block('ISOLATED_TRACE_REJECTED')
+            if mysql(stem+'-server','SELECT COUNT(*) FROM information_schema.PROCESSLIST WHERE ID='+str(cid)+';').strip()!=b'0':
+                raise h.Block('ISOLATED_REMOTE_REMAINS')
+        return output
     with patch.object(h,'run',side_effect=run):
         return previous.exercise(work,stem,token,network,image,owned,head,series)
 
