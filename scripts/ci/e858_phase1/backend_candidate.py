@@ -27,8 +27,9 @@ def reap(process,until):
         okay=process.poll() is not None
     except BaseException:okay=False
     finally:
-        for stream in (process.stdin,process.stdout,process.stderr):
+        for name in ('stdin','stdout','stderr'):
             try:
+                stream=getattr(process,name)
                 if stream is not None:stream.close()
             except BaseException:okay=False
     return okay
@@ -80,7 +81,8 @@ def exchange(process,request,until):
         if selector is not None:
             try:selector.close()
             except BaseException:result=None
-        reaped=reap(process,until)
+        try:reaped=reap(process,until)
+        except BaseException:reaped=False
     if result is None or not reaped:
         error=Block();error.dns_reaped=reaped
         error.dns_status=status if reaped else 'DNS_CHILD_CLEANUP_UNVERIFIED'

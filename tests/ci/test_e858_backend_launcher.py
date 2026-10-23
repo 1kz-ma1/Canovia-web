@@ -80,6 +80,19 @@ class ChildSupervisor(unittest.TestCase):
         self.assertEqual(error.exception.dns_status,'DNS_CHILD_CLEANUP_UNVERIFIED')
         self.assertFalse(error.exception.dns_reaped)
 
+    def test_unknown_resource_cannot_leak_raw_cleanup_error(self):
+        class Unknown:
+            def poll(self):raise PermissionError(CANARY)
+            @property
+            def stdin(self):raise PermissionError(CANARY)
+        out,err=io.StringIO(),io.StringIO()
+        with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err):
+            with self.assertRaises(Block) as error:b.exchange(Unknown(),b'{}',time.monotonic()+2)
+        self.assertFalse(error.exception.dns_reaped)
+        self.assertEqual(error.exception.dns_status,'DNS_CHILD_CLEANUP_UNVERIFIED')
+        self.assertNotIn(CANARY,str(error.exception));self.assertIsNone(error.exception.__context__)
+        self.assertEqual(out.getvalue()+err.getvalue(),'')
+
 
 class LauncherLifecycle(unittest.TestCase):
     setUpClass=classmethod(fixture.Practical.setUpClass.__func__)

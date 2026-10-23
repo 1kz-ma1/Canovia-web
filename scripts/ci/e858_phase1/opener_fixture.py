@@ -245,7 +245,8 @@ def child_case(fault,parent):
     if fault in CASES[1:11] and any(w.authentication_packets for w in wires):raise Block()
     if fault in ('DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_SIGNAL','DNS_STDERR','DNS_FLOOD'):
         expected={'DNS_TIMEOUT':'DNS_TIMEOUT','DNS_SIGNAL':'DNS_CHILD_SIGNAL','DNS_STDERR':'DNS_CHILD_ERROR'}.get(fault,'DNS_RESPONSE_INVALID')
-        if len(wires)!=1 or wires[0].dns_status!=expected:raise Block()
+        if (len(wires)!=1 or wires[0].dns_status!=expected or result['sql_count']
+                or any(w.authentication_packets for w in wires)):raise Block()
     if any(v.launcher.state!='STOPPED' or v.launcher.entry is not None for v in OwnedBoundary.created):raise Block()
     result.update(launcher_stopped=True,tls_verified_before_auth=(fault=='NORMAL' and all(w.tls_verified for w in wires)),
         dns_workers_started_before_input=True,dns_children_reaped=True,dns_status=[w.dns_status for w in wires],
