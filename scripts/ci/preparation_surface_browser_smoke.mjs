@@ -15,6 +15,8 @@ const browser = await chromium.launch({ headless: true,
 try {
     const context = await browser.newContext({ serviceWorkers: 'block' });
     await context.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
+    const existingCookies = ['pace_keeper_actor_token', 'canovia_first_run_passed', 'XSRF-TOKEN', 'pace_keeper_owner_token_1'];
+    if (macLab) await context.addCookies(existingCookies.map(name => ({ name, value: 'synthetic-existing-do-not-replace', url: base })));
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -94,6 +96,11 @@ try {
     assert(new URL(denied.headers().location).pathname === '/login');
     assert.deepEqual(errors, []);
     if (macLab) {
+        const cookies = await context.cookies();
+        for (const name of existingCookies) {
+            assert.equal(cookies.find(cookie => cookie.name === name)?.value, 'synthetic-existing-do-not-replace');
+        }
+        assert(cookies.filter(cookie => !existingCookies.includes(cookie.name)).every(cookie => /^canovia_mac_lab_[a-f0-9]{16}$/.test(cookie.name)));
         // Public L0 and administrator status alone do not grant the diagnosis.
         for (const actor of ['normal', 'admin']) {
             const isolated = await browser.newContext({ serviceWorkers: 'block' });

@@ -26,4 +26,22 @@ define('LARAVEL_START', microtime(true));
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
 $app->booted(fn () => \Illuminate\Support\Facades\Http::preventStrayRequests());
-$app->handleRequest(\Illuminate\Http\Request::capture());
+// Cookies are scoped to a HOST, not a port. Do not read/overwrite another
+// loopback Canovia's actor/first-run/guest-owner/XSRF/remember cookies.
+$cookie = getenv('SESSION_COOKIE');
+if (! preg_match('/^canovia_mac_lab_[a-f0-9]{16}$/D', $cookie ?: '')) {
+    http_response_code(403);
+    exit;
+}
+$_COOKIE = isset($_COOKIE[$cookie]) ? [$cookie => $_COOKIE[$cookie]] : [];
+unset($_SERVER['HTTP_COOKIE']);
+$request = \Illuminate\Http\Request::capture();
+$kernel = $app->make(\Illuminate\Contracts\Http\Kernel::class);
+$response = $kernel->handle($request);
+foreach ($response->headers->getCookies() as $queued) {
+    if ($queued->getName() !== $cookie) {
+        $response->headers->removeCookie($queued->getName(), $queued->getPath(), $queued->getDomain());
+    }
+}
+$response->send();
+$kernel->terminate($request, $response);

@@ -243,7 +243,7 @@ python3 scripts/ci/preparation_mac_lab.py --source-sha "$ACCEPTANCE_SHA"
 
 `.env`作成、`artisan key:generate`、手動migration、実資格情報設定は**不要・禁止**。vendorはこのworktree内に独立install（他checkoutへのsymlink不可）。`.env*`（配布`.env.example`を除く）/cached config/routes/Vite hot/public storage link/dirty source/占有portなら起動拒否。依存不足もSTOP。今のAPサーバーを止めてportを空けない。
 
-`SYNTHETIC_LOCAL_LAB_READY`後、Safariで **http://127.0.0.1:18803** を開く。LAN IP、localhost、本番URL、tunnelを使わない。固定の**公開ダミー**ログインだけを使用する：
+`SYNTHETIC_LOCAL_LAB_READY`後、Safariの**新しいラボ専用プライベートウィンドウ**で **http://127.0.0.1:18803** を開く。既存APのタブ/プロファイルはそのまま残す。LAN IP、localhost、本番URL、tunnelを使わない。固定の**公開ダミー**ログインだけを使用する：
 
 | 合成Account | 公開L0での扱い | password |
 | --- | --- | --- |
@@ -276,7 +276,7 @@ python3 scripts/ci/preparation_mac_lab.py --source-sha "$ACCEPTANCE_SHA" --profi
 
 `PreparationCompatibilityMatrixTest`はfalse/true × public L0/L1 × 未認証/通常/管理者の12ケースと、指定L1本人のfalse→true→falseを比較。同じDBのPlan/Task/StudyPracticeAttempt/WorkSessionの**全行・全列（ID/owner/score/思考/assessment/進捗/時刻を含む）**を前後一致検証し、別ユーザーの履歴/編集拒否も確認する。SQL/新migration/production設定を変えない。元UI L0の履歴403と専門Workspaceのredirect、準備profileの404は区別する。全既存仕様や全プロバイダーの無故障保証ではない。
 
-起動ツールはenvをallowlist化し、DB/queue/mail/AI/MCPを合成設定へ固定、storage/config/routes/cache/cookieも分離。既知local .envや実秘密を読まない。lab専用routerはloopbackとHostを照合し、CSPで外部リソース/フォーム/workerを閉じ、Laravel HTTP facadeの実リクエストも拒否。**OS全体のegress firewallではない**。既存の任意SDK/ブラウザ拡張/同一Macの別プロセスまで隔離済みと扱わない。実資格情報の設定や連携操作は禁止。private tempログは共有せず停止時削除。loopbackはインターネット認証や同一端末の他アプリからの隔離証明ではない。
+起動ツールはenvをallowlist化し、DB/queue/mail/AI/MCPを合成設定へ固定、storage/config/routes/cache/cookieも分離。Cookieはportを区別しないため、専用routerはランダムなラボsession名以外の受信Cookieをアプリへ渡さず、応答もそのsession Cookie以外を送信しない。既存loopbackのactor/first-run/owner/XSRF Cookieを合成値で事前配置し、保存・再ログイン後も上書きされないことを実ブラウザ検証する。このためラボではremember-me/Guest永続Cookieの受入を対象外にする（元アプリの認可実装は変更しない）。既知local .envや実秘密を読まない。lab専用routerはloopbackとHostを照合し、CSPで外部リソース/フォーム/workerを閉じ、Laravel HTTP facadeの実リクエストも拒否。**OS全体のegress firewallではない**。既存の任意SDK/ブラウザ拡張/同一Macの別プロセスまで隔離済みと扱わない。実資格情報の設定や連携操作は禁止。private tempログは共有せず停止時削除。loopbackはインターネット認証や同一端末の他アプリからの隔離証明ではない。
 
 ### 10.4 残るHOLD
 
