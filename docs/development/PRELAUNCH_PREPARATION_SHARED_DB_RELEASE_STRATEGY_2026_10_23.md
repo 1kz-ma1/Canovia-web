@@ -214,7 +214,7 @@ git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a e026f49221c7e45b52
 - **非HTTP**：既存2 GitHub jobの直接handleと、未知jobを含むqueue before-eventを拒否。Consoleは起動/maintenance/cache/readonly ledger等の固定allowlistだけ許可し、`schedule:run`、`queue:work`、`migrate`、各provider command等は実CLIプロセスで拒否する。機能を隠して旧deliveryを処理することはない。providerへの通信は負例でゼロを検査。
 - **境界の限界**：これは起動済み旧workerのプロセスconfigを書き換える仕組みではない。旧worker/schedulerの停止・全runtimeへ同じ固定code/configを反映し再起動する証拠、job reservation/failureのDB bookkeeping、共有session/メール/削除/export/telemetry、既存SW/キャッシュやNginx静的経路の実受入は依然BLOCKING_SHARED/UNKNOWN。DB migrationは別承認で事前適用し、runtimeでは既存check-only起動フェンスを使う。Flagで未適用20件を飛ばして起動可能とは言わない。
 
-新profileのPHP9ケースと既存Plan replay/bootstrap/Level/session等の関連回帰を使い捨てSQLiteで確認。別の実Chromium journeyは登録→診断→元AccountのPlan保存→reload/edit/logout/login→元Plan再訪、GET/POST/API拒否、CSRF、390pxでの横overflowなしを検証。Console負例はLaravelがunit-test環境でConsoleイベントを省略する仕様を避け、**`APP_ENV=local`の独立した実Artisanプロセス**で確認する（実環境への接続なし）。既存Full94/114・strict SQL/Reference・MySQL復旧CIは対象source不変のため作り直していない。
+新profileのPHP10ケースと既存Plan replay/bootstrap/Level/session等の関連回帰を使い捨てSQLiteで確認（47件 / 420 assertions）。編集時は既存Plan行ロック内で編集内容のfingerprintを比較し、古いタブ/比較値なしの上書きを拒否。入力内容は残して保存ボタンを止め、最新内容の確認を求める。fingerprintは新しい認証情報や永続revision/自動mergeではない。別の実Chromium journeyは登録→診断→元AccountのPlan保存→reload/edit/logout/login→元Plan再訪、GET/POST/API拒否、CSRF、390pxでの横overflowなしを検証。Console負例はLaravelがunit-test環境でConsoleイベントを省略する仕様を避け、**`APP_ENV=local`の独立した実Artisanプロセス**で確認する（実環境への接続なし）。既存Full94/114・strict SQL/Reference・MySQL復旧CIは対象source不変のため作り直していない。
 
 **HOLDの更新**：専門機能の完成・教材/実行の実機受入は、上記固定profileの**合成アプリケーション層**では後回し可能。現在本番が隔離済みとは認定しない。実効設定/旧worker/静的経路等を含む実運用隔離と実DB/復旧が未検証なので、公開判断では依然UNKNOWN/MIXED→BLOCKING扱い。Track H/Eいずれの候補も自動更新/採用せず、`A_SHARED_DB_PRELAUNCH_NO_GO / PRODUCTION_NO_GO_HOLD`。
 

@@ -11,6 +11,7 @@ on:
       - 'app/Http/Middleware/EnsurePreparationSurface.php'
       - 'app/Http/Middleware/EnsureFirstRunStarted.php'
       - 'app/Services/ReleaseLevelService.php'
+      - 'app/Services/FeatureFlagService.php'
       - 'app/Providers/AppServiceProvider.php'
       - 'app/Jobs/**'
       - 'bootstrap/app.php'

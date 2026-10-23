@@ -41,6 +41,8 @@ final class PreparationOnlyBoundaryTest extends TestCase
         config(['canovia.super_admin_user_id' => $user->id]);
         $this->actingAs($user);
         foreach (FeatureKey::cases() as $feature) {
+            config(["features.flags.{$feature->value}" => true]);
+            $this->assertFalse(app(\App\Services\FeatureFlagService::class)->isEnabled($feature));
             $this->assertFalse(app(FeatureAccessService::class)->canUse($user, $feature));
         }
         foreach ([WorkspaceMode::Study, WorkspaceMode::Development, WorkspaceMode::Career] as $mode) {
@@ -79,14 +81,30 @@ final class PreparationOnlyBoundaryTest extends TestCase
         $this->post(route('plans.store'), ['title' => '新しい準備', 'category' => '資格学習', 'create_request_id' => $id])->assertRedirect();
         $new = Plan::where('creation_request_id', $id)->sole();
         $this->assertSame($user->id, $new->user_id);
-        $this->get(route('plans.edit', $new))->assertOk();
-        $this->put(route('plans.update', $new), ['title' => '準備を編集'])->assertRedirect();
+        $revision = $this->get(route('plans.edit', $new))->assertOk()->viewData('revision');
+        $this->put(route('plans.update', $new), ['title' => '準備を編集', 'preparation_revision' => $revision])->assertRedirect();
         $this->assertSame('準備を編集', $new->fresh()->title);
         $this->assertDatabaseCount('tasks', 1);
         $this->assertSame($taskBefore, $task->fresh()->getRawOriginal());
         $this->assertSame(0, $new->tasks()->count());
         $this->assertDatabaseCount('work_sessions', 0);
         $this->assertDatabaseCount('study_practice_attempts', 0);
+    }
+
+    public function test_stale_or_missing_edit_snapshot_cannot_overwrite_a_newer_save(): void
+    {
+        $user = User::factory()->create();
+        $plan = $this->plan($user);
+        $this->actingAs($user);
+        $revision = $this->get(route('plans.edit', $plan))->viewData('revision');
+        $this->put(route('plans.update', $plan), ['title' => '先に保存した目標', 'preparation_revision' => $revision])->assertSessionHasNoErrors();
+        $before = $plan->fresh()->getRawOriginal();
+        $this->from(route('plans.edit', $plan))->put(route('plans.update', $plan), [
+            'title' => '古い画面の入力', 'preparation_revision' => $revision,
+        ])->assertSessionHasErrors('preparation_revision');
+        $this->assertSame($before, $plan->fresh()->getRawOriginal());
+        $this->put(route('plans.update', $plan), ['title' => '比較値なし'])->assertSessionHasErrors('preparation_revision');
+        $this->assertSame($before, $plan->fresh()->getRawOriginal());
     }
 
     public function test_other_users_and_public_slugs_do_not_grant_access(): void

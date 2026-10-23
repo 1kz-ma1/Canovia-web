@@ -47,6 +47,18 @@ try {
     await page.locator('[name="title"]').fill('再訪して編集した準備目標');
     await page.getByRole('button', { name: '変更を保存する' }).click();
     await page.getByRole('heading', { name: '再訪して編集した準備目標' }).waitFor();
+    const stale = await context.newPage();
+    await stale.goto(base + planPath + '/edit', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: '目標・計画を編集する' }).click();
+    await page.locator('[name="description"]').fill('現在地と次に整理したいこと・更新済み');
+    await page.getByRole('button', { name: '変更を保存する' }).click();
+    await page.locator('[data-preparation-plan]').waitFor();
+    await stale.locator('[name="title"]').fill('古いタブからの上書き');
+    await stale.getByRole('button', { name: '変更を保存する' }).click();
+    await stale.locator('[data-preparation-conflict]').waitFor();
+    assert.equal(await stale.locator('[name="title"]').inputValue(), '古いタブからの上書き');
+    assert.equal(await stale.getByRole('button', { name: '変更を保存する' }).isDisabled(), true);
+    await stale.close();
     assert.equal(await page.locator('a[href*="/workspace/study"],a[href*="/work-sessions"],a[href*="/github-workflow"]').count(), 0);
     for (const path of ['/workspace/study', '/workspace/development', '/map', '/public-plans', '/admin']) {
         const response = await context.request.get(base + path);
@@ -67,7 +79,7 @@ try {
     await page.waitForURL(base + '/');
     await page.getByRole('link', { name: '再訪して編集した準備目標', exact: true }).click();
     assert.equal(new URL(page.url()).pathname, planPath);
-    await page.getByText('現在地と次に整理したいこと', { exact: true }).waitFor();
+    await page.getByText('現在地と次に整理したいこと・更新済み', { exact: true }).waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     const stranger = await browser.newContext({ serviceWorkers: 'block' });
@@ -75,7 +87,7 @@ try {
     assert.equal(denied.status(), 302);
     assert(new URL(denied.headers().location).pathname === '/login');
     assert.deepEqual(errors, []);
-    console.log('PREPARATION_SURFACE_BROWSER=PASS: diagnosis, canonical Plan, reload/edit/relogin, private access, direct GET/POST/API deny, CSRF, mobile layout');
+    console.log('PREPARATION_SURFACE_BROWSER=PASS: diagnosis, canonical Plan, stale-tab rejection, reload/edit/relogin, private access, direct GET/POST/API deny, CSRF, mobile layout');
 } finally {
     await browser.close();
 }
