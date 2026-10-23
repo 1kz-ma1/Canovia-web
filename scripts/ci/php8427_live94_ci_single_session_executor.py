@@ -168,6 +168,7 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
         private = Path(name)
         os.chmod(private, 0o700)
         out = private / "result.tsv"
+        err = private / "stderr-private.txt"
         # Prevent MySQL from reading global/user defaults and login-path;
         # scrub entire inherited environment and use only CI fake password.
         mysql_env = {
@@ -176,10 +177,10 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
         }
         args = cli_arguments(binary, safe_ca)
         try:
-            with out.open("xb") as f:
+            with out.open("xb") as f, err.open("xb") as error_file:
                 proc = subprocess.Popen(
                     args, stdin=subprocess.PIPE, stdout=f,
-                    stderr=subprocess.DEVNULL, env=mysql_env, cwd=private,
+                    stderr=error_file, env=mysql_env, cwd=private,
                     start_new_session=True, preexec_fn=_limited_file_size,
                 )
                 try:
@@ -189,7 +190,19 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
                     proc.communicate()
                     raise Block() from None
             if proc.returncode != 0:
-                raise SafeStage("MYSQL_CLIENT_EXIT")
+                # Classify in private memory; NEVER emit raw CLI stderr.
+                message = err.read_bytes()[:8192].lower()
+                if b"unknown option" in message or b"unknown variable" in message:
+                    code = "UNSUPPORTED_OPTION"
+                elif b"access denied" in message:
+                    code = "AUTH_DENIED"
+                elif b"ssl" in message or b"certificate" in message or b"tls" in message:
+                    code = "TLS_NEGOTIATION"
+                elif b"can't connect" in message or b"connection refused" in message:
+                    code = "TCP_CONNECT"
+                else:
+                    code = "OTHER"
+                raise SafeStage("MYSQL_CLIENT_EXIT_" + code)
             if out.stat().st_size > MAX_RESULT_BYTES:
                 raise SafeStage("OUTPUT_LIMIT")
             # The source-bound observation must include matching session,
