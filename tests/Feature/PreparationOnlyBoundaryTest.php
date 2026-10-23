@@ -61,6 +61,17 @@ final class PreparationOnlyBoundaryTest extends TestCase
         $this->assertDatabaseCount('plans', 0);
     }
 
+    public function test_public_future_uses_manual_roadmap_without_support_data_or_mutation(): void
+    {
+        $queries = [];
+        \Illuminate\Support\Facades\DB::listen(function ($event) use (&$queries): void {
+            $queries[] = strtolower($event->sql);
+        });
+        $this->get('/feedback')->assertOk()->assertSee('Canovia Future')->assertDontSee('500 Support');
+        $this->assertFalse(collect($queries)->contains(fn ($sql) => str_contains($sql, 'roadmap_votes') || str_contains($sql, 'roadmap_features')));
+        $this->postJson('/feedback/future/1/support')->assertNotFound()->assertJsonPath('code', 'PREPARATION_SURFACE_CLOSED');
+    }
+
     public function test_new_and_legacy_owner_plan_remain_canonical_without_task_or_progress_mutation(): void
     {
         $user = User::factory()->create();

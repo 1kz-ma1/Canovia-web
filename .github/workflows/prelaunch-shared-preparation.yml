@@ -6,6 +6,7 @@ on:
     paths:
       - 'app/Http/Controllers/PlanController.php'
       - 'app/Http/Controllers/HomeController.php'
+      - 'app/Http/Controllers/CanoviaFutureController.php'
       - 'app/Http/Controllers/AuthController.php'
       - 'app/Http/Controllers/PersonalizationController.php'
       - 'app/Http/Middleware/EnsurePreparationSurface.php'

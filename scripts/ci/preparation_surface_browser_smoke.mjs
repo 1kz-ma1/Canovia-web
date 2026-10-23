@@ -82,6 +82,10 @@ try {
     await page.getByText('現在地と次に整理したいこと・更新済み', { exact: true }).waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.getByRole('link', { name: 'Canovia Future', exact: true }).click();
+    await page.getByRole('heading', { name: 'Canovia Future', exact: true }).waitFor();
+    assert.equal(await page.locator('[data-support-count],button[type="submit"]:not([form])').count(), 1); // logout only
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     const stranger = await browser.newContext({ serviceWorkers: 'block' });
     const denied = await stranger.request.get(base + planPath, { maxRedirects: 0 });
     assert.equal(denied.status(), 302);

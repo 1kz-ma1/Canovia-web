@@ -13,6 +13,7 @@
     <a href="{{ route('home') }}" aria-label="Canovia ホーム"><img src="/brand/canovia-wordmark.png" alt="Canovia" class="h-8 w-auto"></a>
     <nav aria-label="メイン" class="flex flex-wrap gap-4 text-sm">
         <a href="{{ route('home') }}">準備する</a>
+        <a href="{{ route('feedback.index') }}">Canovia Future</a>
         @auth
             <a href="{{ route('auth.account') }}">アカウント</a>
             <form method="POST" action="{{ route('auth.logout') }}">@csrf<button type="submit">ログアウト</button></form>

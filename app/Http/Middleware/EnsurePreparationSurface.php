@@ -11,7 +11,7 @@ use Symfony\Component\HttpFoundation\Response;
 final class EnsurePreparationSurface
 {
     private const PUBLIC_ROUTES = [
-        'home', 'health', 'legal.privacy', 'legal.support',
+        'home', 'health', 'legal.privacy', 'legal.support', 'feedback.index',
         'auth.login.form', 'auth.login', 'auth.register.form', 'auth.register',
         'password.request', 'password.email', 'password.reset', 'password.update',
     ];
