@@ -46,6 +46,13 @@ SCRIPT_FOOTER = (
     b"SELECT 'CI_END', CONNECTION_ID(), @@server_uuid, CURRENT_USER(), "
     b"DATABASE(), CURRENT_ROLE(), @@GLOBAL.mandatory_roles;\n"
 )
+class SafeStage(Block):
+    """Only a fixed stage name, never a MySQL or file error string."""
+    def __init__(self, stage: str):
+        self.stage = stage
+        super().__init__()
+
+
 ALWAYS_FALSE = {
     "real_aiven_connected": False,
     "real_tls_peer_authenticated": False,
@@ -139,15 +146,24 @@ def _limited_file_size() -> None:
 
 
 def execute(checkout: Path, ca: Path) -> dict[str, object]:
-    runner = synthetic_only_guard()
+    try:
+        runner = synthetic_only_guard()
+    except BaseException:
+        raise SafeStage("GUARD") from None
     if not checkout.is_absolute():
-        raise Block()
-    safe_ca = secure_ca(ca, runner)
+        raise SafeStage("SOURCE_PATH")
+    try:
+        safe_ca = secure_ca(ca, runner)
+    except BaseException:
+        raise SafeStage("CA") from None
     # Verify all old-Live source and SQL bytes before the *single* connection.
-    packet = immutable_packet(checkout)
+    try:
+        packet = immutable_packet(checkout)
+    except BaseException:
+        raise SafeStage("SOURCE") from None
     binary = shutil.which("mysql")
     if binary is None or not Path(binary).is_file():
-        raise Block()
+        raise SafeStage("MYSQL_BINARY")
     with tempfile.TemporaryDirectory(prefix="live94-single-session-", dir=runner) as name:
         private = Path(name)
         os.chmod(private, 0o700)
@@ -172,13 +188,18 @@ def execute(checkout: Path, ca: Path) -> dict[str, object]:
                     os.killpg(proc.pid, signal.SIGKILL)
                     proc.communicate()
                     raise Block() from None
-            if proc.returncode != 0 or out.stat().st_size > MAX_RESULT_BYTES:
-                raise Block()
+            if proc.returncode != 0:
+                raise SafeStage("MYSQL_CLIENT_EXIT")
+            if out.stat().st_size > MAX_RESULT_BYTES:
+                raise SafeStage("OUTPUT_LIMIT")
             # The source-bound observation must include matching session,
             # server, principal and role/grants, then exactly 94 fake entries.
-            verdict = verify_result(out.read_bytes(), checkout)
+            try:
+                verdict = verify_result(out.read_bytes(), checkout)
+            except BaseException:
+                raise SafeStage("OUTPUT_VALIDATION") from None
         except (OSError, subprocess.SubprocessError):
-            raise Block() from None
+            raise SafeStage("LOCAL_PROCESS_FAILURE") from None
     if (verdict["verdict"] != "HOLD"
             or verdict["same_client_connection_observed"] is not True
             or verdict["scope_limited_grants_observed"] is not True):
@@ -203,10 +224,11 @@ def main() -> int:
     try:
         answer = execute(args.checkout, args.ca)
         rc = 0
-    except BaseException:
+    except BaseException as exc:
+        stage = exc.stage if type(exc) is SafeStage else "OTHER"
         answer = {
             "verdict": "BLOCK",
-            "code": "DISPOSABLE_SINGLE_CLIENT_REJECTED",
+            "code": "DISPOSABLE_SINGLE_CLIENT_REJECTED_" + stage,
             "synthetic_one_client_finished": False,
             **ALWAYS_FALSE,
         }
