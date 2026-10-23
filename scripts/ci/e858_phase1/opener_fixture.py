@@ -110,6 +110,7 @@ class OwnedTLS:
             if wire.fault=='PEER_CHANGED':plan.peer=Peer(plan.peer.family,('198.51.100.9',3306))
             plan.before_tls(raw,server_hostname)
             raw.settimeout(plan.remaining())
+            wire.tls_handshake_started=True
             wrapped=plan.context.wrap_socket(raw,server_hostname=server_hostname)
             plan.after_tls(wrapped)  # must complete BEFORE driver gets TLS/auth socket
             return wrapped
@@ -124,6 +125,7 @@ class OwnedWire(old.FixtureWire):
     def initialize_fixture(self,gate,secret,target):
         super().initialize_fixture(gate,secret,target)  # fixed owned name/CA/DB/principal/password guard
         self.created.append(self);self.plan=None;self.dns_started=False;self.dns_reaped=False
+        self.authentication_packets=0;self.tls_handshake_started=False
     def connect(self,sock=None):
         raw=None
         try:
@@ -175,7 +177,9 @@ class OwnedWire(old.FixtureWire):
             return super()._write_bytes(data)
         finally:self.gate.deadline=previous
     def write_packet(self,data):
-        if isinstance(getattr(self,'_sock',None),ssl.SSLSocket) and not self.plan.verified:raise Block()
+        if isinstance(getattr(self,'_sock',None),ssl.SSLSocket) and not self.authenticated:
+            if not self.plan.verified:raise Block()
+            self.authentication_packets+=1
         return super().write_packet(data)
     def close(self):
         try:return super().close()
@@ -219,17 +223,28 @@ CASES=('NORMAL','DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_UNOWNED','DNS_
 def child_case(fault,parent):
     OwnedWire.created=[];OwnedWire.fault=fault;DNSWorker.created=[]
     mapped='PHASE1' if fault=='NORMAL' else fault
-    with patch.object(old,'FixtureWire',OwnedWire),patch.object(old,'IsolatedAdapter',OwnedAdapter):
+    capture=p.ReviewedEntry.capture;captures=[]
+    def before_input(entry):
+        if len(DNSWorker.created)!=2 or any(w.used or w.process.poll() is not None for w in DNSWorker.created):raise Block()
+        captures.append(True)
+        return capture(entry)
+    with patch.object(old,'FixtureWire',OwnedWire),patch.object(old,'IsolatedAdapter',OwnedAdapter),\
+            patch.object(p.ReviewedEntry,'capture',before_input):
         result=old.child(mapped,parent)
     wires=OwnedWire.created
     if fault in CASES[1:9] and (result['sql_count'] or any(w.authenticated for w in wires)):raise Block()
     if not wires or not all(w.dns_reaped for w in wires):raise Block()
     if len(DNSWorker.created)!=2 or any(w.process.poll() is None for w in DNSWorker.created):raise Block()
+    if len(captures)!=1 or not all(not w.authentication_packets or w.plan.verified for w in wires):raise Block()
+    if fault in CASES[1:11] and any(w.authentication_packets for w in wires):raise Block()
     if fault in ('DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE'):
         expected='DNS_TIMEOUT' if fault=='DNS_TIMEOUT' else 'DNS_RESPONSE_INVALID'
         if len(wires)!=1 or wires[0].dns_status!=expected:raise Block()
     result.update(tls_verified_before_auth=(fault=='NORMAL' and all(w.tls_verified for w in wires)),
-        dns_children_reaped=True,dns_status=[w.dns_status for w in wires],
+        dns_workers_started_before_input=True,dns_children_reaped=True,dns_status=[w.dns_status for w in wires],
+        authentication_packets=sum(w.authentication_packets for w in wires),
+        tls_handshakes_started=sum(w.tls_handshake_started for w in wires),
+        server_sessions_observed=sum(hasattr(w,'server_thread_id') for w in wires),
         private_cids=[int(w.thread_id()) for w in wires if hasattr(w,'server_thread_id')])
     return result
 
