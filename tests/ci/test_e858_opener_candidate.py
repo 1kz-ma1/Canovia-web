@@ -44,6 +44,8 @@ class OpenerPolicy(unittest.TestCase):
         bad=[[],[answer()]*33,[answer(port=9877)],[answer(),answer('127.0.0.1')],
              [answer('0.0.0.0')],[answer('224.0.0.1')],[answer('169.254.0.1')],
              [answer('fe80::1',family=socket.AF_INET6)],
+             [answer('::ffff:127.0.0.1',family=socket.AF_INET6)],
+             [(2.0,socket.SOCK_STREAM,6,'',('198.51.100.7',9876))],
              [(socket.AF_INET,socket.SOCK_DGRAM,17,'',('198.51.100.7',9876))],
              [(socket.AF_INET6,socket.SOCK_STREAM,6,'',('2001:db8::7',9876,0,3))]]
         for rows in bad:
@@ -78,11 +80,17 @@ class OpenerPolicy(unittest.TestCase):
                     elif fault=='CA':
                         ctx.load_verify_locations(cadata=self.other_ca.decode('ascii'))
                         with self.assertRaises(Block):plan.remaining()
+                    elif fault=='CIPHER':
+                        ctx.set_ciphers('AES128-SHA')
+                        with self.assertRaises(Block):plan.remaining()
                     elif fault=='TIME':
                         plan.until=time.monotonic()-1
                         with self.assertRaises(Block):plan.remaining()
                     elif fault=='ROLE':
                         gate.role='third'
+                        with self.assertRaises(Block):plan.remaining()
+                    elif fault=='NAN':
+                        gate.deadline=float('nan')
                         with self.assertRaises(Block):plan.remaining()
                     elif fault=='SNI':
                         plan.resolution([answer()]);raw=Mock();raw.getpeername.return_value=('198.51.100.7',9876)
@@ -108,9 +116,9 @@ class OpenerPolicy(unittest.TestCase):
 
     def test_resolution_is_single_use_and_bounded(self):self._entry_case('NORMAL')
     def test_tls_weakening_and_ca_store_change_block(self):
-        self._entry_case('WEAK');self._entry_case('CA')
+        self._entry_case('WEAK');self._entry_case('CA');self._entry_case('CIPHER')
     def test_expiry_and_role_change_block(self):
-        self._entry_case('TIME');self._entry_case('ROLE')
+        self._entry_case('TIME');self._entry_case('ROLE');self._entry_case('NAN')
     def test_sni_switch_and_self_declared_tls_are_not_proof(self):
         self._entry_case('SNI');self._entry_case('FAKE_TLS')
     def test_third_connection_fails_before_any_network(self):self._entry_case('THIRD')

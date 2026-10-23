@@ -32,7 +32,8 @@ def select_peer(answers,port):
         for row in answers:
             if type(row) not in (tuple,list) or len(row)!=5:raise Block()
             family,kind,protocol,canonical,address=row
-            if (family not in (socket.AF_INET,socket.AF_INET6) or type(kind) is bool or kind!=socket.SOCK_STREAM
+            if (not all(isinstance(v,int) and type(v) is not bool for v in (family,kind,protocol))
+                    or family not in (socket.AF_INET,socket.AF_INET6) or kind!=socket.SOCK_STREAM
                     or protocol!=socket.IPPROTO_TCP or canonical!='' or type(address) not in (tuple,list)
                     or len(address)!=(2 if family==socket.AF_INET else 4)
                     or type(address[0]) is not str or len(address[0])>45
@@ -40,6 +41,7 @@ def select_peer(answers,port):
                     or family==socket.AF_INET6 and (tuple(address[2:])!=(0,0) or any(type(v) is not int for v in address[2:]))):raise Block()
             ip=ipaddress.ip_address(address[0])
             if (ip.version!=(4 if family==socket.AF_INET else 6) or '%' in address[0]
+                    or getattr(ip,'ipv4_mapped',None) is not None
                     or ip.is_unspecified or ip.is_multicast or ip.is_loopback or ip.is_link_local):raise Block()
             result.append(Peer(int(family),(ip.compressed,port)+tuple(address[2:])))
         return result[0]
@@ -48,6 +50,10 @@ def select_peer(answers,port):
 
 def _ca(context):
     return tuple(sorted(hashlib.sha256(raw).hexdigest() for raw in context.get_ca_certs(binary_form=True)))
+
+
+def _ciphers(context):
+    return tuple((v['id'],v['name'],v['protocol'],v['strength_bits']) for v in context.get_ciphers())
 
 
 class OpenerCandidate:
@@ -62,7 +68,7 @@ class OpenerCandidate:
             if type(entry) is not ReviewedEntry or type(entry.target) is not Target:raise Block()
             self.entry=entry;self.target=entry.target;self.gate=gate;self.context=context
             self.role=gate.role;self.until=min(entry.until,gate.deadline,time.monotonic()+OPEN_SECONDS)
-            self.ca=_ca(self.target.tls_context())
+            expected=self.target.tls_context();self.ca=_ca(expected);self.ciphers=_ciphers(expected)
             if not self.ca:raise Block()
             self.remaining()
         except BaseException:
@@ -78,12 +84,12 @@ class OpenerCandidate:
             if (self.entry.review.value['scope']!='phase1' or self.entry.target!=self.target
                     or self.role not in ('control','data') or self.gate.role!=self.role
                     or self.gate.q0!=program.queries['identity'] or self.gate.q1!=program.queries['grants']
-                    or self.gate.deadline>self.entry.until or self.context.verify_mode!=ssl.CERT_REQUIRED
+                    or not time.monotonic()<self.gate.deadline<=self.entry.until or self.context.verify_mode!=ssl.CERT_REQUIRED
                     or not self.context.check_hostname or self.context.hostname_checks_common_name
                     or self.context.minimum_version<ssl.TLSVersion.TLSv1_2 or self.context.keylog_filename is not None
-                    or _ca(self.context)!=self.ca):raise Block()
+                    or _ca(self.context)!=self.ca or _ciphers(self.context)!=self.ciphers):raise Block()
             value=min(self.until,self.gate.deadline,self.entry.until)-time.monotonic()
-            if value<=0:raise Block()
+            if not value>0:raise Block()
             return value
         except BaseException:
             self.close();raise Block() from None
