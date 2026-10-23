@@ -1,9 +1,13 @@
 """Negative-control tests for the legacy 94-source preflight (no DB/network)."""
 import json
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+
+# Explicit import root also when python is run with -I (isolated mode).
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.ci.php8427_live94_offline_source_gate import (
     AUDIT_BLOBS, Block, LIVE_MIGRATION_COUNT, LIVE_MIGRATION_TREE, LIVE_SHA,
