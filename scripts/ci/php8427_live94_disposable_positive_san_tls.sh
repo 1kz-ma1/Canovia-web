@@ -26,7 +26,9 @@ fi
 
 umask 077
 scratch="$(mktemp -d "$RUNNER_TEMP/live94-san-tls.XXXXXXXX")"
-trap 'rm -rf -- "$scratch"' EXIT
+result_path="$RUNNER_TEMP/live94-positive-san-observations.tsv"
+[[ ! -e "$result_path" ]] || { echo "LIVE94_SAN_TLS: RESULT_PATH_EXISTS" >&2; exit 2; }
+trap 'rm -rf -- "$scratch"; rm -f -- "$result_path"' EXIT
 
 root_mysql() {
   MYSQL_PWD=ci-only-root-password timeout -k 2s 12s mysql --no-defaults \
@@ -112,8 +114,6 @@ fi
 
 # Correct requested host but the previous auto-generated/disconnected test
 # CA is an untrusted root; do not accept it as this new custom SAN authority.
-docker cp "$MYSQL_SERVICE_CONTAINER:/var/lib/mysql/client-cert.pem" \
-  "$scratch/unrelated-client-cert.pem" >/dev/null 2>&1 || true
 openssl req -x509 -newkey rsa:2048 -sha256 -nodes -days 1 \
   -subj '/CN=untrusted-disposable-test-ca' \
   -addext 'basicConstraints=critical,CA:TRUE' \
@@ -132,10 +132,10 @@ echo 'DISPOSABLE_VERIFY_IDENTITY_BAD_HOST_AND_CA=DENIED'
 # Only the existing reviewed 7 source-pinned SQL can be used in the test.
 # A successful TLS handshake does not transform incomplete fixture metadata
 # into an authorized schema, live Aiven audit, remote close or production GO.
-reader_tls < "$RUNNER_TEMP/audit.sql" > "$scratch/verified-client.tsv"
+reader_tls < "$RUNNER_TEMP/audit.sql" > "$result_path"
 python3 -I -B scripts/ci/php8427_live94_disposable_mysql_smoke.py verify \
   --checkout "$RUNNER_TEMP/old-live94-mysql-fixture" \
-  --path "$scratch/verified-client.tsv" > "$scratch/verification.json"
+  --path "$result_path" > "$scratch/verification.json"
 python3 - "$scratch/verification.json" <<'PY'
 import json,sys
 r=json.load(open(sys.argv[1], encoding="utf-8"))
