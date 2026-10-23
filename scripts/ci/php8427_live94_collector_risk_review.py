@@ -10,6 +10,10 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
+
+# Explicit local import root, including under isolated Python -I.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.ci.php8427_live94_offline_source_gate import (
     AUDIT_BLOBS, Block, LIVE_SHA, verify_source,
