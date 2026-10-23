@@ -68,7 +68,7 @@ def review(collector: str, *, source_verified: bool) -> dict[str, object]:
             "SHOW GRANTS FOR CURRENT_USER()" in code
             and "p0_mysql_metadata_grants_guard.py" in code
             and code.index("SHOW GRANTS FOR CURRENT_USER()")
-                < code.rindex(' < "$repo/scripts/sql/p0_mysql_readonly_schema_inventory.sql"')
+                < code.rfind(' < "$repo/scripts/sql/p0_mysql_readonly_schema_inventory.sql"')
         ),
         "two_known_sql_sources": (
             '< "$repo/scripts/sql/p0_mysql_readonly_schema_inventory.sql"' in code
