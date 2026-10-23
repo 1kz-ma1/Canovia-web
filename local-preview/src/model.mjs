@@ -37,5 +37,11 @@ export function validate(state) {
   for (const p of state.plans) requireValue(['study', 'development'].includes(p.domain) && text(p.title, 120) && p.title.trim() && text(p.description) && date(p.start_date) && (p.deadline === null || date(p.deadline) && p.deadline >= p.start_date) && number(p.priority, 3));
   for (const t of state.tasks) requireValue(plans.has(t.plan_id) && text(t.title, 120) && t.title.trim() && text(t.description) && ['todo', 'doing', 'done', 'cancelled'].includes(t.status) && number(t.estimated_minutes, 100000) && number(t.remaining_minutes, 100000) && number(t.progress_percent, 100) && number(t.priority, 3) && Number.isSafeInteger(t.sort_order) && t.sort_order >= 0 && (t.status !== 'done' || t.remaining_minutes === 0 && t.progress_percent === 100));
   for (const row of [...state.work_sessions, ...state.work_logs, ...state.practice_sessions]) requireValue(tasks.has(row.task_id) && tasks.get(row.task_id).plan_id === row.plan_id, 'BROKEN_REFERENCE');
+  const sessions = new Map(state.work_sessions.map(s => [s.id,s]));
+  requireValue(state.work_sessions.filter(s => s.status !== 'finished').length <= 1);
+  for (const s of state.work_sessions) requireValue(['running','paused','finished'].includes(s.status) && instant(s.started_at) && instant(s.last_checkpoint_at) && s.started_at <= s.last_checkpoint_at && number(s.active_seconds,31536000) && (s.status === 'finished' ? instant(s.ended_at) && s.ended_at >= s.last_checkpoint_at : s.ended_at === null) && (s.paused_at === null || instant(s.paused_at)));
+  const logged = new Set();
+  for (const l of state.work_logs) {const session=sessions.get(l.session_id);requireValue(session && session.status === 'finished' && session.task_id === l.task_id && session.plan_id === l.plan_id && !logged.has(l.session_id) && date(l.worked_on) && number(l.actual_seconds,31536000) && l.actual_seconds === session.active_seconds && l.actual_minutes === l.actual_seconds/60 && text(l.memo) && number(l.progress_before,100) && number(l.progress_after,100));logged.add(l.session_id);}
+  requireValue(state.work_sessions.filter(s => s.status === 'finished').every(s => logged.has(s.id)));
   return state;
 }

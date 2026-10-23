@@ -133,3 +133,9 @@
 ## 11. Phase 1b 診断・Plan・Task
 
 初回は領域/目標/現在地/週の分数/任意期限を本人入力し、Planと編集可能な最初の2 Taskを同じtransactionで作成。情報不足から能力を推測しない。Study/Developmentは専用切替、期限/単純Roadmap/CRUDを提供。Task進捗は本人の明示保存のみ、完了指定で100%・残0。実績を持つTaskの削除は拒否し取消を案内、Taskを残すPlanの削除も拒否する。ユーザー文字列はHTML escape、競合時は入力を保って更新を拒否し明示refreshを促す。診断と履歴は端末外へ送信しない。
+
+## 12. Phase 2 実行ループ
+
+作業は単一active WorkSession、保存した秒数と本人確認Task進捗を分離。UIの単調時計で5秒ごとにcheckpoint（同一revision transaction）し、pause/resume/finishを状態機械で処理、同sessionのLogは1件のみ。見積加重進捗・残分・実績分を別表示、取消を進捗から除外。推薦は本人priority/doing/実績未記録/順序の決定的な参考候補。
+
+離席visibilitychangeでpauseを試みるがpage closeの非同期書込成功は保証しない。reload/別タブ復帰では保存済みactive秒数だけを残してrunningをpausedにし、未観測の離席時間を加算しない。古いタブはCAS失敗で停止。時計差5秒超/観測間隔15秒超は未観測時間を加算せずpause、書込失敗はpulseを停止し成功表示しない。Task状態・進捗は実績時間や正答率では更新しない。これは稼働率/勤怠保証ではなく、短い未保存区間が失われ得る保守的な個人記録。
