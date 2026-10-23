@@ -14,3 +14,6 @@ test('diagnosis creates linked plan/tasks, CRUD preserves history boundaries',()
  deleteTask(s,s.tasks[0].id);deleteTask(s,s.tasks[0].id);deletePlan(s,s.plans[0].id);validate(s);
  const p=createPlan(s,{title:'開発',domain:'development',start_date:'2026-10-23'});createTask(s,{plan_id:p.id,title:'実装',estimated_minutes:20});validate(s);
 });
+
+import {date,instant} from '../src/model.mjs';
+test('date-only and UTC instants reject normalized impossible dates',()=>{assert.equal(date('2026-02-30'),false);assert.equal(instant('2026-02-30T00:00:00.000Z'),false);assert.equal(date('2028-02-29'),true)});
