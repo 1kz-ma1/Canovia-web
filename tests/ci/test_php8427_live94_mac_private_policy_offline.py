@@ -45,7 +45,7 @@ class OperatorOfflinePrivatePolicyTests(unittest.TestCase):
         self.ca_file.chmod(0o600)
         self.data = {
             "protocol": "MYSQL_TCP",
-            "service_host": "mysql-disposable.example.invalid",
+            "service_host": "mysql-disposable.example.org",
             "service_port": 25000,
             "database": "live94audit",
             "reader_user": "reader_live94",
@@ -106,6 +106,9 @@ class OperatorOfflinePrivatePolicyTests(unittest.TestCase):
         invalid = (
             ("service_host", "localhost"),
             ("service_host", "127.0.0.1"),
+            ("service_host", "127.1"),
+            ("service_host", "staging.invalid"),
+            ("service_host", "foo.local"),
             ("service_host", "two hosts.invalid"),
             ("service_host", "-bad.example.org"),
             ("service_port", True),
