@@ -49,7 +49,7 @@
 - **物理分離:** 既存Laravelと切り離したStatic Web/PWAを別ホスト/オリジンで配布。`main`/`production`の既存Laravel routeやsession cookieと混用しない。Previewホスト名、配布手段、CSPおよびService Worker scopeはリリース前に別途固定し、既存`offline.html`/既存SWを上書きしない。
 - **依存ゼロ:** Preview通常操作は`/api`、`/offline/work-sessions/sync`、OAuth、GitHub、AI、Aiven、Render Webを呼び出さない。外部CDN、外部フォント、分析SDKも初版は入れない。Network断/ログイン無しで全操作が成立する。静的ファイルの配信/更新は別途存在する。
 - **DB分離:** 専用IndexedDB名 `canovia-local-preview-v1` を使用。既存`pacekeeper-offline-v1`等を直接読込・破壊しない。取り込みは人間操作と検証がある場合だけ。
-- **Client:** `crypto.randomUUID()`が使えるsecure context（HTTPS / localhost）で実行。使えない環境では危険な識別子を発行せず操作を停止し案内する。IndexedDB書込失敗、容量超過、Private modeでは「保存済み」を表示しない。
+- **Client:** `crypto.randomUUID()`が使えるsecure context（HTTPS / localhost）で実行。使えない環境では危険な識別子を発行せず操作を停止し案内する。IndexedDB書込失敗・容量超過では「保存済み」を表示しない。Private modeの確実な検出は保証せず、commit成功も永続性の保証とは区別する。プライベートウィンドウ終了による消失を画面で説明し、通常profileと定期バックアップを推奨する。
 - **モバイル:** PWAと既存SwiftUI+WKWebViewは保存領域、インストール削除、Service Worker挙動が異なるため独立受入。iOS公開やApp Store審査は本Previewの自動結果ではない。
 
 ## 4. Local data contract（初版規約案）
@@ -162,7 +162,7 @@ Importは全件検査→追加/一致件数preview→本人confirm→raw/hashを
 
 ### 自動受入
 
-Nodeのmodel/進捗/作業状態/採点/backup/公開gateテストと、実Chromium/ChromeのブラウザE2Eを既存CIへ追加。ブラウザはStudy初回診断→Task→draft保存/reload→採点/履歴/弱点/次問、Development初回診断→start/pause/resume/finish→本人進捗/推薦/reload、混在データのJSON download→独立context restore→全論理record一致→二重/破損拒否、storage失敗/競合/unsupported schema保持、SW準備後の実network断/reload/復習、390px overflowなし/keyboard操作、サーバーデータ通信なしを検証する。quota失敗は実ブラウザ内の合成書込失敗注入であり、実端末ディスクを満杯にしたとは主張しない。旧schema0は新規の未定義形式なので消去/推測変換をせず明示拒否する。
+Nodeのmodel/進捗/作業状態/採点/backup/公開gateテストと、実Chromium/ChromeのブラウザE2Eを既存CIへ追加。ブラウザはStudy初回診断→Task→draft保存/reload→採点/履歴/弱点/次問、Development初回診断→start/pause/resume/finish→本人進捗/推薦/reload、混在データのJSON download→独立context restore→全論理record一致→二重/破損拒否、storage失敗/競合/unsupported schema保持、SW準備後の実network断/reload/復習、390px overflowなし/keyboard操作/新しいbrowser processでのprofile再起動復元、サーバーデータ通信なしを検証する。quota失敗は実ブラウザ内の合成書込失敗注入であり、実端末ディスクを満杯にしたとは主張しない。旧schema0は新規の未定義形式なので消去/推測変換をせず明示拒否する。
 
 ### ローカルでの再現
 

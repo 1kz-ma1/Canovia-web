@@ -1,6 +1,8 @@
 import {chromium} from 'playwright';
 import assert from 'node:assert/strict';
-const browser=await chromium.launch({headless:true,...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH?{executablePath:process.env.CANOVIA_BROWSER_EXECUTABLE_PATH}:{})});
+import {mkdtemp,rm} from 'node:fs/promises';import {join} from 'node:path';import {tmpdir} from 'node:os';
+const launchOptions={headless:true,...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH?{executablePath:process.env.CANOVIA_BROWSER_EXECUTABLE_PATH}:{})};
+const browser=await chromium.launch(launchOptions);
 const traffic=[],pageErrors=[];browser.on('context',c=>{c.on('request',r=>traffic.push({url:r.url(),method:r.method()}));c.on('page',p=>p.on('pageerror',e=>pageErrors.push(e.message)))});
 const context=await browser.newContext();const page=await context.newPage();
 try {
@@ -63,6 +65,12 @@ try {
  const bad=await browser.newContext();await bad.addInitScript(()=>Object.defineProperty(window,'indexedDB',{get(){throw new Error('synthetic storage blocked')}}));const bp=await bad.newPage();await bp.goto('http://127.0.0.1:18799/');await bp.getByText('保存領域を利用できません。データを削除せず、通常ブラウザでお試しください。',{exact:true}).waitFor();assert.equal(await bp.locator('#diagnosis').count(),0);await bad.close();
  const legacy=await browser.newContext(),lp=await legacy.newPage();await lp.goto('http://127.0.0.1:18799/');await lp.locator('#backup').waitFor();await lp.evaluate(async()=>{const {repo}=await import('/src/app.mjs');repo.close();await new Promise((resolve,reject)=>{const q=indexedDB.open('canovia-local-preview-v1');q.onsuccess=()=>{const db=q.result,tx=db.transaction('state','readwrite'),r=tx.objectStore('state').get('root');r.onsuccess=()=>{r.result.schema_version=0;tx.objectStore('state').put(r.result,'root')};tx.oncomplete=()=>{db.close();resolve()};tx.onabort=reject}})});await lp.reload();await lp.getByText('このデータ形式はこの版では開けません。データを削除せず、対応する版を確認してください。',{exact:true}).waitFor();const version=await lp.evaluate(()=>new Promise(resolve=>{const q=indexedDB.open('canovia-local-preview-v1');q.onsuccess=()=>{const d=q.result,t=d.transaction('state'),r=t.objectStore('state').get('root');r.onsuccess=()=>{resolve(r.result.schema_version);d.close()}}}));assert.equal(version,0);await legacy.close();
  console.log('LOCAL_PREVIEW_BROWSER_STORAGE_SCHEMA_SAFETY=PASS');
+ const profile=await mkdtemp(join(tmpdir(),'canovia-local-preview-'));let persisted;
+ try{
+  persisted=await chromium.launchPersistentContext(profile,launchOptions);persisted.on('request',r=>traffic.push({url:r.url(),method:r.method()}));let pp=await persisted.newPage();await pp.goto('http://127.0.0.1:18799/');await pp.locator('#diagnosis').waitFor();await pp.locator('#diagnosis').getByLabel('できるようになりたいこと').fill('再起動しても続ける');await pp.locator('#diagnosis').getByRole('button').click();await pp.getByRole('heading',{name:'再起動しても続ける',exact:true}).waitFor();await persisted.close();persisted=null;
+  persisted=await chromium.launchPersistentContext(profile,launchOptions);persisted.on('request',r=>traffic.push({url:r.url(),method:r.method()}));pp=await persisted.newPage();await pp.goto('http://127.0.0.1:18799/');await pp.getByRole('heading',{name:'再起動しても続ける',exact:true}).waitFor();assert.equal(await pp.locator('[data-edit-task]').count(),2);
+ }finally{if(persisted)await persisted.close();await rm(profile,{recursive:true,force:true})}
+ console.log('LOCAL_PREVIEW_BROWSER_PROCESS_RESTART=PASS');
  assert.deepEqual(pageErrors,[]);assert.ok(traffic.every(r=>r.method==='GET'&&new URL(r.url).origin==='http://127.0.0.1:18799'&&!/^\/(api|offline|mcp)(\/|$)/.test(new URL(r.url).pathname)));
  console.log('LOCAL_PREVIEW_BROWSER_NO_SERVER_DATA_REQUESTS=PASS');
 } finally {await context.close();await browser.close()}
