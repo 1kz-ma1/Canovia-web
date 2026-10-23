@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - scripts/ci/php8427_live94_disposable_tls_role_session.sh
+      - tests/ci/test_php8427_live94_disposable_tls_role_session.py
       - scripts/ci/php8427_live94_disposable_mysql_smoke.py
       - tests/ci/test_php8427_live94_disposable_mysql_smoke.py
       - .github/workflows/php8427-live94-disposable-mysql-smoke.yml
@@ -56,6 +58,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_disposable_mysql_smoke.py -v
+
+      - name: Offline guard, syntax and synthetic-target negative tests
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_disposable_tls_role_session.py -v
 
       - name: Check out exact historical Live94 source, never main-derived SQL
         run: |
@@ -183,6 +190,15 @@ jobs:
           fi
           grep -Fq '"verdict": "BLOCK"' "$RUNNER_TEMP/overgrant-result.json"
           echo 'DISPOSABLE_OVERGRANT=BLOCK; REAL_AIVEN_NOT_RUN'
+
+      - name: Verify real synthetic CA and reject bad hostname, active role and unclosed sessions
+        env:
+          CANOVIA_P0_DISPOSABLE_ROOT_PASSWORD: ci-only-root-password
+          MYSQL_SERVICE_CONTAINER: ${{ job.services.mysql.id }}
+        run: |
+          set -euo pipefail
+          bash -n scripts/ci/php8427_live94_disposable_tls_role_session.sh
+          bash scripts/ci/php8427_live94_disposable_tls_role_session.sh
 
       - name: Explicitly reject live acceptance inference
         run: |
