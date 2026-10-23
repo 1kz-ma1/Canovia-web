@@ -381,6 +381,13 @@ class PlanController extends Controller
         bool $alreadyExists = false,
     ): ?RedirectResponse {
         if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            $request = request();
+            if ($request->user() && app(PlanOwnershipService::class)->owns($request, $plan)) {
+                // The owner has saved preparation. Reuse the existing first-run
+                // marker so the formal UI will not force onboarding again.
+                app(\App\Services\FirstRunService::class)->markPassed($request);
+            }
+
             return null;
         }
 

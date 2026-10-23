@@ -118,6 +118,20 @@ final class PreparationOnlyBoundaryTest extends TestCase
         $this->assertSame($before, $plan->fresh()->getRawOriginal());
     }
 
+    public function test_saved_preparation_does_not_force_first_run_again_when_formal_ui_returns(): void
+    {
+        $user = User::factory()->create(['first_run_completed_at' => null]);
+        $this->actingAs($user)->post(route('plans.store'), ['title' => '正式版へ引き継ぐ目標'])->assertRedirect();
+        $plan = Plan::query()->sole();
+        $this->assertNotNull($user->fresh()->first_run_completed_at);
+        $this->assertNull($user->fresh()->release_level_override);
+        config(['release_levels.preparation_only' => false]);
+        $this->get(route('my_plans.index'))->assertOk()->assertSee($plan->title);
+        $this->assertSame($user->id, $plan->fresh()->user_id);
+        $this->assertDatabaseCount('plans', 1);
+        $this->assertDatabaseCount('tasks', 0);
+    }
+
     public function test_other_users_and_public_slugs_do_not_grant_access(): void
     {
         $plan = $this->plan(User::factory()->create());
