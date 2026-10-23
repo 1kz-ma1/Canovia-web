@@ -17,9 +17,12 @@ jobs:
           node-version: '22'
       - run: node --test local-preview/test/*.test.mjs
       - run: |
-          npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-          npx playwright install --with-deps chromium
-      - run: |
+          npm install --prefix "$RUNNER_TEMP/preview-browser" --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          ln -s "$RUNNER_TEMP/preview-browser/node_modules" node_modules
+          test -x /usr/bin/google-chrome
+      - env:
+          CANOVIA_BROWSER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
           python3 scripts/ci/local_preview_serve.py > /tmp/local-preview-server.log 2>&1 &
           node tests/browser/local_preview.mjs
       - run: test -z "$(git status --porcelain)"
