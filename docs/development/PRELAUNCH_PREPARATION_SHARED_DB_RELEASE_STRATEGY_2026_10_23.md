@@ -221,3 +221,65 @@ git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a e026f49221c7e45b52
 **HOLDの更新**：専門機能の完成・教材/実行の実機受入は、上記固定profileの**合成アプリケーション層**では後回し可能。現在本番が隔離済みとは認定しない。実効設定/旧worker/静的経路等を含む実運用隔離と実DB/復旧が未検証なので、公開判断では依然UNKNOWN/MIXED→BLOCKING扱い。Track H/Eいずれの候補も自動更新/採用せず、`A_SHARED_DB_PRELAUNCH_NO_GO / PRODUCTION_NO_GO_HOLD`。
 
 次の本人操作は実接続や配備ではなく、CIで固定された元Webの準備フローを管理Macで**無公開・合成データ**受入すること。実運用候補の依存closure/追加20件・実DB/backup restore・実効profile/旧worker停止・既存Account/実機/Privacy・初回manual deployment/publicationの各別GOが揃うまで公開しない。別DB B案への切替もしない。
+
+## 10. 管理Mac Safariでの無公開・合成受入（2026-10-24）
+
+§9/#857/#859/#860の既存証拠を再利用する。`scripts/ci/preparation_mac_lab.py`は**元Webを別のclean worktreeで前面起動**するための受入ツール。既存のbrowser runnerの合成環境と`preparation_surface_browser_smoke.mjs`を再利用する。公開UIの差分は今回追加しない。内部コード/判定を一般画面へ出す必要はなく、既存PC/390px画像と今回の実ブラウザで点検する。Safari実機は本人の操作後まで`DEVICE_NOT_RUN`。
+
+### 10.1 起動と終了（本人操作、実データ入力禁止）
+
+前提：管理MacのPHP 8.4（SQLite/mbstring等のComposer要件）、Composer、Node 22、Python 3.9以上。既存のCanovia/AP checkoutや.envは変更しない。別ターミナルで、Issue #488の**今回の最終検証HEAD完全SHA**を`ACCEPTANCE_SHA`へ貼る。moving mainのまま開始しない。以下の`/path/to/Canovia-web`だけ手元のGit checkoutへ置換する。新しいパスが既に存在したら上書きせずSTOP。
+
+```bash
+ACCEPTANCE_SHA='<Issue #488に記録した最終検証HEADの40桁SHA>'
+git -C /path/to/Canovia-web fetch origin
+git -C /path/to/Canovia-web worktree add --detach "$HOME/Canovia-preparation-mac-acceptance" "$ACCEPTANCE_SHA"
+cd "$HOME/Canovia-preparation-mac-acceptance"
+composer install --no-interaction --prefer-dist --no-scripts
+npm ci --ignore-scripts
+npm run build
+python3 scripts/ci/preparation_mac_lab.py --source-sha "$ACCEPTANCE_SHA"
+```
+
+`.env`作成、`artisan key:generate`、手動migration、実資格情報設定は**不要・禁止**。vendorはこのworktree内に独立install（他checkoutへのsymlink不可）。`.env*`（配布`.env.example`を除く）/cached config/routes/Vite hot/public storage link/dirty source/占有portなら起動拒否。依存不足もSTOP。今のAPサーバーを止めてportを空けない。
+
+`SYNTHETIC_LOCAL_LAB_READY`後、Safariの**新しいラボ専用プライベートウィンドウ**で **http://127.0.0.1:18803** を開く。既存APのタブ/プロファイルはそのまま残す。LAN IP、localhost、本番URL、tunnelを使わない。固定の**公開ダミー**ログインだけを使用する：
+
+| 合成Account | 公開L0での扱い | password |
+| --- | --- | --- |
+| `tester@example.test` | 明示的な本人override L1、診断可 | `Synthetic-Preparation-Only-2026` |
+| `normal@example.test` | L0、診断不可、手入力Plan可 | 同上 |
+| `admin@example.test` | adminだがL0、診断バイパスなし | 同上 |
+
+新規登録もL0。全員へL1を付与しない。`example.test`とダミーpasswordは本番で使用しない。合成AP/Development PlanとAP採点履歴が初期データとして存在する。
+
+終了は**起動したターミナルでCtrl-Cを1回**。所有する単一PHP serverの終了をwaitし、必要時だけその同じprocessをkill/waitしてから、私有temp内のSQLite/セッション/compiled view/logを削除する。`LAB_STOPPED_DISPOSABLE_DATA_DELETED`を確認。Safariタブを閉じる。source/dependency/buildはworktreeに残るが、ラボ内のPlanは終了時に消える。次の起動は別DB/別session cookieで最初から。`killall php`、他サーバーの停止、SQLiteの流用は禁止。終了未確認・権限エラーなら`LAB_BLOCKED`、データ削除/停止成功とは記録しない。残るラボはOSのtemp領域に合成データのみ、該当processを私的に特定して終了確認するまで新たな操作をしない。
+
+### 10.2 確認する画面（Mac Safari本人受入）
+
+1. 未ログインのホーム/Canovia Future/Privacy/Support。元ロゴ/デザイン、不要な内部説明・架空応援数がないこと。未ログイン保存/他者Planは入れない。
+2. testerでログイン→「現在地を整理する」→合成診断→候補編集→Plan保存。元のPlan IDのままreload/編集/ログアウト/再ログインし、保存した内容へ戻る。
+3. 同じPlanの編集を2タブで開く。先のタブを保存後、古いタブを送信。上書きを拒否し、古い入力を残し、保存ボタンを止め、最新画面を開く案内がある。
+4. Safariウィンドウを約390pxへ縮める。フォーム/エラー/ナビが横にはみ出さず、Futureを横スクロールし、キーボードでも操作できる。iPhone実機受入とは区別する。
+5. normal/adminを別のSafariプライベートウィンドウで確認。L0診断入口なし、直URLも診断へ入れない。管理者でもStudy/Development/履歴/専門APIを開けない。他人のPlanを編集できない。L0自身の手入力Planは保存できる。
+6. 準備profile trueでは既存合成AP/Dev Planは見えるが実行/履歴UIは404。**本番に同じ設定を採用すると普段のAP学習も閉じる**。Task/score/履歴削除とは別の影響として受入する。
+
+比較用の元UIはCtrl-C完了後、同じsourceで次を起動して **http://127.0.0.1:18804**。新しい独立DBに同じ合成fixtureを作る（先の手入力を移す仕組みではない）。tester L1でStudy（`/workspace/study?plan_id=1`）/Development（`/workspace/development?plan_id=2`）と合成AP Taskの履歴（`/plans/1/tasks/1/study-practice/history`）へ入れることを比較する。これらのIDは空のラボに作る固定合成fixtureだけの値。通常L0の専門画面が閉じるのは元のRelease Level仕様。adminだけの例外は追加しない。
+
+```bash
+python3 scripts/ci/preparation_mac_lab.py --source-sha "$ACCEPTANCE_SHA" --profile original
+```
+
+本人が共有する結果は`source SHA / Safari・macOS version / 上記1〜6と元UI比較のPASS・FAIL / 保存・競合・再ログイン・390pxの問題`だけ。実Account/Plan、実URL、秘密値、実データの画像を求めない。1件でも不一致なら受入HOLD、公開を行わない。
+
+### 10.3 合成証拠と限界
+
+`PreparationCompatibilityMatrixTest`はfalse/true × public L0/L1 × 未認証/通常/管理者の12ケースと、指定L1本人のfalse→true→falseを比較。同じDBのPlan/Task/StudyPracticeAttempt/WorkSessionの**全行・全列（ID/owner/score/思考/assessment/進捗/時刻を含む）**を前後一致検証し、別ユーザーの履歴/編集拒否も確認する。SQL/新migration/production設定を変えない。元UI L0の履歴403と専門Workspaceのredirect、準備profileの404は区別する。全既存仕様や全プロバイダーの無故障保証ではない。
+
+起動ツールはenvをallowlist化し、DB/queue/mail/AI/MCPを合成設定へ固定、storage/config/routes/cache/cookieも分離。Cookieはportを区別しないため、専用routerはランダムなラボsession名以外の受信Cookieをアプリへ渡さず、応答もそのsession Cookie以外を送信しない。既存loopbackのactor/first-run/owner/XSRF Cookieを合成値で事前配置し、保存・再ログイン後も上書きされないことを実ブラウザ検証する。このためラボではremember-me/Guest永続Cookieの受入を対象外にする（元アプリの認可実装は変更しない）。既知local .envや実秘密を読まない。lab専用routerはloopbackとHostを照合し、CSPで外部リソース/フォーム/workerを閉じ、Laravel HTTP facadeの実リクエストも拒否。**OS全体のegress firewallではない**。既存の任意SDK/ブラウザ拡張/同一Macの別プロセスまで隔離済みと扱わない。実資格情報の設定や連携操作は禁止。private tempログは共有せず停止時削除。loopbackはインターネット認証や同一端末の他アプリからの隔離証明ではない。
+
+### 10.4 残るHOLD
+
+Mac Safari本人受入、iPhone実機、実効全runtime profile/旧worker/cache/SW/静的経路、既存ユーザーのAP画面停止影響、候補固定/実DB・追加20件/独立実backup restore/Privacy/各Owner GOは未解除。今回のlabでDB互換や本番認証/session/運用復旧をPASSにしない。**次の推奨操作は上記のMac Safari無公開受入だけ**。本番flag変更や実Aiven監査を依頼する段階ではない。
+
+`DEVICE_NOT_RUN / NOT_DEPLOYED / A_SHARED_DB_PRELAUNCH_NO_GO / PRODUCTION_NO_GO_HOLD`

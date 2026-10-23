@@ -21,9 +21,8 @@ JOURNEYS = {
 }
 
 
-def run(name, artifacts, executable=None, engine='chromium'):
-    port, script, prefix = JOURNEYS[name]
-    base = f'http://127.0.0.1:{port}'
+def synthetic_environment(base, private, name, *, public_level=1, app_env='testing'):
+    """Shared browser/lab profile. Callers own the disposable directory."""
     # Retain tool activation, not provider credentials or production DB values.
     env = {k: os.environ[k] for k in ['PATH', 'PHPRC', 'PHP_INI_SCAN_DIR', 'LD_LIBRARY_PATH',
            'LANG', 'NODE_EXTRA_CA_CERTS'] if k in os.environ}
@@ -31,17 +30,26 @@ def run(name, artifacts, executable=None, engine='chromium'):
     # only that fixed test-asset path; never pass arbitrary target/DB settings.
     if os.environ.get('PLAYWRIGHT_BROWSERS_PATH') == '/ms-playwright':
         env['PLAYWRIGHT_BROWSERS_PATH'] = '/ms-playwright'
+    env.update(APP_ENV=app_env, APP_DEBUG='false', APP_URL=base,
+               APP_KEY='base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
+               DB_CONNECTION='sqlite', DB_DATABASE=str(Path(private) / 'synthetic.sqlite'), DB_URL='',
+               SESSION_DRIVER='file', SESSION_COOKIE=f'integration_{name}',
+               CACHE_STORE='array', QUEUE_CONNECTION='sync', MAIL_MAILER='array',
+               NATIVE_AI_DRIVER='disabled', CANOVIA_NATIVE_AI_DRIVER='disabled',
+               CANOVIA_PUBLIC_RELEASE_LEVEL=str(public_level), CI='true', RUNNER_TEMP=str(private),
+               CANOVIA_PREPARATION_ONLY='false',
+               CANOVIA_MCP_TOOLS_ENABLED='false', FEATURE_CANOVIA_AI='false')
+    return env
+
+
+def run(name, artifacts, executable=None, engine='chromium'):
+    port, script, prefix = JOURNEYS[name]
+    base = f'http://127.0.0.1:{port}'
     with tempfile.TemporaryDirectory(prefix='canovia-integration-') as private:
+        env = synthetic_environment(base, private, name)
         database = Path(private) / ('learning-v621-browser.sqlite' if name == 'study' else 'synthetic.sqlite')
         database.touch(mode=0o600)
-        env.update(APP_ENV='testing', APP_DEBUG='false', APP_URL=base,
-                   APP_KEY='base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=',
-                   DB_CONNECTION='sqlite', DB_DATABASE=str(database), DB_URL='',
-                   SESSION_DRIVER='file', SESSION_COOKIE=f'integration_{name}',
-                   CACHE_STORE='array', QUEUE_CONNECTION='sync', MAIL_MAILER='array',
-                   NATIVE_AI_DRIVER='disabled', CANOVIA_NATIVE_AI_DRIVER='disabled',
-                   CANOVIA_PUBLIC_RELEASE_LEVEL='1', CI='true', RUNNER_TEMP=private,
-                   CANOVIA_MCP_TOOLS_ENABLED='false', FEATURE_CANOVIA_AI='false')
+        env['DB_DATABASE'] = str(database)
         if name == 'welcome':
             env.update(CANOVIA_IA2_BROWSER_BASE_URL=base, CANOVIA_IA2_BROWSER_FIXTURE='1')
         else:
