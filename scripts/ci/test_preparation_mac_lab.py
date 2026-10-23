@@ -102,7 +102,7 @@ class MacLabTest(unittest.TestCase):
     def test_interrupt_does_not_report_cleanup_before_owned_process_is_confirmed(self):
         @contextlib.contextmanager
         def failed_cleanup(*args):
-            yield {'APP_URL': 'http://127.0.0.1:18803'}, Mock()
+            yield {'APP_URL': 'http://127.0.0.1:18803'}, Mock(**{'poll.return_value': None})
             raise PermissionError('synthetic cleanup failure')
         output = io.StringIO()
         with patch.object(sys, 'argv', ['lab', '--source-sha', 'a' * 40]), \
