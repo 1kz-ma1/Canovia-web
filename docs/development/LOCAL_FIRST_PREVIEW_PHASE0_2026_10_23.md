@@ -129,3 +129,7 @@
 独立`local-preview/`を静的rootとし、既存Laravel/public/SWは変更しない。依存なしのES moduleと専用IndexedDBを採用。論理Object群は本書のモデルを維持するが、**物理的には単一state store/root snapshot**に格納する（schema1）。小規模Previewの上限20,000レコードで、参照整合性・関連更新・将来importを1 transactionで検証/確定するため。readwrite transaction内でrevisionを比較し、古いタブの更新は拒否、oncomplete後だけ成功を返す。BroadcastChannelは通知のみで排他の根拠にしない。unknown schemaは消去せずBLOCK、quota/abortで既存データを保持する。将来大容量化は別migration設計。
 
 ローカルfixtureは127.0.0.1:18799だけで静的rootを配信しCSPを設定する。配布先の独立origin/同等headers/HTTPSは公開前の未解決gate。repositoryの実ブラウザ試験は競合/abort/容量失敗/再読み込みを対象とする。実機・配備・公開承認は未実施。
+
+## 11. Phase 1b 診断・Plan・Task
+
+初回は領域/目標/現在地/週の分数/任意期限を本人入力し、Planと編集可能な最初の2 Taskを同じtransactionで作成。情報不足から能力を推測しない。Study/Developmentは専用切替、期限/単純Roadmap/CRUDを提供。Task進捗は本人の明示保存のみ、完了指定で100%・残0。実績を持つTaskの削除は拒否し取消を案内、Taskを残すPlanの削除も拒否する。ユーザー文字列はHTML escape、競合時は入力を保って更新を拒否し明示refreshを促す。診断と履歴は端末外へ送信しない。

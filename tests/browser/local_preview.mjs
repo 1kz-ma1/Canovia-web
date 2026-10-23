@@ -18,4 +18,14 @@ try {
  });assert.deepEqual(result,{conflict:true,abort:true,quota:true,kept:true});
  await page.reload();await page.getByText('端末内の保存領域を利用できます。',{exact:true}).waitFor();
  console.log('LOCAL_PREVIEW_BROWSER_FOUNDATION=PASS');
+ const form=page.locator('#diagnosis');await form.getByLabel('できるようになりたいこと').fill('基礎を確かめる');await form.getByLabel('いま分かっていること').fill('最初から');await form.getByRole('button',{name:'最初のPlanを作る'}).click();
+ await page.getByRole('heading',{name:'基礎を確かめる',exact:true}).waitFor();
+ await page.locator('#task-create').locator('..').locator('summary').click();
+ await page.locator('#task-create').getByLabel('Task名',{exact:true}).fill('<img src=x onerror=alert(1)>');await page.locator('#task-create').getByRole('button').click();
+ await page.getByRole('heading',{name:'<img src=x onerror=alert(1)>',exact:true}).waitFor();assert.equal(await page.locator('img').count(),0);
+ await page.reload();await page.getByRole('heading',{name:'基礎を確かめる',exact:true}).waitFor();
+ const other=await context.newPage();await other.goto('http://127.0.0.1:18799/');await other.getByRole('heading',{name:'基礎を確かめる',exact:true}).waitFor();
+ await page.locator('#task-create').locator('..').locator('summary').click();await page.locator('#task-create').getByLabel('Task名',{exact:true}).fill('新しいTask');await page.locator('#task-create').getByRole('button').click();await page.getByRole('heading',{name:'新しいTask',exact:true}).waitFor();
+ const edit=other.locator('[data-edit-task]').first();await edit.locator('..').locator('summary').click();await edit.getByLabel('Task名',{exact:true}).fill('古いタブの編集');await edit.getByRole('button',{name:'確認した進捗を保存'}).click();await other.getByText('別のタブで更新されました。入力を控えてから「最新状態を表示」を押してください。',{exact:true}).waitFor();await other.close();
+ console.log('LOCAL_PREVIEW_BROWSER_PLANNING=PASS');
 } finally {await context.close();await browser.close()}
