@@ -65,7 +65,7 @@ def _stdlib_identity():
     root=Path(sysconfig.get_path('stdlib')).resolve(strict=True)
     result={}
     names=('ssl','socket','hashlib','json','json.decoder','json.encoder','ctypes','threading',
-           'termios','select','time','os','stat','pathlib','io','zipfile','struct','importlib.metadata')
+           'termios','select','time','os','stat','pathlib','io','zipfile','struct','importlib.metadata','ipaddress','dataclasses')
     for name in names:
         module=importlib.import_module(name);origin=getattr(module.__spec__,'origin',None)
         if origin in ('built-in','frozen'):
