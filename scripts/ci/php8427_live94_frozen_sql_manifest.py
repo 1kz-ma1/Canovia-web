@@ -33,9 +33,9 @@ MAX_QUERY_BYTES = 8192
 MAX_TOTAL_QUERIES = 7
 SECTION_RE = re.compile(r"^SELECT\s+'([a-z_]+)'\s+AS\s+section\s*,", re.ASCII | re.IGNORECASE)
 FORBIDDEN = re.compile(
-    r"\b(?:INTO\s+(?:OUTFILE|DUMPFILE)|LOAD_FILE\s*\(|"
+    r"\b(?:INTO\s+(?:OUTFILE|DUMPFILE)\b|LOAD_FILE\s*\(|"
     r"SLEEP\s*\(|BENCHMARK\s*\(|GET_LOCK\s*\(|RELEASE_LOCK\s*\(|"
-    r"FOR\s+UPDATE|LOCK\s+IN\s+SHARE\s+MODE)\b", re.ASCII | re.IGNORECASE,
+    r"FOR\s+UPDATE\b|LOCK\s+IN\s+SHARE\s+MODE\b)", re.ASCII | re.IGNORECASE,
 )
 
 
