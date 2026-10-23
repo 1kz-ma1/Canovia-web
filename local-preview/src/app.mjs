@@ -11,7 +11,7 @@ export let state,repo;let domain='study',selected=null,busy=false;
 const errors={STORAGE_LIMIT:'Previewの保存上限に達しました。バックアップしてから記録を整理してください。',CONFLICT:'別のタブで更新されました。入力を控えてから「最新状態を表示」を押してください。',STORAGE_FULL:'保存容量が不足しています。保存できませんでした。',HAS_TASKS:'先にTaskを整理してください。',HAS_HISTORY:'実績があるTaskは削除できません。取りやめにすると履歴を残せます。',INVALID_DATA:'入力内容を確認してください。保存は行っていません。',VERSION_CHANGED:'別の版が開かれました。この画面を再読み込みしてください。'};
 export function notice(text,error=false){message.textContent=text;message.className=error?'error':'good'}
 export async function act(mutate,after=()=>{},redraw=true){
- if(busy)return false;busy=true;
+ if(busy){if(redraw)notice('保存処理中です。この入力はまだ保存されていません。少し待って再操作してください。',true);return false}busy=true;
  try{state=await repo.change(state.revision,mutate);after();if(redraw){render();notice('端末内に保存しました。')}return true}
  catch(e){notice(errors[e.message]||'保存できませんでした。入力を控え、状態を確認してください。',true);return false}
  finally{busy=false}
