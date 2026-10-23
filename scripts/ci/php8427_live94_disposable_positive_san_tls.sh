@@ -151,9 +151,19 @@ PY
 # New client is CI-only and intentionally lacks any arbitrary host or
 # operator/live login path. It constructs the source-frozen SQL itself, starts
 # exactly one MySQL process, disallows reconnect and verifies identity/grants.
-python3 -I -B scripts/ci/php8427_live94_ci_single_session_executor.py \
+if ! python3 -I -B scripts/ci/php8427_live94_ci_single_session_executor.py \
   --checkout "$RUNNER_TEMP/old-live94-mysql-fixture" \
-  --ca "$scratch/ca.pem" > "$scratch/single-client-report.json"
+  --ca "$scratch/ca.pem" > "$scratch/single-client-report.json"; then
+  # Only a fixed stage classification; never echo SQL, raw output or stderr.
+  python3 - "$scratch/single-client-report.json" <<'PY_FAIL'
+import json,sys
+r=json.load(open(sys.argv[1], encoding="utf-8"))
+code=r.get("code","MALFORMED")
+assert isinstance(code,str) and code.startswith("DISPOSABLE_SINGLE_CLIENT_REJECTED_")
+print("SEALED_CI_CLIENT_BLOCK=" + code)
+PY_FAIL
+  exit 2
+fi
 python3 - "$scratch/single-client-report.json" <<'PY'
 import json, sys
 from pathlib import Path
