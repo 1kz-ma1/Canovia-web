@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   single-session-only:
-    name: Live94 inert contract: identity/time/roles/termination (not GO)
+    name: "Live94 inert contract: identity/time/roles/termination (not GO)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
