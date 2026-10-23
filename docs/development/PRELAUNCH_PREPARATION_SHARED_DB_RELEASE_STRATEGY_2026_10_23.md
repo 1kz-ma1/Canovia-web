@@ -189,6 +189,7 @@ git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a e026f49221c7e45b52
 | 区分 | 実装根拠・対象 | 判定と次の証拠 |
 | --- | --- | --- |
 | BLOCKING_SHARED | `PlanController::store/update`、`PlanOwnershipService`、`GuestPlanClaimService`、`GoalContextAccessService`、`AuthController`、session/CSRF | Account/Guestの本人帰属・保存・再訪が必須。再送時のowner確認不足を下記で修正。既存Account、所有者以外のGET/POST拒否、Guest claimを合成テスト。実機/実運用の受入は別。 |
+| BLOCKING_SHARED | `Dockerfile` PHP 8.4.27 pin/build fence（#832）、Nginx/PHP/session runtime | sourceの修正済みruntimeは再利用するが、旧Liveの更新完了とは扱わない。正式候補imageの出自・version・起動/既存session互換と実配備の別受入は必須。専門機能OFFでも後回し不可。 |
 | BLOCKING_SHARED | 全20 migration、`Release20*Guard`、`docker/startup-migration-policy.sh`、web/worker/scheduler | 非公開機能のmigrationも同じ起動経路。候補固定・実schema監査・writer停止/forward repairは省略不可。独立実データ復元、RPO/RTOも未達。 |
 | BLOCKING_SHARED | `ReleaseLevelService`、`FeatureFlagService`、`FeatureAccessService`、`ReleaseGateService`、`routes/web.php`/`api.php` | L0でも`work_sessions.*`/`offline.work_sessions.sync`等が存在し、診断はL1。既存Levelだけでは「準備のみ」を分離できない。専用のdenyとnegative testsが必要。effective production設定はUNKNOWN。 |
 | UNKNOWN/MIXED → BLOCKING | `ProcessGitHubWebhookDelivery`/`BootstrapGitHubDevelopmentActivity`、`routes/console.php`、Native AI、provider、MCP、Study/Development | route非表示だけでは既存delivery/job/CLIの副作用を否定できない。専用機能の完成は不要だが、HTTP/API/queue/console/workerと共有起動の隔離を証明するまで一括でDEFERRABLEにしない。 |
