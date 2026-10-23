@@ -235,8 +235,11 @@ def child_case(fault,parent):
 
 
 def run():
-    # Existing driver/package regression once, same owned servers. No new KILL.
-    previous=old.run();traces=json.loads(Path('/b1/traces.json').read_text());cids=[]
+    # Host ran the existing suite once, reset only the owned auth cache and
+    # preserved private traces. No duplicate migration/schema construction.
+    previous=json.loads(Path('/b1/practical-result.json').read_text())
+    if previous['result']!='B1_INTEGRATION_VERIFIED' or previous['real_aiven_connected']:raise Block()
+    traces=json.loads(Path('/b1/traces.json').read_text());cids=[]
     for fault in CASES:
         with patch.object(old.tty,'child_trial',side_effect=lambda _,parent:child_case(fault,parent)):
             result=old.tty.trial('NORMAL')

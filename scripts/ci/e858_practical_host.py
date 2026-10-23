@@ -32,7 +32,16 @@ def exercise(work,stem,token,network,image,owned,head,series):
         namespace=dict(kind='OWNED_INTERNAL_DOCKER_ONLY',pins=pins,series=series,bundle_sha256=hashlib.sha256(archive).hexdigest(),
             owned_ips=[config['r1']['ipv4']],ca_hashes=[hashlib.sha256((client/name).read_bytes()).hexdigest() for name in ('ca.pem','wrong-ca.pem')])
         (client/'practical.json').write_text(json.dumps(namespace))
-        argv=list(argv);argv[-1]='e858_phase1.opener_fixture'
+        argv=list(argv);argv[-1]='e858_phase1.practical_fixture'
+        prior=original_run(argv,*args,**kwargs)
+        (work/'out/practical-result.json').write_bytes(prior)
+        (work/'out/practical-result.json').chmod(0o600)
+        # Both suites must prove full TLS authentication on a fresh cache.
+        # Root fixture setup only; never an inspector/release operation.
+        mysql(stem+'-server','FLUSH PRIVILEGES;')
+        argv[argv.index('--name')+1]+='-opener'
+        owned.append(argv[argv.index('--name')+1])
+        argv[-1]='e858_phase1.opener_fixture'
         output=original_run(argv,*args,**kwargs)
         # Include unauthenticated/failed-TLS sessions which sent no SQL. Their
         # private CIDs come from the actual owned server handshake, not logs.
