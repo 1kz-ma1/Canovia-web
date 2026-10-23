@@ -31,6 +31,21 @@ class SingleSessionExecutorTest(unittest.TestCase):
             for prefix in ("--password", "--login-path=", "--execute", "-e", "--ssl-mode=REQUIRED")
         ))
 
+    def test_container_transport_only_targets_fixed_synthetic_mysql(self):
+        token = "0123456789abcdef0123456789ab"
+        args = m.container_client_arguments("/usr/bin/docker", token)
+        self.assertEqual(args[:5], [
+            "/usr/bin/docker", "exec", "-i",
+            "--env=MYSQL_PWD=ci-only-live94-password", token,
+        ])
+        self.assertEqual(args[5:8], ["mysql", "--no-defaults", "--no-login-paths"])
+        self.assertIn("--ssl-ca=/var/lib/mysql/ca.pem", args)
+        self.assertIn("--host=localhost", args)
+        self.assertIn("--skip-reconnect", args)
+        self.assertFalse(any("aiven" in word.lower() for word in args))
+        with self.assertRaises(Block):
+            m.container_client_arguments("/usr/bin/docker", "not-a-container")
+
     def test_non_ci_never_spawns_mysql_even_if_checkout_and_ca_exist(self):
         with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}, clear=True):
             with mock.patch.object(m.subprocess, "Popen") as popen:
