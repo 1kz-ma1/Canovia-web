@@ -1,0 +1,77 @@
+name: PHP 8.4.27 Old Live94 Frozen SQL Packet (Offline)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/ci/php8427_live94_frozen_sql_manifest.py
+      - tests/ci/test_php8427_live94_frozen_sql_manifest.py
+      - .github/workflows/php8427-live94-frozen-sql-manifest.yml
+      - docs/development/PHP8427_LIVE94_FROZEN_QUERY_MANIFEST_2026_10_23.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frozen-sql-only:
+    name: "Live94 immutable query manifest (NO Aiven, NOT GO)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Offline malformed SQL and unpinned-source tests
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci -p 'test_php8427_live94_frozen_sql_manifest.py' -v
+
+      - name: Clean detached exact deployed old Live checkout
+        run: |
+          set -euo pipefail
+          test "$(git cat-file -t 15abdc9de6f24b5250fb255c579d1aa55facaf1a)" = commit
+          git worktree add --detach "$RUNNER_TEMP/canovia-old-live94-frozen-sql" 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+
+      - name: Enumerate exactly seven old Live queries as digests (no SQL exec)
+        run: |
+          set -euo pipefail
+          python3 -I -B scripts/ci/php8427_live94_frozen_sql_manifest.py \
+            --checkout "$RUNNER_TEMP/canovia-old-live94-frozen-sql" > "$RUNNER_TEMP/manifest.json"
+          python3 - <<'PY'
+          import json,os,re
+          from pathlib import Path
+          z=json.loads((Path(os.environ['RUNNER_TEMP'])/'manifest.json').read_text())
+          assert z['verdict']=='REVIEW_REQUIRED'
+          assert z['code']=='LIVE94_FROZEN_SQL_MANIFEST_OFFLINE_ONLY'
+          assert z['sql_statement_count']==7 and z['migration_source_count']==94
+          assert z['statement_sections']==['connection','table','column','foreign_key','index','migration','migration_ledger']
+          assert len(z['statement_sha256'])==7
+          assert all(re.fullmatch('[0-9a-f]{64}', x) for x in z['statement_sha256'])
+          for flag in ['sql_executed','real_aiven_connected','tls_server_authenticated',
+                       'effective_grants_verified','physical_schema_complete',
+                       'remote_session_end_verified','backup_restored','production_go']:
+              assert z[flag] is False
+          assert z['statement_content_exposed'] is False
+          print('PINNED_LIVE94_SQL_6_PLUS_1=PASS; SOURCE_ONLY; AIVEN_NOT_RUN; PRODUCTION_NO_GO')
+          PY
+
+      - name: Tampering or unexpected SQL file prevents packet issuance
+        run: |
+          set -euo pipefail
+          live="$RUNNER_TEMP/canovia-old-live94-frozen-sql"
+          printf '\nSELECT * FROM users;\n' >> "$live/scripts/sql/p0_mysql_readonly_full_migration_ledger.sql"
+          if python3 -I -B scripts/ci/php8427_live94_frozen_sql_manifest.py \
+            --checkout "$live" > "$RUNNER_TEMP/tampered.json"; then
+              echo "UNEXPECTED_TAMPER_ACCEPTANCE" >&2
+              exit 1
+          fi
+          grep -Fq '"verdict": "BLOCK"' "$RUNNER_TEMP/tampered.json"
+          git -C "$live" restore -- scripts/sql/p0_mysql_readonly_full_migration_ledger.sql
+          echo 'SOURCE_DRIFT=BLOCK; NO_MYSQL_EXECUTED'
+
+      - name: Explicit limits of this green source check
+        run: |
+          echo 'PASS is exact SQL source + statement layout, NOT current Aiven schema or account privileges'
+          echo 'Real TLS handshake, effective roles, same session, remote termination and restoration remain HOLD'
