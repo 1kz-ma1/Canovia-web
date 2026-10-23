@@ -46,6 +46,9 @@ class PlanController extends Controller
         WorkspaceModeRegistry $workspaceModes,
     ) {
         $prefill = $request->session()->pull('plan_create_prefill', []);
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return view('preparation.form', ['prefill' => $prefill, 'plan' => null, 'revision' => null]);
+        }
         $workspaceModeContext = $this->workspaceModeCreateContext(
             $request->query('workspace_mode'),
             $workspaceModes,
@@ -321,7 +324,9 @@ class PlanController extends Controller
         }
 
         return redirect()->route('plans.show', $plan)
-            ->with('status', '目標を保存しました。まず今できることから始めましょう。タスクやロードマップは必要になった時点で整理できます。');
+            ->with('status', app(\App\Services\ReleaseLevelService::class)->preparationOnly()
+                ? '目標を保存しました。同じアカウントで、いつでも準備を続けられます。'
+                : '目標を保存しました。まず今できることから始めましょう。タスクやロードマップは必要になった時点で整理できます。');
     }
 
     /**
@@ -375,6 +380,17 @@ class PlanController extends Controller
         WorkspaceModeRegistry $workspaceModes,
         bool $alreadyExists = false,
     ): ?RedirectResponse {
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            $request = request();
+            if ($request->user() && app(PlanOwnershipService::class)->owns($request, $plan)) {
+                // The owner has saved preparation. Reuse the existing first-run
+                // marker so the formal UI will not force onboarding again.
+                app(\App\Services\FirstRunService::class)->markPassed($request);
+            }
+
+            return null;
+        }
+
         $profile = $categoryProfiles->forPlan($plan);
         $explicitMode = trim((string) $rawMode);
         // A generic Plan form must not funnel every new Plan through AI Task
@@ -454,6 +470,12 @@ class PlanController extends Controller
         // the full Plan detail even when is_public is enabled.
         if (! $canView) {
             abort(404);
+        }
+
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            abort_unless($canManage, 404);
+
+            return view('preparation.show', ['plan' => $plan]);
         }
 
         $plan->load([
@@ -540,6 +562,10 @@ class PlanController extends Controller
         PlanPriorityService $priorityService,
     ) {
         $ownership->authorizePlan($request, $plan);
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return view('preparation.form', ['plan' => $plan, 'prefill' => [],
+                'revision' => $this->preparationRevision($plan)]);
+        }
         $priorityEvaluation = $priorityService->evaluate($plan);
 
         return view('plans.edit', compact('plan', 'priorityEvaluation'));
@@ -557,7 +583,9 @@ class PlanController extends Controller
     ) {
         $ownership->authorizePlan($request, $plan);
 
+        $preparation = app(\App\Services\ReleaseLevelService::class)->preparationOnly();
         $validated = $request->validate([
+            'preparation_revision' => $preparation ? ['required', 'regex:/^[a-f0-9]{64}$/D'] : ['exclude'],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'category' => ['nullable', 'string', 'max:100'],
@@ -580,13 +608,21 @@ class PlanController extends Controller
         // transfer or Context Watch capture committed.
         $updatedPlan = DB::transaction(function () use (
             $request, $plan, $ownership, $activity, $goalContexts,
-            $categoryProfiles, $specializations, $validated,
+            $categoryProfiles, $specializations, $validated, $preparation,
         ): Plan {
             $live = Plan::query()->whereKey($plan->id)
                 ->lockForUpdate()->firstOrFail();
             // Owner-only settings; never trust a pretransaction permission
             // check or a per-request collaboration role cache.
             $ownership->authorizePlan($request, $live);
+
+            if ($preparation && ! hash_equals(
+                $this->preparationRevision($live), $validated['preparation_revision'],
+            )) {
+                throw ValidationException::withMessages([
+                    'preparation_revision' => '別の画面で更新されています。入力内容を控え、最新の内容を開いて確認してください。',
+                ]);
+            }
 
             $startDate = $validated['start_date'] ?? $live->start_date?->format('Y-m-d');
             $deadline = array_key_exists('deadline', $validated)
@@ -671,6 +707,18 @@ class PlanController extends Controller
         }
 
         return redirect()->route('plans.show', $updatedPlan)->with('success', '計画を更新しました。');
+    }
+
+    private function preparationRevision(Plan $plan): string
+    {
+        // Content comparison under the existing Plan lock, not a second owner
+        // credential, monotonic revision or automatic merge protocol.
+        return hash('sha256', json_encode($plan->only([
+            'id', 'user_id', 'title', 'description', 'category', 'start_date', 'deadline',
+            'priority', 'priority_mode', 'workspace_domain_override',
+            'workspace_specialization_override', 'visual_icon', 'accent_key',
+            'roadmap_world', 'is_public', 'is_collaborative', 'updated_at',
+        ]), JSON_THROW_ON_ERROR));
     }
 
     public function destroy(

@@ -24,10 +24,10 @@ return [
         [
             'key' => 'first-use-choices',
             'title' => '自分に合った始め方',
-            'description' => '「診断する」「Canoviaに相談する」「まず見てみる」の初回導線を検証しています。一般提供はまだ確認していません。',
+            'description' => '正式リリースに向け、診断で現在地を整理し、目標・計画を保存して後日続ける入口を準備しています。一般提供はまだ承認されていません。',
             'area' => '全般',
             'status' => 'ready',
-            'updated_on' => '2026-10-15',
+            'updated_on' => '2026-10-23',
             'is_published' => true,
         ],
         [

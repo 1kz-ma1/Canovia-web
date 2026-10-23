@@ -61,6 +61,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('web', NormalizeAiJsonInput::class);
         $middleware->appendToGroup('web', EnsureFirstRunStarted::class);
         $middleware->appendToGroup('web', RememberWorkspaceScreen::class);
+        $middleware->appendToGroup('web', \App\Http\Middleware\EnsurePreparationSurface::class);
+        $middleware->appendToGroup('api', \App\Http\Middleware\EnsurePreparationSurface::class);
+        $middleware->prependToPriorityList(
+            \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            \App\Http\Middleware\EnsurePreparationSurface::class,
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

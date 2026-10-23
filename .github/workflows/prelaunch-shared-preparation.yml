@@ -5,6 +5,22 @@ on:
     branches: [main]
     paths:
       - 'app/Http/Controllers/PlanController.php'
+      - 'app/Http/Controllers/HomeController.php'
+      - 'app/Http/Controllers/CanoviaFutureController.php'
+      - 'app/Http/Controllers/AuthController.php'
+      - 'app/Http/Controllers/PersonalizationController.php'
+      - 'app/Http/Middleware/EnsurePreparationSurface.php'
+      - 'app/Http/Middleware/EnsureFirstRunStarted.php'
+      - 'app/Services/ReleaseLevelService.php'
+      - 'app/Services/FeatureFlagService.php'
+      - 'app/Providers/AppServiceProvider.php'
+      - 'app/Jobs/**'
+      - 'bootstrap/app.php'
+      - 'config/release_levels.php'
+      - 'resources/views/preparation/**'
+      - 'resources/views/layouts/**'
+      - 'tests/Feature/PreparationOnlyBoundaryTest.php'
+      - 'scripts/ci/preparation_surface_browser_smoke.mjs'
       - 'app/Services/PlanOwnershipService.php'
       - 'app/Services/GuestPlanClaimService.php'
       - 'tests/Feature/PlanCreationReplayOwnershipTest.php'
@@ -36,7 +52,7 @@ jobs:
       - run: cp .env.example .env
       - name: Owner replay and existing preparation/session contracts
         run: >-
-          php artisan test tests/Feature/PlanCreationReplayOwnershipTest.php
+          php artisan test tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PlanCreationReplayOwnershipTest.php
           tests/Feature/PlanActionFirstCreationV5866Test.php
           tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           tests/Feature/PersonalizationBootstrapV5825Test.php
@@ -48,3 +64,9 @@ jobs:
         run: >-
           python3 scripts/ci/integration_browser_regression.py
           --journey preparation --browser-executable /usr/bin/google-chrome --artifacts "$RUNNER_TEMP/shared-preparation"
+
+      - name: Preparation-only original Web journey (synthetic SQLite)
+        run: >-
+          python3 scripts/ci/integration_browser_regression.py
+          --journey preparation_surface --browser-executable /usr/bin/google-chrome
+          --artifacts "$RUNNER_TEMP/shared-preparation-surface"

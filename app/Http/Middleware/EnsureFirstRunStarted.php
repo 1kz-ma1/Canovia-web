@@ -14,6 +14,10 @@ final class EnsureFirstRunStarted
 
     public function handle(Request $request, Closure $next): Response
     {
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return $next($request);
+        }
+
         if (! in_array($request->method(), ['GET', 'HEAD'], true)) {
             return $next($request);
         }

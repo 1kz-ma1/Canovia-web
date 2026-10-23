@@ -44,6 +44,10 @@ final class ProcessGitHubWebhookDelivery implements ShouldQueue
         ?DevelopmentAdaptiveActionService $developmentActions = null,
         ?PlanCategoryProfileService $profiles = null,
     ): void {
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            throw new \RuntimeException('PREPARATION_EXECUTION_CLOSED');
+        }
+
         $delivery = GitHubWebhookDelivery::query()->find($this->deliveryId);
         if (! $delivery instanceof GitHubWebhookDelivery) {
             return;

@@ -12,6 +12,12 @@ class CanoviaFutureController extends Controller
 {
     public function index(Request $request, BehaviorIdentityService $identity, PublicRoadmapProjectionService $publicRoadmap)
     {
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            // Public development copy is distinct from the DB Support model.
+            // Preparation does not read votes, infer counts or enable voting.
+            return view('preparation.future', ['publicRoadmapSections' => $publicRoadmap->build()]);
+        }
+
         $voterKey = $this->voterKey($request, $identity);
         $supported = RoadmapVote::query()
             ->where('voter_key', $voterKey)

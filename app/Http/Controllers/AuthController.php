@@ -199,6 +199,9 @@ class AuthController extends Controller
         }
 
         $user = $request->user();
+        if ($releaseLevels->preparationOnly()) {
+            return view('preparation.account', compact('user'));
+        }
         if (config('app.env') === 'staging'
             && config('canovia_staging.login_pilot_enabled') === true) {
             // The stage-only identity pilot needs no product navigation, PWA,

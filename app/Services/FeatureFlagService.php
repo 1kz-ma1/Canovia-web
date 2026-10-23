@@ -13,6 +13,10 @@ final class FeatureFlagService
      */
     public function isEnabled(FeatureKey|string $feature, array $context = []): bool
     {
+        if (app(ReleaseLevelService::class)->preparationOnly()) {
+            return false;
+        }
+
         $key = $feature instanceof FeatureKey ? $feature->value : $feature;
         $definition = config("features.flags.{$key}");
 

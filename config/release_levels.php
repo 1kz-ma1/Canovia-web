@@ -5,6 +5,9 @@ use App\Enums\ReleaseLevel;
 use App\Enums\WorkspaceMode;
 
 return [
+    // Restricts the existing release level; never grants a higher level or
+    // authorizes deployment. Production selection requires separate review.
+    'preparation_only' => env('CANOVIA_PREPARATION_ONLY', false),
     /*
     |--------------------------------------------------------------------------
     | Public Release Level

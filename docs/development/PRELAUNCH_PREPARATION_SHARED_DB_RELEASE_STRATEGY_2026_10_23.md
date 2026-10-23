@@ -189,6 +189,7 @@ git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a e026f49221c7e45b52
 | 区分 | 実装根拠・対象 | 判定と次の証拠 |
 | --- | --- | --- |
 | BLOCKING_SHARED | `PlanController::store/update`、`PlanOwnershipService`、`GuestPlanClaimService`、`GoalContextAccessService`、`AuthController`、session/CSRF | Account/Guestの本人帰属・保存・再訪が必須。再送時のowner確認不足を下記で修正。既存Account、所有者以外のGET/POST拒否、Guest claimを合成テスト。実機/実運用の受入は別。 |
+| BLOCKING_SHARED | `Dockerfile` PHP 8.4.27 pin/build fence（#832）、Nginx/PHP/session runtime | sourceの修正済みruntimeは再利用するが、旧Liveの更新完了とは扱わない。正式候補imageの出自・version・起動/既存session互換と実配備の別受入は必須。専門機能OFFでも後回し不可。 |
 | BLOCKING_SHARED | 全20 migration、`Release20*Guard`、`docker/startup-migration-policy.sh`、web/worker/scheduler | 非公開機能のmigrationも同じ起動経路。候補固定・実schema監査・writer停止/forward repairは省略不可。独立実データ復元、RPO/RTOも未達。 |
 | BLOCKING_SHARED | `ReleaseLevelService`、`FeatureFlagService`、`FeatureAccessService`、`ReleaseGateService`、`routes/web.php`/`api.php` | L0でも`work_sessions.*`/`offline.work_sessions.sync`等が存在し、診断はL1。既存Levelだけでは「準備のみ」を分離できない。専用のdenyとnegative testsが必要。effective production設定はUNKNOWN。 |
 | UNKNOWN/MIXED → BLOCKING | `ProcessGitHubWebhookDelivery`/`BootstrapGitHubDevelopmentActivity`、`routes/console.php`、Native AI、provider、MCP、Study/Development | route非表示だけでは既存delivery/job/CLIの副作用を否定できない。専用機能の完成は不要だが、HTTP/API/queue/console/workerと共有起動の隔離を証明するまで一括でDEFERRABLEにしない。 |
@@ -203,3 +204,20 @@ git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a e026f49221c7e45b52
 新5ケースは未修正mainで3件の拒否テストが失敗し、修正後は既存bootstrap/lifecycle/first-action/sessionと合わせPHP **34件 / 313 assertions PASS**（使い捨てSQLite）。実ブラウザでは合成Guest→保存→登録claim→編集→logout/login→同一Planの保持と、他者GET/PUT/replay・CSRF拒否を確認する専用CIを追加。これは既存PHPベースライン全体の失敗原因解消や実ユーザー移行の受入を意味しない。
 
 次PRは準備専用のpublication境界。既存Release/Feature基盤を再利用し、公開有効化を行わずHTTP/非HTTP経路を責務別に閉じる。全量候補・実DB/復旧・実効設定・実機・オーナー各GOが揃うまで **A_SHARED_DB_PRELAUNCH_NO_GO / PRODUCTION_NO_GO_HOLD**。
+
+### 9.4 Slice 1：既存Web上のrestrictive preparation profile（未選択・未配備）
+
+`release_levels.preparation_only` / `CANOVIA_PREPARATION_ONLY=true`は、既存Release Level/認可の**上に重ねる縮小制御**。コードの初期値falseは既存開発カタログとの互換性であり、準備版の安全な公開設定ではない。本番へこの値を設定した事実はなく、A案の候補審査では**全サービスの実効値true**を別途確認する。falseへの変更は緊急OFFとして使わない（元のカタログへ戻るため）。不正なconfig値は制限側へ倒し、L4/Admin/契約の例外で拡張しない。L0→L1の診断権限を自動昇格しない。
+
+- **原UI/DB継続**：既存Laravel routes/controllers、Canoviaのbrand/CSSとBlade shell、`User/Plan/UserPersonalizationContext`・Goal Contextと既存サービスを再利用。新DB/Account/Planコピー/同期/migrationなし。Home→任意の既存診断→編集可能な候補→本人Plan保存/編集→再ログインで元IDから再訪。Study/Dev/Career Workspaceへ自動転送しない。以前のPlan/Task/履歴・公開bitは削除/書換えず、共有URLを閉じる。保存成功時は既存FirstRunServiceの準備完了markerを再利用し、正式UIへ戻った際の初回導線/再入力を強制しない（Task完了/習熟やLevel昇格は記録しない）。
+- **既存ユーザーへの影響**：trueは全actorへ適用される縮小profileで、既存ユーザー/オーナー/AdminのStudy・作業実行・共有URL・履歴UIも閉じる。既存Task/Attempt/実績は保持するが、継続利用可能とは約束しない。本人のAP学習を含むこの停止影響は、本番設定を選ぶ前の別受入事項。既存ユーザーを免除する抜け道は追加していない。
+- **最小スコープ**：準備の保存はログイン本人のみ。新Guest durable save/Task操作は今回採用しない。旧Goal Discoveryの`goal_context_id`接続もgeneric Plan POSTから拒否し、閉じた専門workflowへ再入場させない。既存の正しいGuest cookieから登録/ログイン時のclaimは既存サービスを維持。アカウント・Privacy/Support/既存削除経路・本人feedbackは保持し、データexport提供済みとは説明しない。
+- **HTTP deny-by-default**：`EnsurePreparationSurface`をweb/apiのresource binding前に適用。public/auth/本人診断/本人Planの正確なroute一覧以外（unnamed/new routeも含む）を404。Admin previewでも同じ。Plan共有の入力も拒否し、所有者認可は既存サービスが引き続き行う。準備shellは実行/AI/MCP/課金/共有の導線やSWを登録しない。Canovia FutureのGETは既存のpublic roadmap projectionだけを表示し、SupportのDB/投票/架空countへ混同しない（POSTは拒否）。
+- **非HTTP**：既存2 GitHub jobの直接handleと、未知jobを含むqueue before-eventを拒否。Consoleは起動/maintenance/cache/readonly ledger等の固定allowlistだけ許可し、`schedule:run`、`queue:work`、`migrate`、各provider command等は実CLIプロセスで拒否する。機能を隠して旧deliveryを処理することはない。providerへの通信は負例でゼロを検査。
+- **境界の限界**：これは起動済み旧workerのプロセスconfigを書き換える仕組みではない。旧worker/schedulerの停止・全runtimeへ同じ固定code/configを反映し再起動する証拠、job reservation/failureのDB bookkeeping、共有session/メール/削除/export/telemetry、既存SW/キャッシュやNginx静的経路の実受入は依然BLOCKING_SHARED/UNKNOWN。DB migrationは別承認で事前適用し、runtimeでは既存check-only起動フェンスを使う。Flagで未適用20件を飛ばして起動可能とは言わない。
+
+新profileのPHP13ケースと既存Plan replay/bootstrap/Level/session等の関連回帰を使い捨てSQLiteで確認（50件 / 437 assertions）。編集時は既存Plan行ロック内で編集内容のfingerprintを比較し、古いタブ/比較値なしの上書きを拒否。入力内容は残して保存ボタンを止め、最新内容の確認を求める。fingerprintは新しい認証情報や永続revision/自動mergeではない。別の実Chromium journeyは登録→診断→元AccountのPlan保存→reload/edit/logout/login→元Plan再訪、GET/POST/API拒否、CSRF、390pxでの横overflowなしを検証。Console負例はLaravelがunit-test環境でConsoleイベントを省略する仕様を避け、**`APP_ENV=local`の独立した実Artisanプロセス**で確認する（実環境への接続なし）。既存Full94/114・strict SQL/Reference・MySQL復旧CIは対象source不変のため作り直していない。
+
+**HOLDの更新**：専門機能の完成・教材/実行の実機受入は、上記固定profileの**合成アプリケーション層**では後回し可能。現在本番が隔離済みとは認定しない。実効設定/旧worker/静的経路等を含む実運用隔離と実DB/復旧が未検証なので、公開判断では依然UNKNOWN/MIXED→BLOCKING扱い。Track H/Eいずれの候補も自動更新/採用せず、`A_SHARED_DB_PRELAUNCH_NO_GO / PRODUCTION_NO_GO_HOLD`。
+
+次の本人操作は実接続や配備ではなく、CIで固定された元Webの準備フローを管理Macで**無公開・合成データ**受入すること。実運用候補の依存closure/追加20件・実DB/backup restore・実効profile/旧worker停止・既存Account/実機/Privacy・初回manual deployment/publicationの各別GOが揃うまで公開しない。別DB B案への切替もしない。

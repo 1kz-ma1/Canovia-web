@@ -79,6 +79,28 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Recheck in the running process, before any queued handler (including
+        // old deliveries). Queue reservation/failure bookkeeping is not a
+        // proof of zero DB writes or a substitute for a stopped writer window.
+        \Illuminate\Support\Facades\Queue::before(function (): void {
+            if (app(ReleaseLevelService::class)->preparationOnly()) {
+                throw new \RuntimeException('PREPARATION_QUEUE_CLOSED');
+            }
+        });
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Console\Events\CommandStarting::class,
+            function ($event): void {
+                if (app(ReleaseLevelService::class)->preparationOnly()
+                    && ! in_array($event->command, [
+                        'list', 'help', 'about', 'serve', 'up', 'down',
+                        'config:cache', 'config:clear', 'route:cache', 'route:clear',
+                        'view:cache', 'view:clear', 'canovia:release-schema-ready',
+                    ], true)) {
+                    throw new \RuntimeException('PREPARATION_CONSOLE_CLOSED');
+                }
+            },
+        );
+
         // V6.11 confirmation must not be exhausted by the different Study
         // answer/start/next endpoints sharing numeric throttle buckets.
         // Register in the provider so the named limiter survives route:cache.

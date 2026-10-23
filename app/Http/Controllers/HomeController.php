@@ -15,6 +15,14 @@ class HomeController extends Controller
         Request $request,
         HomePageDataService $page,
     ) {
+        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
+            return view('preparation.index', [
+                'plans' => $request->user()
+                    ? Plan::query()->where('user_id', $request->user()->id)->latest()->get()
+                    : collect(),
+            ]);
+        }
+
         return view(
             'dashboard.index',
             $page->build(
