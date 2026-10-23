@@ -67,14 +67,11 @@ jobs:
           php artisan migrate --force --no-interaction
           node --check scripts/ci/prelaunch_ia2d_browser_smoke.mjs
           for f in scripts/ci/*_browser_smoke.mjs; do node --check "$f"; done
-      - name: Use signed official Ubuntu archive for disposable browser dependencies
-        run: |
-          test -f /etc/apt/sources.list.d/ubuntu.sources
-          sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/sources.list.d/ubuntu.sources
       - name: Install pinned headless Chromium
         run: |
           npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-          npx playwright install --with-deps chromium
+          test -x /usr/bin/google-chrome
+          /usr/bin/google-chrome --version
           git diff --exit-code -- package-lock.json package.json
       - name: Serve isolated application exclusively on loopback
         shell: bash
@@ -89,6 +86,8 @@ jobs:
           echo "Disposable browser server failed to start" >&2
           exit 1
       - name: Exercise all three first-run choices via real Chromium click/input/redirect
+        env:
+          CANOVIA_BROWSER_EXECUTABLE_PATH: /usr/bin/google-chrome
         run: node scripts/ci/prelaunch_ia2d_browser_smoke.mjs
       - name: Document actual test boundary
         run: |
