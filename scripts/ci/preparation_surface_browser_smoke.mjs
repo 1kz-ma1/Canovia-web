@@ -3,11 +3,13 @@ import { randomUUID } from 'node:crypto';
 import { chromium } from 'playwright';
 
 const base = process.env.CANOVIA_PREPARATION_SURFACE_BASE_URL;
-assert.equal(base, 'http://127.0.0.1:18802');
+const macLab = process.env.CANOVIA_MAC_LAB_FIXTURE === '1';
+assert.equal(base, macLab ? 'http://127.0.0.1:18803' : 'http://127.0.0.1:18802');
 assert.equal(process.env.CANOVIA_PREPARATION_SURFACE_FIXTURE, '1');
 assert.equal(process.env.CANOVIA_PREPARATION_ONLY, 'true');
 assert.equal(process.env.DB_CONNECTION, 'sqlite');
-assert.equal(process.env.APP_ENV, 'testing');
+assert.equal(process.env.APP_ENV, macLab ? 'local' : 'testing');
+if (macLab) assert.equal(process.env.CANOVIA_PUBLIC_RELEASE_LEVEL, '0');
 const browser = await chromium.launch({ headless: true,
     ...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH ? { executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH } : {}) });
 try {
@@ -19,14 +21,14 @@ try {
     const visit = path => page.goto(base + path, { waitUntil: 'domcontentloaded' });
     await visit('/');
     await page.getByRole('heading', { name: '今の目標を、これからの一歩につなげる。' }).waitFor();
-    const email = `prepared-${randomUUID()}@example.test`;
+    const email = macLab ? 'tester@example.test' : `prepared-${randomUUID()}@example.test`;
     const password = 'Synthetic-Preparation-Only-2026';
-    await visit('/register');
-    await page.locator('[name="name"]').fill('Synthetic preparation owner');
+    await visit(macLab ? '/login' : '/register');
+    if (!macLab) await page.locator('[name="name"]').fill('Synthetic preparation owner');
     await page.locator('[name="email"]').fill(email);
     await page.locator('[name="password"]').fill(password);
-    await page.locator('[name="password_confirmation"]').fill(password);
-    await page.getByRole('button', { name: '登録してそのまま続ける', exact: true }).click();
+    if (!macLab) await page.locator('[name="password_confirmation"]').fill(password);
+    await page.getByRole('button', { name: macLab ? 'ログイン' : '登録してそのまま続ける', exact: true }).click();
     await page.waitForURL(base + '/');
     await page.getByRole('link', { name: '現在地を整理する' }).click();
     await page.locator('[name="domains[]"]').selectOption('study');
@@ -91,6 +93,23 @@ try {
     assert.equal(denied.status(), 302);
     assert(new URL(denied.headers().location).pathname === '/login');
     assert.deepEqual(errors, []);
+    if (macLab) {
+        // Public L0 and administrator status alone do not grant the diagnosis.
+        for (const actor of ['normal', 'admin']) {
+            const isolated = await browser.newContext({ serviceWorkers: 'block' });
+            const p = await isolated.newPage();
+            await p.goto(base + '/login');
+            await p.locator('[name="email"]').fill(`${actor}@example.test`);
+            await p.locator('[name="password"]').fill(password);
+            await p.getByRole('button', { name: 'ログイン', exact: true }).click();
+            await p.waitForURL(base + '/');
+            assert.equal(await p.getByRole('link', { name: '現在地を整理する' }).count(), 0);
+            assert.equal((await isolated.request.get(base + '/personalization', { maxRedirects: 0 })).status(), 302);
+            assert.equal((await isolated.request.get(base + '/workspace/study')).status(), 404);
+            assert.equal((await isolated.request.get(base + planPath)).status(), 404);
+            await isolated.close();
+        }
+    }
     console.log('PREPARATION_SURFACE_BROWSER=PASS: diagnosis, canonical Plan, stale-tab rejection, reload/edit/relogin, private access, direct GET/POST/API deny, CSRF, mobile layout');
 } finally {
     await browser.close();

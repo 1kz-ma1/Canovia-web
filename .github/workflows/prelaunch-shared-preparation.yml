@@ -20,6 +20,9 @@ on:
       - 'resources/views/preparation/**'
       - 'resources/views/layouts/**'
       - 'tests/Feature/PreparationOnlyBoundaryTest.php'
+      - 'tests/Feature/PreparationCompatibilityMatrixTest.php'
+      - 'scripts/ci/preparation_mac*'
+      - 'scripts/ci/test_preparation_mac_lab.py'
       - 'scripts/ci/preparation_surface_browser_smoke.mjs'
       - 'app/Services/PlanOwnershipService.php'
       - 'app/Services/GuestPlanClaimService.php'
@@ -52,7 +55,7 @@ jobs:
       - run: cp .env.example .env
       - name: Owner replay and existing preparation/session contracts
         run: >-
-          php artisan test tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PlanCreationReplayOwnershipTest.php
+          php artisan test tests/Feature/PreparationCompatibilityMatrixTest.php tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PlanCreationReplayOwnershipTest.php
           tests/Feature/PlanActionFirstCreationV5866Test.php
           tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           tests/Feature/PersonalizationBootstrapV5825Test.php
@@ -70,3 +73,20 @@ jobs:
           python3 scripts/ci/integration_browser_regression.py
           --journey preparation_surface --browser-executable /usr/bin/google-chrome
           --artifacts "$RUNNER_TEMP/shared-preparation-surface"
+
+      - name: Mac interactive launcher lifecycle and L0 public / explicit L1 tester (synthetic only)
+        run: |
+          rm .env
+          PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts/ci -p test_preparation_mac_lab.py -v
+          python3 scripts/ci/preparation_mac_lab.py --source-sha "$(git rev-parse HEAD)" --smoke --browser-executable /usr/bin/google-chrome
+
+  mac-launcher-guardrails:
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: No-network environment, source and owned-process guardrails on macOS
+        run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s scripts/ci -p test_preparation_mac_lab.py -v
