@@ -12,6 +12,7 @@ from urllib.request import build_opener, ProxyHandler
 
 ROOT = Path(__file__).resolve().parents[2]
 JOURNEYS = {
+    'preparation': (18801, 'preparation_plan_ownership_browser_smoke.mjs', 'CANOVIA_PREPARATION'),
     'welcome': (8796, 'prelaunch_ia2d_browser_smoke.mjs', 'CANOVIA_IA2_BROWSER'),
     'development': (8791, 'development_v69_browser_smoke.mjs', 'CANOVIA_V69'),
     'study': (8799, 'learning_v621_draft_browser_smoke.mjs', 'CANOVIA_LEARNING_V621'),

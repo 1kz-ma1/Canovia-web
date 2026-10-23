@@ -81,6 +81,7 @@ class PlanController extends Controller
         PlanIntentClassificationService $intentClassification,
         WorkspaceModeRegistry $workspaceModes,
         PlanLifecyclePersonalizationAdapter $planLifecycle,
+        PlanOwnershipService $ownership,
     ) {
         $workspaceModeKeys = $workspaceModes->available()
             ->filter(fn ($definition) =>
@@ -225,6 +226,11 @@ class PlanController extends Controller
             if ($plan->user_id !== null && (int) $plan->user_id !== (int) ($request->user()?->id ?? 0)) {
                 abort(409, 'この作成リクエストは別のアカウントで使用済みです。');
             }
+
+            // An idempotency key identifies a request, never an owner. Check
+            // the existing Account/cookie authority before issuing a cookie
+            // or attaching any Goal Context on a replay.
+            $ownership->authorizePlan($request, $plan);
 
             if (! $request->user() && is_string($plan->owner_token) && $plan->owner_token !== '') {
                 cookie()->queue('pace_keeper_owner_token_' . $plan->id, $plan->owner_token, 60 * 24 * 365, '/', null, app()->environment('production') || $request->isSecure(), true, false, 'lax');
