@@ -7,7 +7,7 @@ export const text = (v, max = 2000) => typeof v === 'string' && v.length <= max 
 export const number = (v, max = 1e7) => Number.isFinite(v) && v >= 0 && v <= max;
 export const date = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(v + 'T00:00:00Z')) && new Date(v + 'T00:00:00Z').toISOString().slice(0, 10) === v;
 export const localDay = (value = new Date()) => `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
-export const instant = v => typeof v === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(v) && Number.isFinite(Date.parse(v));
+export const instant = v => typeof v === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(v) && Number.isFinite(Date.parse(v)) && new Date(v).toISOString() === v;
 export function emptyState() {
   requireValue(globalThis.crypto?.randomUUID, 'SECURE_CONTEXT_REQUIRED');
   return {schema_version: VERSION, installation_id: crypto.randomUUID(), revision: 0, import_receipts: [], ...Object.fromEntries(TABLES.map(t => [t, []]))};
@@ -21,11 +21,14 @@ export function validate(state) {
   requireValue(state.schema_version === VERSION, 'UNSUPPORTED_SCHEMA');
   requireValue(UUID.test(state.installation_id) && Number.isSafeInteger(state.revision) && state.revision >= 0);
   requireValue(Array.isArray(state.import_receipts) && state.import_receipts.length <= 1000 && new Set(state.import_receipts).size === state.import_receipts.length && state.import_receipts.every(x => /^[a-f0-9]{64}$/.test(x)));
+  const common=['id','source_installation_id','schema_version','created_at','updated_at'];
+  const fields={profiles:['domains','goal','current_state','weekly_capacity','setup_version'],plans:['domain','title','description','start_date','deadline','priority'],tasks:['plan_id','title','description','status','estimated_minutes','remaining_minutes','progress_percent','priority','sort_order'],work_sessions:['plan_id','task_id','status','started_at','ended_at','paused_at','active_seconds','last_checkpoint_at'],work_logs:['session_id','plan_id','task_id','worked_on','actual_seconds','actual_minutes','memo','progress_before','progress_after'],practice_sessions:['plan_id','task_id','pack_id','pack_version','question_ids','question','draft_answers','status','submitted_at'],practice_attempts:['session_id','question_id','answer','correct','topic_keys','graded_at','pack_version']};
   const ids = new Set(); let count = 0;
   for (const table of TABLES) {
     requireValue(Array.isArray(state[table]) && state[table].length <= 10000);
     for (const row of state[table]) {
       requireValue(row && Object.getPrototypeOf(row) === Object.prototype && UUID.test(row.id) && UUID.test(row.source_installation_id) && !ids.has(row.id)); ids.add(row.id);
+      requireValue(Object.keys(row).sort().join()===[...common,...fields[table]].sort().join());
       requireValue(row.schema_version === VERSION && instant(row.created_at) && instant(row.updated_at) && row.created_at <= row.updated_at);
       requireValue(JSON.stringify(row).length <= 32000); count++;
     }
@@ -51,5 +54,6 @@ export function validate(state) {
   const graded=new Set();
   for(const a of state.practice_attempts){const s=practice.get(a.session_id);requireValue(s && s.status==='submitted' && !graded.has(s.id) && a.question_id===s.question.id && a.pack_version===s.pack_version && Object.hasOwn(s.question.choices,a.answer) && s.draft_answers[a.question_id]===a.answer && a.correct===(a.answer===s.question.answer) && Array.isArray(a.topic_keys) && a.topic_keys.length===1 && a.topic_keys[0]===s.question.topic && instant(a.graded_at) && a.graded_at===s.submitted_at);graded.add(s.id);}
   requireValue(state.practice_sessions.filter(s=>s.status==='submitted').every(s=>graded.has(s.id)));
+  requireValue(new TextEncoder().encode(JSON.stringify(state)).length<=6*1024*1024,'STORAGE_LIMIT');
   return state;
 }

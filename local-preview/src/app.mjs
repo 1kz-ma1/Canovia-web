@@ -6,7 +6,7 @@ export const escape=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&l
 export const field=(name,label,value='',type='text',extra='')=>`<label>${label}<input name="${name}" type="${type}" value="${escape(value)}" ${extra}></label>`;
 export const taskStatus={todo:'これから',doing:'取り組み中',done:'完了',cancelled:'取りやめ'};
 export let state,repo;let domain='study',selected=null,busy=false;
-const errors={CONFLICT:'別のタブで更新されました。入力を控えてから「最新状態を表示」を押してください。',STORAGE_FULL:'保存容量が不足しています。保存できませんでした。',HAS_TASKS:'先にTaskを整理してください。',HAS_HISTORY:'実績があるTaskは削除できません。取りやめにすると履歴を残せます。',INVALID_DATA:'入力内容を確認してください。保存は行っていません。',VERSION_CHANGED:'別の版が開かれました。この画面を再読み込みしてください。'};
+const errors={STORAGE_LIMIT:'Previewの保存上限に達しました。バックアップしてから記録を整理してください。',CONFLICT:'別のタブで更新されました。入力を控えてから「最新状態を表示」を押してください。',STORAGE_FULL:'保存容量が不足しています。保存できませんでした。',HAS_TASKS:'先にTaskを整理してください。',HAS_HISTORY:'実績があるTaskは削除できません。取りやめにすると履歴を残せます。',INVALID_DATA:'入力内容を確認してください。保存は行っていません。',VERSION_CHANGED:'別の版が開かれました。この画面を再読み込みしてください。'};
 export function notice(text,error=false){message.textContent=text;message.className=error?'error':'good'}
 export async function act(mutate,after=()=>{},redraw=true){
  if(busy)return false;busy=true;
@@ -41,5 +41,5 @@ function bind(){
  root.querySelectorAll('[data-edit-task]').forEach(f=>f.onsubmit=e=>{e.preventDefault();const v=data(f);for(const k of ['estimated_minutes','remaining_minutes','progress_percent'])v[k]=Number(v[k]);act(s=>planning.updateTask(s,f.dataset.editTask,v))});
  root.querySelectorAll('[data-delete-task]').forEach(b=>b.onclick=()=>{if(confirm('このTaskを削除しますか？'))act(s=>planning.deleteTask(s,b.dataset.deleteTask))});
 }
-try{repo=await Repository.open();state=await repo.read();domain=state.profiles[0]?.domains[0]||'study';const work=await import('./execution.mjs');if(state.work_sessions.some(s=>s.status==='running'))state=await repo.change(state.revision,s=>work.recoverWork(s));const context={state:()=>state,act,extensions,escape,notice,busy:()=>busy};const ui=await import('./execution-ui.mjs');ui.install(context);const study=await import('./study-ui.mjs');study.install(context);repo.onchange=()=>notice('別のタブで変更されました。編集を控えてから最新状態を表示してください。',true);render();notice('端末内の保存領域を利用できます。')}
+try{repo=await Repository.open();state=await repo.read();domain=state.profiles[0]?.domains[0]||'study';const work=await import('./execution.mjs');if(state.work_sessions.some(s=>s.status==='running'))state=await repo.change(state.revision,s=>work.recoverWork(s));const context={state:()=>state,act,extensions,escape,notice,busy:()=>busy,read:()=>repo.read(),repo:()=>repo,replace:async operation=>{if(busy)throw new Error();busy=true;try{state=await operation();render()}finally{busy=false}}};const ui=await import('./execution-ui.mjs');ui.install(context);const study=await import('./study-ui.mjs');study.install(context);const backup=await import('./backup-ui.mjs');backup.install(context);repo.onchange=()=>notice('別のタブで変更されました。編集を控えてから最新状態を表示してください。',true);render();notice('端末内の保存領域を利用できます。')}
 catch{notice('保存領域を利用できません。データを削除せず、通常ブラウザでお試しください。',true)}
