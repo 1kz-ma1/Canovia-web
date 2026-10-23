@@ -59,6 +59,11 @@ jobs:
           set -euo pipefail
           python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_disposable_mysql_smoke.py -v
 
+      - name: Offline guard, syntax and synthetic-target negative tests
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_disposable_tls_role_session.py -v
+
       - name: Check out exact historical Live94 source, never main-derived SQL
         run: |
           set -euo pipefail
