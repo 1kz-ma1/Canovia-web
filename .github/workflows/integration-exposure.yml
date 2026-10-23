@@ -73,12 +73,12 @@ jobs:
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci --ignore-scripts && npm run build
       - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-      - run: npx playwright install --with-deps chromium
+      - run: test -x /usr/bin/google-chrome && /usr/bin/google-chrome --version
       - run: git diff --exit-code -- package.json package-lock.json
       - name: Run existing journey with private DB and no provider credentials
         run: >-
           python3 scripts/ci/integration_browser_regression.py
-          --journey "${{ matrix.journey }}" --artifacts "$RUNNER_TEMP/integration-browser"
+          --journey "${{ matrix.journey }}" --browser-executable /usr/bin/google-chrome --artifacts "$RUNNER_TEMP/integration-browser"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
