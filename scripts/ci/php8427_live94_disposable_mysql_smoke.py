@@ -160,7 +160,9 @@ def verify_result(raw: bytes, checkout: Path) -> dict[str, object]:
     index = ledger_starts[0]
     inventory = body[:index]
     ledger = body[index:]
-    if not inventory or any(row[0] == "migration_ledger" for row in inventory):
+    if not inventory or any(row[0] not in (
+        "connection", "table", "column", "foreign_key", "index", "migration"
+    ) for row in inventory):
         raise Block()
     if any(row[0] != "migration_ledger" for row in ledger):
         raise Block()
