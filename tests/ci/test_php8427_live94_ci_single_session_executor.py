@@ -31,20 +31,25 @@ class SingleSessionExecutorTest(unittest.TestCase):
             for prefix in ("--password", "--login-path=", "--execute", "-e", "--ssl-mode=REQUIRED")
         ))
 
-    def test_container_transport_only_targets_fixed_synthetic_mysql(self):
+    def test_container_transport_uses_84_client_and_fixed_synthetic_network(self):
         token = "0123456789abcdef0123456789ab"
-        args = m.container_client_arguments("/usr/bin/docker", token)
-        self.assertEqual(args[:5], [
-            "/usr/bin/docker", "exec", "-i",
-            "--env=MYSQL_PWD=ci-only-live94-password", token,
-        ])
-        self.assertEqual(args[5:8], ["mysql", "--no-defaults", "--no-login-paths"])
-        self.assertIn("--ssl-ca=/var/lib/mysql/ca.pem", args)
+        args = m.container_client_arguments(
+            "/usr/bin/docker", token, Path("/tmp/runner/ca.pem")
+        )
+        self.assertEqual(args[:4], ["/usr/bin/docker", "run", "--rm", "-i"])
+        self.assertIn("--network=container:" + token, args)
+        self.assertIn("--entrypoint=mysql", args)
+        self.assertIn("--env=MYSQL_PWD=ci-only-live94-password", args)
+        self.assertIn("mysql:8.4", args)
+        self.assertIn("--mount=type=bind,source=/tmp/runner/ca.pem,target=/tmp/live94-ci-ca.pem,readonly", args)
+        self.assertEqual(args[args.index("mysql:8.4") + 1:args.index("mysql:8.4") + 3],
+                         ["--no-defaults", "--no-login-paths"])
+        self.assertIn("--ssl-ca=/tmp/live94-ci-ca.pem", args)
         self.assertIn("--host=localhost", args)
         self.assertIn("--skip-reconnect", args)
         self.assertFalse(any("aiven" in word.lower() for word in args))
         with self.assertRaises(Block):
-            m.container_client_arguments("/usr/bin/docker", "not-a-container")
+            m.container_client_arguments("/usr/bin/docker", "bad", Path("/tmp/ca.pem"))
 
     def test_non_ci_never_spawns_mysql_even_if_checkout_and_ca_exist(self):
         with mock.patch.dict(os.environ, {"GITHUB_ACTIONS": "false"}, clear=True):
