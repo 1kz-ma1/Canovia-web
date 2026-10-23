@@ -42,9 +42,9 @@ jobs:
           tests/Feature/PersonalizationBootstrapV5825Test.php
           tests/Feature/P0DatabaseSessionLoginRegressionTest.php --colors=never
       - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
-      - run: npx playwright install --with-deps chromium
+      - run: test -x /usr/bin/google-chrome
       - run: git diff --exit-code -- package.json package-lock.json
       - name: Real browser, synthetic SQLite only
         run: >-
           python3 scripts/ci/integration_browser_regression.py
-          --journey preparation --artifacts "$RUNNER_TEMP/shared-preparation"
+          --journey preparation --browser-executable /usr/bin/google-chrome --artifacts "$RUNNER_TEMP/shared-preparation"
