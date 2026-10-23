@@ -1,0 +1,50 @@
+name: Shared DB Preparation Safety
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/Http/Controllers/PlanController.php'
+      - 'app/Services/PlanOwnershipService.php'
+      - 'app/Services/GuestPlanClaimService.php'
+      - 'tests/Feature/PlanCreationReplayOwnershipTest.php'
+      - 'scripts/ci/preparation_plan_ownership_browser_smoke.mjs'
+      - 'scripts/ci/integration_browser_regression.py'
+      - '.github/workflows/prelaunch-shared-preparation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ownership-and-persistence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: npm ci --ignore-scripts && npm run build
+      - run: cp .env.example .env
+      - name: Owner replay and existing preparation/session contracts
+        run: >-
+          php artisan test tests/Feature/PlanCreationReplayOwnershipTest.php
+          tests/Feature/PlanActionFirstCreationV5866Test.php
+          tests/Feature/PlanLifecyclePersonalizationV5829Test.php
+          tests/Feature/PersonalizationBootstrapV5825Test.php
+          tests/Feature/P0DatabaseSessionLoginRegressionTest.php --colors=never
+      - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - run: git diff --exit-code -- package.json package-lock.json
+      - name: Real browser, synthetic SQLite only
+        run: >-
+          python3 scripts/ci/integration_browser_regression.py
+          --journey preparation --artifacts "$RUNNER_TEMP/shared-preparation"

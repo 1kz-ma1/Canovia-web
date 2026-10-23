@@ -168,3 +168,38 @@ mainへのSquashはAGENTS.mdのCI・差分・受入条件を満たす場合の�
 - **NOT IMPLEMENTED BY THIS DOCUMENT:** 先行モード専用の本番機能遮断、真正な本番migration、移行/復元、本番受入は**本書の追記のみでは実施していない**。
 - **NOT RELEASED:** `main`マージ・CI成功・`local-preview/`のChromium E2EはCloud本番昇格を証明しない。
 - **AUTHORITATIVE GATES:** `AGENTS.md`、現行Release/DB/Auth関連実装と安全な固定検証、Issue #488、Ownerの個別GO。旧`#513`、10/15の19件用candidate、Track H/Eはそれぞれ独立管理する。
+
+## 9. 2026-10-24 Slice 0 / 共有Plan保護の初回差分
+
+ユーザーの本書を指定した実装依頼に基づく着手。調査基準main **`e026f49221c7e45b52fdf7314f14420ed39d921b`**。GitHubの`production=15abdc9de6f24b5250fb255c579d1aa55facaf1a`と固定e858 releaseは不変。Render Liveは[#488の直近の独立記録](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6360966071)を歴史的証拠として再利用し、今回はRender APIで再取得していない（現在値UNVERIFIED）。本作業のmainは新しい本番候補として未採用。
+
+### 9.1 全量source差分と既存証拠の再利用
+
+Git全履歴で`15abdc9..e026f492`は **368 commits / 1,177 changed paths**。REST compareの先頭300件は使わない。次で全量を再生成可能（LFを含む出力をSHA256）：
+
+```sh
+git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a e026f49221c7e45b52fdf7314f14420ed39d921b
+git diff --name-only 15abdc9de6f24b5250fb255c579d1aa55facaf1a e026f49221c7e45b52fdf7314f14420ed39d921b -- database/migrations
+```
+
+全path一覧hash `29210f6575736831ef09ba3842f54b89d5a06dad3285883c5f738eee4de5bde7`、追加migration一覧hash `99432db700ee35a767ace77af22629eca318a6176a20d9421aaf34bd98900da3`。source上は **94→114 / 追加20件**（実DB台帳の現在値ではない）。migration全ファイルと`docker/render-start.sh`は固定e858から差分ゼロ。したがって既存[integration README](integration/2026-10-18-b/README.md)の20件監査・MySQL両版のforward/partial-DDL/retry/独立logical restore CIを再利用する。実DBの制約名、M08 UNIQUE名依存、M04→M05 trigger、衝突・可視性、実DDL権限/binlog、実バックアップ復元は未受入のまま。#856は旧Live94の**合成**single-client経路であり新mainの実監査ではない。
+
+### 9.2 影響範囲とHOLDの分類（実装着手時）
+
+| 区分 | 実装根拠・対象 | 判定と次の証拠 |
+| --- | --- | --- |
+| BLOCKING_SHARED | `PlanController::store/update`、`PlanOwnershipService`、`GuestPlanClaimService`、`GoalContextAccessService`、`AuthController`、session/CSRF | Account/Guestの本人帰属・保存・再訪が必須。再送時のowner確認不足を下記で修正。既存Account、所有者以外のGET/POST拒否、Guest claimを合成テスト。実機/実運用の受入は別。 |
+| BLOCKING_SHARED | 全20 migration、`Release20*Guard`、`docker/startup-migration-policy.sh`、web/worker/scheduler | 非公開機能のmigrationも同じ起動経路。候補固定・実schema監査・writer停止/forward repairは省略不可。独立実データ復元、RPO/RTOも未達。 |
+| BLOCKING_SHARED | `ReleaseLevelService`、`FeatureFlagService`、`FeatureAccessService`、`ReleaseGateService`、`routes/web.php`/`api.php` | L0でも`work_sessions.*`/`offline.work_sessions.sync`等が存在し、診断はL1。既存Levelだけでは「準備のみ」を分離できない。専用のdenyとnegative testsが必要。effective production設定はUNKNOWN。 |
+| UNKNOWN/MIXED → BLOCKING | `ProcessGitHubWebhookDelivery`/`BootstrapGitHubDevelopmentActivity`、`routes/console.php`、Native AI、provider、MCP、Study/Development | route非表示だけでは既存delivery/job/CLIの副作用を否定できない。専用機能の完成は不要だが、HTTP/API/queue/console/workerと共有起動の隔離を証明するまで一括でDEFERRABLEにしない。 |
+| DEFERRABLE_ISOLATED（限定） | `local-preview/`と専用static server、独立IndexedDB | Laravel public/routes/startupの外。Aの配布対象に採用しない限り、PWA/教材の人間受入やCloud importは後回し可能。既存資産は保全しCloud保存証拠へ転用しない。 |
+| 条件付き後回し（未認定） | Study採点/教材公開、Development実行/AI/GitHub、MCP/Auth0連携、Career/World/課金/Dev Pro | 専門機能自体の完成・実機受入は先行目的に不要。ただし上記shared schema/認可/実行隔離がPASSになった範囲だけを後続でDEFERRABLE_ISOLATEDへ変更する。 |
+| BLOCKING_SHARED | browser/device、privacy/削除/export、source/flag固定、GitHub production保護、緊急停止/owner GO | 合成browser成功は実機・本番・正式公開承認ではない。Aの診断→Plan保存→再ログイン/編集をMac/iPhoneで受入し、部署/対象者/停止責任と個別deploy/public GOを確定する必要。 |
+
+### 9.3 最初の小さな修正：Plan作成再送の所有権
+
+`create_request_id`は冪等キーであり所有権ではない。既存Planへ戻る分岐で既存`PlanOwnershipService::authorizePlan`を再利用し、cookie発行・Goal Context接続の**前**に本人を検証する。旧Account間の409は維持し、正しいGuest cookie/Accountの再送は同じPlanへ戻る。DB migration・既存行/スコア/進捗の書換えなし。
+
+新5ケースは未修正mainで3件の拒否テストが失敗し、修正後は既存bootstrap/lifecycle/first-action/sessionと合わせPHP **34件 / 313 assertions PASS**（使い捨てSQLite）。実ブラウザでは合成Guest→保存→登録claim→編集→logout/login→同一Planの保持と、他者GET/PUT/replay・CSRF拒否を確認する専用CIを追加。これは既存PHPベースライン全体の失敗原因解消や実ユーザー移行の受入を意味しない。
+
+次PRは準備専用のpublication境界。既存Release/Feature基盤を再利用し、公開有効化を行わずHTTP/非HTTP経路を責務別に閉じる。全量候補・実DB/復旧・実効設定・実機・オーナー各GOが揃うまで **A_SHARED_DB_PRELAUNCH_NO_GO / PRODUCTION_NO_GO_HOLD**。
