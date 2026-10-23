@@ -1,5 +1,13 @@
 # Canovia — 統合停止・本番収束・段階公開マスター仕様（2026-10-16）
 
+## 2026-10-23 Product-scope supersession (safety gates unchanged)
+
+**Product owner後続決定:** [先行公開は正式版のための事前準備に限定し、Canonical DB継続を第一候補とする](PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md)（[D-2026-10-23-01](decisions/2026-10-23_PRELAUNCH_PREPARATION_SHARED_DB_DECISION.md)）。本書§4の「Study最初の一問/Development次Actionまで先行公開」は**履歴的な旧スコープ**であり、必須の初回公開要件としては**後続決定により置換**された。先行版は元のCanovia Webで診断・目標・Plan作成/保存/再訪を準備し、正式版に同じ所有データを引き継ぐことを優先する。
+
+**変更なし:** §1–3, §5–7、Issue #488の共通DB/実Aiven/auth/session/権限/物理schema・migration/独立復元・release flags・actual device・Production GOの安全ゲート、Codex/Owner権限境界、Cloud §NO-GO/HOLD§。機能OFFは共有コード/migrationの無害化証明ではない。新チャット/実装は後続仕様§5–6を参照する。
+
+
+
 > 状態: **INTEGRATION PLANNING / IMPLEMENTATION PAUSED / PRODUCTION NO-GO**  
 > 担当: Orchestrator + Platform（各レーンは調査・引き継ぎの参照元）  
 > 固定調査基準: GitHub `main` `626a4ea6b19842089da91b107cc61da234858c7d`。本文の観測値は継続的に更新されない。Codex着手時は再取得すること。
