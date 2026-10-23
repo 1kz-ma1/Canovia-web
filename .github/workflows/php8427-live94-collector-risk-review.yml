@@ -1,0 +1,72 @@
+name: PHP 8.4.27 Legacy Collector Live-Execution Risks (Offline)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/ci/php8427_live94_collector_risk_review.py
+      - tests/ci/test_php8427_live94_collector_risk_review.py
+      - .github/workflows/php8427-live94-collector-risk-review.yml
+      - docs/development/PHP8427_LIVE94_COLLECTOR_SECURITY_REVIEW_2026_10_23.md
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live94-risk-review:
+    name: Legacy94 connection risk diagnosis (HOLD, not GO)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Offline negative controls, no DB client invoked
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover -s tests/ci -p test_php8427_live94_collector_risk_review.py -v
+
+      - name: Isolate exact old deployed source
+        run: |
+          set -euo pipefail
+          test "$(git cat-file -t 15abdc9de6f24b5250fb255c579d1aa55facaf1a)" = commit
+          git worktree add --detach "$RUNNER_TEMP/canovia-live94-legacy-risk" 15abdc9de6f24b5250fb255c579d1aa55facaf1a
+
+      - name: Review actual old source and require explicit HOLD
+        run: |
+          set -euo pipefail
+          python3 -I -B scripts/ci/php8427_live94_collector_risk_review.py \
+            --checkout "$RUNNER_TEMP/canovia-live94-legacy-risk" > "$RUNNER_TEMP/risk.json"
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          x=json.loads((Path(os.environ["RUNNER_TEMP"])/"risk.json").read_text())
+          assert x["verdict"]=="HOLD"
+          assert x["source_locked"] is True
+          assert x["code"]=="PINNED_LEGACY_COLLECTOR_HAS_OPEN_LIVE_SAFETY_GATES"
+          assert len(x["open_risks"])==8
+          assert x["real_aiven_connection_executed"] is False
+          assert x["owner_go"] is False and x["production_go"] is False
+          assert x["schema_94_verified"] is False and x["backup_restorable"] is False
+          print("LEGACY_COLLECTOR_SOURCE_REVIEW=PASS; REAL_AIVEN=NOT_RUN; EXECUTION=HOLD; PRODUCTION=NO_GO")
+          print("OPEN_RISKS="+",".join(x["open_risks"]))
+          PY
+
+      - name: Tampered legacy source must block before any operator action
+        run: |
+          set -euo pipefail
+          live="$RUNNER_TEMP/canovia-live94-legacy-risk"
+          printf '\n# synthetic source drift\n' >> "$live/scripts/ops/p0_mysql_operator_select_only_collect.sh"
+          if python3 -I -B scripts/ci/php8427_live94_collector_risk_review.py \
+            --checkout "$live" > "$RUNNER_TEMP/tampered.json"; then
+            echo "TAMPER_WAS_NOT_BLOCKED" >&2
+            exit 1
+          fi
+          grep -Fq '"code": "SOURCE_NOT_PINNED"' "$RUNNER_TEMP/tampered.json"
+          git -C "$live" restore -- scripts/ops/p0_mysql_operator_select_only_collect.sh
+
+      - name: No live connection or release approval inferred
+        run: |
+          echo "STATIC_REVIEW_ONLY; NO_MYSQL; NO_AIVEN; NO_CREDENTIALS; NO_RENDER; NO_PRODUCTION_MUTATION"
