@@ -24,7 +24,7 @@ DNS_CHILD='''import json,socket,sys,time
 v=json.loads(sys.stdin.buffer.read(256))
 if set(v)!={'host','mode'} or v['host'] not in ('mysql.synthetic.invalid','mismatch.synthetic.invalid'):sys.exit(2)
 mode=v['mode']
-if mode=='timeout':time.sleep(60)
+if mode=='timeout':time.sleep(60);sys.exit(2)
 elif mode=='malformed':sys.stdout.write('not-json');sys.exit(0)
 elif mode=='oversize':sys.stdout.write('x'*8193);sys.exit(0)
 elif mode!='normal':sys.exit(2)

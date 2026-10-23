@@ -142,6 +142,12 @@ class OpenerPolicy(unittest.TestCase):
                 self.assertEqual(caught.exception.dns_status,'DNS_TIMEOUT' if mode=='timeout' else 'DNS_RESPONSE_INVALID')
         self.assertEqual(len(children),3);self.assertTrue(all(v.poll() is not None for v in children))
         self.assertEqual(out.getvalue()+err.getvalue(),'')
+        # Even if OS kill were unavailable, the timeout fixture must NEVER
+        # fall through to DNS when its artificial sleep eventually completes.
+        data=Mock(buffer=io.BytesIO(b'{"host":"mysql.synthetic.invalid","mode":"timeout"}'))
+        with patch('sys.stdin',data),patch('time.sleep') as wait,patch('socket.getaddrinfo') as dns:
+            with self.assertRaises(SystemExit) as stopped:exec(owned.DNS_CHILD,{})
+        self.assertEqual(stopped.exception.code,2);wait.assert_called_once_with(60);dns.assert_not_called()
 
     def test_child_kill_permission_error_does_not_claim_reaped(self):
         child=Mock();child.poll.return_value=None
