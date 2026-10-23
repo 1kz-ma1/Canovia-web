@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - scripts/ops/php8427_live94_mac_private_policy_offline.py
+      - tests/ci/test_php8427_live94_mac_private_policy_offline.py
+      - docs/development/PHP8427_LIVE94_MAC_PRIVATE_POLICY_OFFLINE_2026_10_24.md
       - scripts/ops/php8427_live94_mac_offline_preflight.py
       - tests/ci/test_php8427_live94_mac_offline_preflight.py
       - .github/workflows/php8427-live94-mac-offline-preflight.yml
@@ -29,6 +32,12 @@ jobs:
           set -euo pipefail
           python3 -I -B -m unittest discover \
             -s tests/ci -p test_php8427_live94_mac_offline_preflight.py -v
+
+      - name: Test private target policy/CA parsing and irreversible no-execute gate
+        run: |
+          set -euo pipefail
+          python3 -I -B -m unittest discover \
+            -s tests/ci -p test_php8427_live94_mac_private_policy_offline.py -v
 
       - name: Test old Live94 pinned Git checkout independently
         run: |
@@ -73,6 +82,30 @@ jobs:
           assert d['owner_connection_go'] is False
           assert d['production_go'] is False
           print('CI_OPERATOR_IMPERSONATION=DENIED; AIVEN=NOT_RUN')
+          PY
+
+      - name: Actual Linux CI must reject Mac private policy adapter
+        run: |
+          set -euo pipefail
+          if python3 -I -B scripts/ops/php8427_live94_mac_private_policy_offline.py \
+            --checkout "$RUNNER_TEMP/live94-operator-offline-source" \
+            --private-policy "$RUNNER_TEMP/DOES_NOT_EXIST.json" \
+            > "$RUNNER_TEMP/private-adapter.json"; then
+            echo "LINUX_OPERATOR_POLICY_BYPASS" >&2
+            exit 2
+          fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import json, os
+          p = Path(os.environ['RUNNER_TEMP']) / 'private-adapter.json'
+          r=json.loads(p.read_text())
+          assert r['verdict']=='HOLD'
+          assert r['code']=='OFFLINE_MAC_POLICY_OR_FROZEN_SQL_REJECTED'
+          for flag in ('mysql_invoked', 'dns_or_network_attempted',
+                       'credentials_read', 'real_aiven_connected',
+                       'owner_aiven_read_go','production_go'):
+              assert r[flag] is False
+          print("MAC_POLICY_CI_IMPERSONATION=DENIED; REAL_AIVEN_NOT_RUN")
           PY
 
       - name: Explicit security boundary
