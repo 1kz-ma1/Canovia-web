@@ -10,6 +10,17 @@ assert.equal(process.env.CANOVIA_PREPARATION_ONLY, 'true');
 assert.equal(process.env.DB_CONNECTION, 'sqlite');
 assert.equal(process.env.APP_ENV, macLab ? 'local' : 'testing');
 if (macLab) assert.equal(process.env.CANOVIA_PUBLIC_RELEASE_LEVEL, '0');
+// Navigation completion can precede stylesheet/font layout. Inspect the settled
+// product geometry, rather than transient unstyled content.
+async function assertFits(page) {
+    await page.waitForLoadState('load');
+    await page.evaluate(() => document.fonts.ready);
+    const geometry = await page.evaluate(() => ({ width: innerWidth, scroll: document.documentElement.scrollWidth,
+        overflow: [...document.querySelectorAll('input,select,textarea,button,nav,img')].map(e => ({
+            tag: e.tagName, right: e.getBoundingClientRect().right, width: e.getBoundingClientRect().width,
+        })).filter(e => e.right > innerWidth) }));
+    assert(geometry.scroll <= geometry.width, JSON.stringify(geometry));
+}
 const browser = await chromium.launch({ headless: true,
     ...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH ? { executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH } : {}) });
 try {
@@ -34,7 +45,7 @@ try {
     await page.waitForURL(base + '/');
     if (macLab) await page.setViewportSize({ width: 390, height: 844 });
     await page.getByRole('link', { name: '現在地を整理する' }).click();
-    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await assertFits(page);
     await page.locator('[name="domains[]"]').selectOption('study');
     await page.locator('[name="study_goal"]').fill('同じAccountで目標を引き継ぐ');
     await page.locator('[name="study_stage"]').selectOption('started');
@@ -42,7 +53,7 @@ try {
     await page.getByRole('button', { name: '現在地を保存して候補を見る' }).click();
     await page.getByRole('heading', { name: '現在地を保存しました' }).waitFor();
     await page.getByRole('button', { name: 'この候補を編集する' }).first().click();
-    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await assertFits(page);
     await page.locator('[name="title"]').fill('正式版に向けた合成の準備目標');
     await page.locator('[name="description"]').fill('現在地と次に整理したいこと');
     await page.getByRole('button', { name: 'Planを保存する', exact: true }).click();
@@ -64,7 +75,7 @@ try {
     await stale.getByRole('button', { name: '変更を保存する' }).click();
     await stale.locator('[data-preparation-conflict]').waitFor();
     if (macLab) await stale.setViewportSize({ width: 390, height: 844 });
-    assert(await stale.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await assertFits(stale);
     assert.equal(await stale.locator('[name="title"]').inputValue(), '古いタブからの上書き');
     assert.equal(await stale.getByRole('button', { name: '変更を保存する' }).isDisabled(), true);
     await stale.close();
@@ -90,11 +101,11 @@ try {
     assert.equal(new URL(page.url()).pathname, planPath);
     await page.getByText('現在地と次に整理したいこと・更新済み', { exact: true }).waitFor();
     await page.setViewportSize({ width: 390, height: 844 });
-    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await assertFits(page);
     await page.getByRole('link', { name: 'Canovia Future', exact: true }).click();
     await page.getByRole('heading', { name: 'Canovia Future', exact: true }).waitFor();
     assert.equal(await page.locator('[data-support-count],button[type="submit"]:not([form])').count(), 1); // logout only
-    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await assertFits(page);
     const stranger = await browser.newContext({ serviceWorkers: 'block' });
     const denied = await stranger.request.get(base + planPath, { maxRedirects: 0 });
     assert.equal(denied.status(), 302);
