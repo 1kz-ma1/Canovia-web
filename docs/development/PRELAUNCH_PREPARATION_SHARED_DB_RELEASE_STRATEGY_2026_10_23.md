@@ -264,7 +264,7 @@ python3 scripts/ci/preparation_mac_lab.py --source-sha "$ACCEPTANCE_SHA"
 5. normal/adminを別のSafariプライベートウィンドウで確認。L0診断入口なし、直URLも診断へ入れない。管理者でもStudy/Development/履歴/専門APIを開けない。他人のPlanを編集できない。L0自身の手入力Planは保存できる。
 6. 準備profile trueでは既存合成AP/Dev Planは見えるが実行/履歴UIは404。**本番に同じ設定を採用すると普段のAP学習も閉じる**。Task/score/履歴削除とは別の影響として受入する。
 
-比較用の元UIはCtrl-C完了後、同じsourceで次を起動して **http://127.0.0.1:18804**。新しい独立DBに同じ合成fixtureを作る（先の手入力を移す仕組みではない）。tester L1でStudy/Developmentと合成AP Taskの「学習履歴」へ入れることを比較する。通常L0の専門画面が閉じるのは元のRelease Level仕様。adminだけの例外は追加しない。
+比較用の元UIはCtrl-C完了後、同じsourceで次を起動して **http://127.0.0.1:18804**。新しい独立DBに同じ合成fixtureを作る（先の手入力を移す仕組みではない）。tester L1でStudy（`/workspace/study?plan_id=1`）/Development（`/workspace/development?plan_id=2`）と合成AP Taskの履歴（`/plans/1/tasks/1/study-practice/history`）へ入れることを比較する。これらのIDは空のラボに作る固定合成fixtureだけの値。通常L0の専門画面が閉じるのは元のRelease Level仕様。adminだけの例外は追加しない。
 
 ```bash
 python3 scripts/ci/preparation_mac_lab.py --source-sha "$ACCEPTANCE_SHA" --profile original

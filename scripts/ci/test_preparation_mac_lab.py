@@ -1,11 +1,13 @@
 import os
 from pathlib import Path
 import subprocess
+import socket
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch, Mock
 
-from preparation_mac_lab import check_checkout, lab_env, stop_server, SafetyError
+from preparation_mac_lab import check_checkout, lab_env, stop_server, serve, SafetyError
 
 
 class MacLabTest(unittest.TestCase):
@@ -71,6 +73,29 @@ class MacLabTest(unittest.TestCase):
         process.wait.side_effect = [subprocess.TimeoutExpired('fake', 5), -9]
         stop_server(process)
         process.kill.assert_called_once()
+
+    def test_real_owned_process_is_reaped_on_linux_and_mac(self):
+        process = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])
+        try:
+            stop_server(process)
+            self.assertIsNotNone(process.poll())
+        finally:
+            if process.poll() is None:
+                process.kill()
+                process.wait(timeout=5)
+
+    def test_occupied_port_refuses_without_touching_other_process(self):
+        with socket.socket() as existing:
+            existing.bind(('127.0.0.1', 0))
+            port = existing.getsockname()[1]
+            with patch('preparation_mac_lab.PORTS', {'preparation': port}), \
+                 patch('preparation_mac_lab.check_checkout'), \
+                 patch('preparation_mac_lab.subprocess.Popen') as popen:
+                with self.assertRaises(SafetyError):
+                    with serve('preparation', 'a' * 40):
+                        self.fail('An occupied listener was reused')
+                popen.assert_not_called()
+            self.assertEqual(existing.getsockname()[1], port)
 
     def test_unknown_cleanup_is_not_success(self):
         process = Mock()

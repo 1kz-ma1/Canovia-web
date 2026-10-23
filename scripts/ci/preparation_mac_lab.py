@@ -169,7 +169,11 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         print('LAB_STOPPED_DISPOSABLE_DATA_DELETED')
-    except (SafetyError, subprocess.SubprocessError, OSError):
+    except SafetyError as error:
+        code = str(error) if re.fullmatch(r'LAB_[A-Z_]+', str(error)) else 'LAB_UNSAFE_CHECKOUT'
+        print(code, file=sys.stderr)
+        sys.exit(2)
+    except (subprocess.SubprocessError, OSError):
         # Never print inherited environment, app errors, raw SQL or private log paths.
         print('LAB_BLOCKED: check clean dedicated checkout, dependencies and unused fixed port.', file=sys.stderr)
         sys.exit(2)
