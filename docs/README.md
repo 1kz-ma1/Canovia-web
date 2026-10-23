@@ -1,5 +1,12 @@
 # Canovia documentation index (2026-10-13)
 
+## 2026-10-23 Product decision: preparation-first prelaunch
+
+- [先行リリース事前準備 / 同一DB第一候補 / HOLD分類・Codex新チャット引継ぎ](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md): **先行は診断・目標・計画の保存と正式版への継続性を成功条件に変更**。A=既存Canovia Webと同じCanonical DBが第一候補、B=安全な別DB移行は別判断。安全HOLD/本番GOは未解除。§5は技術実行パケット、§6は新チャットで使うプロンプト。
+- [D-2026-10-23-01 Decision Memory](development/decisions/2026-10-23_PRELAUNCH_PREPARATION_SHARED_DB_DECISION.md): 製品オーナーの決定理由・旧スコープとの差・計測仮説・非許可境界。既存10/15固定公開スコープ/10/16マスターの**公開体験のみ後続変更**、技術ゲートは引き継ぐ。
+
+
+
 ## Owner-requested Learning follow-up (2026-10-16)
 
 - [「わからない」の回答意思・保存・復帰・分析の設計案](development/LEARNING_DONT_KNOW_RESPONSE_CONTRACT_2026_10_16.md): 未回答・誤答・明示的な回答不能を分離。**設計のみ、ボタン・migration・公開は未実装。** AP問題混入修正/Future UIとは独立し、初回本番候補へ追加しない。
