@@ -55,13 +55,19 @@ export function mountFutureCarousels(root = document) {
         document.addEventListener('canovia:before-page-replace', () => {
             observer.disconnect(); cancelAnimationFrame(frame);
         }, {once:true});
-        carousel.addEventListener('error', event => {
-            const img = event.target;
+        const imageFailure = img => {
             if (img.matches?.('[data-future-art]')) {
                 img.removeAttribute('src'); img.removeAttribute('srcset');
                 img.alt = '機能イラストを表示できません。カード本文で内容を確認できます。';
             }
-        }, true);
+        };
+        carousel.addEventListener('error', event => imageFailure(event.target), true);
+        // A cached/fast failure can precede module mounting (notably WebKit).
+        // Reconcile broken completed requests without treating a pending lazy
+        // request, an image with no source, or a valid image as a failure.
+        carousel.querySelectorAll('[data-future-art]').forEach(img => {
+            if (img.getAttribute('src') && img.complete && img.naturalWidth === 0) imageFailure(img);
+        });
         controls.hidden = false;
         carousel.querySelector('[data-carousel-keyboard-help]').hidden = false;
         resize();
