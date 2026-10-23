@@ -123,7 +123,7 @@ def serve(profile, sha):
                     time.sleep(0.1)
                 else:
                     raise SafetyError('LAB_READINESS_FAILED')
-                yield env
+                yield env, server
             finally:
                 stop_server(server)
     finally:
@@ -145,7 +145,7 @@ def main():
     def interrupted(signum, frame):
         raise KeyboardInterrupt
     signal.signal(signal.SIGTERM, interrupted)
-    with serve(args.profile, args.source_sha) as env:
+    with serve(args.profile, args.source_sha) as (env, server):
         print(json.dumps({'status': 'SYNTHETIC_LOCAL_LAB_READY', 'url': env['APP_URL'],
                           'profile': args.profile, 'public_level': 0, 'tester_level': 1,
                           'source': args.source_sha, 'device_acceptance': 'NOT_RUN'}), flush=True)
@@ -158,8 +158,9 @@ def main():
             subprocess.run(['node', 'scripts/ci/preparation_surface_browser_smoke.mjs'],
                            cwd=ROOT, env=env, check=True, timeout=300)
         else:
-            while True:
+            while server.poll() is None:
                 time.sleep(1)
+            raise SafetyError('LAB_SERVER_EXITED')
     print('LAB_STOPPED_DISPOSABLE_DATA_DELETED')
 
 
