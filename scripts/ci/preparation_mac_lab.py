@@ -158,9 +158,12 @@ def main():
             subprocess.run(['node', 'scripts/ci/preparation_surface_browser_smoke.mjs'],
                            cwd=ROOT, env=env, check=True, timeout=300)
         else:
-            while server.poll() is None:
-                time.sleep(1)
-            raise SafetyError('LAB_SERVER_EXITED')
+            try:
+                while server.poll() is None:
+                    time.sleep(1)
+                raise SafetyError('LAB_SERVER_EXITED')
+            except KeyboardInterrupt:
+                pass  # Success is printed only AFTER the context confirms cleanup.
     print('LAB_STOPPED_DISPOSABLE_DATA_DELETED')
 
 
@@ -168,7 +171,8 @@ if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
-        print('LAB_STOPPED_DISPOSABLE_DATA_DELETED')
+        print('LAB_STOP_UNVERIFIED: confirm owned listener termination before restarting.', file=sys.stderr)
+        sys.exit(2)
     except SafetyError as error:
         code = str(error) if re.fullmatch(r'LAB_[A-Z_]+', str(error)) else 'LAB_UNSAFE_CHECKOUT'
         print(code, file=sys.stderr)

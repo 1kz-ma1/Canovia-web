@@ -1,4 +1,6 @@
 import os
+import contextlib
+import io
 from pathlib import Path
 import subprocess
 import socket
@@ -7,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, Mock
 
-from preparation_mac_lab import check_checkout, lab_env, stop_server, serve, SafetyError
+from preparation_mac_lab import check_checkout, lab_env, stop_server, serve, main, SafetyError
 
 
 class MacLabTest(unittest.TestCase):
@@ -96,6 +98,20 @@ class MacLabTest(unittest.TestCase):
                         self.fail('An occupied listener was reused')
                 popen.assert_not_called()
             self.assertEqual(existing.getsockname()[1], port)
+
+    def test_interrupt_does_not_report_cleanup_before_owned_process_is_confirmed(self):
+        @contextlib.contextmanager
+        def failed_cleanup(*args):
+            yield {'APP_URL': 'http://127.0.0.1:18803'}, Mock()
+            raise PermissionError('synthetic cleanup failure')
+        output = io.StringIO()
+        with patch.object(sys, 'argv', ['lab', '--source-sha', 'a' * 40]), \
+             patch('preparation_mac_lab.serve', failed_cleanup), \
+             patch('preparation_mac_lab.time.sleep', side_effect=KeyboardInterrupt), \
+             contextlib.redirect_stdout(output):
+            with self.assertRaises(PermissionError):
+                main()
+        self.assertNotIn('LAB_STOPPED_DISPOSABLE_DATA_DELETED', output.getvalue())
 
     def test_unknown_cleanup_is_not_success(self):
         process = Mock()
