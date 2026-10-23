@@ -45,8 +45,8 @@ jobs:
           d=json.loads((Path(os.environ['RUNNER_TEMP'])/'source-only.json').read_text())
           assert d['result']=='REVIEW_REQUIRED'
           assert d['code']=='LIVE94_SOURCE_PINNED_NO_AIVEN'
-          assert d['migration_count']==94
-          assert d['audit_file_count']==7
+          assert d['migration_source_count']==94
+          assert d['audit_source_count']==7
           assert d['real_aiven_connected'] is False
           assert d['release_authorized'] is False
           print('OLD_LIVE94_SOURCE=PASS; AIVEN=NOT_RUN; RELEASE=NO_GO')
