@@ -6,6 +6,7 @@ export function requireValue(ok, code = 'INVALID_DATA') { if (!ok) throw new Loc
 export const text = (v, max = 2000) => typeof v === 'string' && v.length <= max && !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(v);
 export const number = (v, max = 1e7) => Number.isFinite(v) && v >= 0 && v <= max;
 export const date = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && Number.isFinite(Date.parse(v + 'T00:00:00Z')) && new Date(v + 'T00:00:00Z').toISOString().slice(0, 10) === v;
+export const localDay = (value = new Date()) => `${value.getFullYear()}-${String(value.getMonth()+1).padStart(2,'0')}-${String(value.getDate()).padStart(2,'0')}`;
 export const instant = v => typeof v === 'string' && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(v) && Number.isFinite(Date.parse(v));
 export function emptyState() {
   requireValue(globalThis.crypto?.randomUUID, 'SECURE_CONTEXT_REQUIRED');
@@ -30,6 +31,7 @@ export function validate(state) {
     }
   }
   requireValue(count <= 20000 && state.profiles.length <= 1);
+  for (const p of state.profiles) requireValue(Array.isArray(p.domains) && p.domains.length >= 1 && p.domains.length <= 2 && p.domains.every(d => ['study','development'].includes(d)) && text(p.goal,120) && p.goal.trim() && text(p.current_state) && number(p.weekly_capacity,10080) && p.setup_version === 1);
   const plans = new Map(state.plans.map(x => [x.id, x]));
   const tasks = new Map(state.tasks.map(x => [x.id, x]));
   for (const p of state.plans) requireValue(['study', 'development'].includes(p.domain) && text(p.title, 120) && p.title.trim() && text(p.description) && date(p.start_date) && (p.deadline === null || date(p.deadline) && p.deadline >= p.start_date) && number(p.priority, 3));
