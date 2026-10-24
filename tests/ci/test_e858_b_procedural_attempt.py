@@ -47,9 +47,10 @@ class Procedure(unittest.TestCase):
                         with self.assertRaises(Block):b.BProceduralAttempt(launcher,root)
                     else:
                         procedure=b.BProceduralAttempt(launcher,root)
+                        if mode!='UNBOUND':procedure.bind_engine(p.Adapter(entry,'phase1'))
                         self.assertLessEqual(procedure.until,initial)
                         self.assertEqual(procedure.state,'PREFLIGHTED')
-                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME'):
+                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE'):
                             if mode=='BEFORE_CONFIRM':
                                 with self.assertRaises(Block):procedure.reserve_attempt()
                             elif mode=='FAKE_GO':
@@ -59,6 +60,7 @@ class Procedure(unittest.TestCase):
                             else:
                                 if mode=='TARGET':(self.private/'target.json').write_bytes(b'{}')
                                 if mode=='CA':(self.private/'ca.pem').write_bytes(b'not-a-ca')
+                                if mode=='ENGINE_SCOPE':procedure.engine.scope='metadata'
                                 if mode=='RUNTIME':
                                     with patch.object(self.program,'runtime','0'*64):
                                         with self.assertRaises(Block):procedure.check()
@@ -91,6 +93,8 @@ class Procedure(unittest.TestCase):
                                 self.assertEqual(procedure.state,'RESERVED_NOT_AUTHORITY')
                                 self.assertEqual(len(list(self.store.iterdir())),1)
                                 if mode=='AFTER_RESERVED_CANCEL':procedure.cancel()
+                                elif mode=='UNBOUND':
+                                    with self.assertRaises(Block):procedure.before_input()
                                 else:
                                     procedure.before_input();entry.capture();secret=entry.secret._password
                                     gate=lambda role:p.r.Gate(role,self.program.queries['identity'],self.program.queries['grants'],entry.until)
@@ -148,7 +152,7 @@ class Procedure(unittest.TestCase):
             with self.subTest(mode=mode):self.trial(mode)
 
     def test_target_ca_runtime_and_store_alias_are_rejected(self):
-        for mode in ('TARGET','CA','RUNTIME','ALIASED_ROOT'):
+        for mode in ('TARGET','CA','RUNTIME','ALIASED_ROOT','ENGINE_SCOPE'):
             with self.subTest(mode=mode):self.trial(mode)
 
     def test_confirmation_reuse_expiry_and_backward_clock_stop(self):
@@ -156,7 +160,7 @@ class Procedure(unittest.TestCase):
             with self.subTest(mode=mode):self.trial(mode)
 
     def test_consumed_attempt_duplicate_fsync_failure_and_cancellation_do_not_retry(self):
-        for mode in ('DUPLICATE','FSYNC_FAILURE','AFTER_RESERVED_CANCEL'):
+        for mode in ('DUPLICATE','FSYNC_FAILURE','AFTER_RESERVED_CANCEL','UNBOUND'):
             with self.subTest(mode=mode):self.trial(mode)
 
     def test_wrong_order_sql_fake_third_role_and_unknown_remote_stop_after_reservation(self):

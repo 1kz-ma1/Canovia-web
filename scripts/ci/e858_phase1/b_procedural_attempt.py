@@ -69,6 +69,7 @@ class BProceduralAttempt:
                     or self.entry.until!=self.until or not time.monotonic()<self.until
                     or self._context()!=self._seal):raise Block()
             self.last_wall=now
+            if self.engine is not None and (self.engine.entry is not self.entry or self.engine.scope!='phase1'):raise Block()
             if self.store is not None and identity(os.fstat(self.store.check()))!=self._store_identity:raise Block()
         except BaseException:
             self.close();raise Block() from None
@@ -153,7 +154,7 @@ class BProceduralAttempt:
     def before_input(self):
         try:
             self.check()
-            if self.state!='RESERVED_NOT_AUTHORITY' or not self.reserved:raise Block()
+            if self.state!='RESERVED_NOT_AUTHORITY' or not self.reserved or self.engine is None:raise Block()
             self.launcher._before_input();self.state='INPUT_STARTED'
         except BaseException:
             self.close();raise Block() from None
