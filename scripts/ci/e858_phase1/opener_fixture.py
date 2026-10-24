@@ -19,6 +19,7 @@ from .opener_candidate import OpenerCandidate, Peer
 from .phase1_application import _phase1_program
 from .backend_candidate import exchange, reap
 from .owned_activation_fixture import OwnedPhase1Activation
+from .tls_handoff_candidate import VerifiedTLSHandoff
 from .private_binding import Block
 
 HOSTS=('mysql.synthetic.invalid','mismatch.synthetic.invalid')
@@ -95,21 +96,16 @@ def owned_resolve(host,until,mode='normal',worker=None):
 class OwnedTLS:
     def __init__(self,wire):self.wire=wire
     def wrap_socket(self,raw,*,server_hostname):
-        wrapped=None;wire=self.wire;plan=wire.plan
-        try:
-            if wire.fault=='SNI_CHANGED':server_hostname='mismatch.synthetic.invalid'
-            if wire.fault=='CA_STORE_CHANGED':
-                plan.context.load_verify_locations(cadata=Path('/synthetic/wrong-ca.pem').read_text())
-            if wire.fault=='PEER_CHANGED':plan.peer=Peer(plan.peer.family,('198.51.100.9',3306))
-            plan.before_tls(raw,server_hostname)
-            raw.settimeout(plan.remaining())
-            wire.tls_handshake_started=True
-            wrapped=plan.context.wrap_socket(raw,server_hostname=server_hostname)
-            plan.after_tls(wrapped)  # must complete BEFORE driver gets TLS/auth socket
-            return wrapped
-        except BaseException:
-            if wrapped is not None:wrapped.close()
-            raise
+        wire=self.wire;plan=wire.plan
+        # Fault injection remains in the owned fixture; the production-neutral
+        # handoff below performs the actual peer-bound TLS handshake.
+        if wire.fault=='SNI_CHANGED':server_hostname='mismatch.synthetic.invalid'
+        if wire.fault=='CA_STORE_CHANGED':
+            plan.context.load_verify_locations(cadata=Path('/synthetic/wrong-ca.pem').read_text())
+        if wire.fault=='PEER_CHANGED':plan.peer=Peer(plan.peer.family,('198.51.100.9',3306))
+        handoff=VerifiedTLSHandoff(plan,raw,server_hostname)
+        wire.tls_handshake_started=True
+        return handoff.handshake()
 
 
 class OwnedWire(old.FixtureWire):
