@@ -1,0 +1,60 @@
+<?php
+
+/**
+ * Original, unvalidated 30-item Canovia interest-discovery draft (v0).
+ *
+ * NOT a clinical or psychometric assessment. This configuration is not
+ * connected to routes or persisted user data until separately accepted.
+ * Keep stable item IDs and versions when editing copy or mapping.
+ *
+ * Mapping reviewed in docs/development/PRELAUNCH_INTEREST_DIAGNOSTIC_ITEM_BANK_V0_2026_10_24.md.
+ */
+return [
+    'item_bank_version' => '2026-10-24-v0',
+    'category_version' => '2026-10-24-v0',
+    'scoring_version' => '0.1',
+    // Input is one of 0/1/2/3 or the literal string "unknown".
+    // 4 agreement levels + unknown = 5 choices; unknown is missing evidence.
+    'categories' => [
+        'ST' => '学習・探究',
+        'DV' => '開発・ものづくり',
+        'CR' => '就職・キャリア',
+        'WK' => '仕事・協働・生産性',
+        'WB' => '健康的な習慣・生活リズム',
+        'FN' => 'お金・家計',
+        'CT' => '趣味・創作・表現',
+        'LF' => '暮らし・生活改善',
+    ],
+    'items' => [
+        'Q01' => ['text' => '初めて聞く言葉が気になると、自分で調べてみたくなる。', 'primary' => 'ST'],
+        'Q02' => ['text' => '「なるほど」と仕組みが分かった瞬間は、しばらく印象に残る。', 'primary' => 'ST'],
+        'Q03' => ['text' => 'やり方を教わるとき、理由まで聞くと納得しやすい。', 'primary' => 'ST'],
+        'Q04' => ['text' => 'いつも使う道具に、こう変えたら便利だと思いつくことがある。', 'primary' => 'DV'],
+        'Q05' => ['text' => '既にあるものでも、別の組み立て方を試してみたくなる。', 'primary' => 'DV'],
+        'Q06' => ['text' => '単調な手順を見ると、まとめたり自動化したりできないか考える。', 'primary' => 'DV'],
+        'Q07' => ['text' => '違う働き方をしている人の話を聞くと、自分だったらと考える。', 'primary' => 'CR'],
+        'Q08' => ['text' => '少し先の自分に、どんな役割が似合うか想像することがある。', 'primary' => 'CR'],
+        'Q09' => ['text' => '自分ができることを初対面の人に伝える工夫を考えるのが好きだ。', 'primary' => 'CR'],
+        'Q10' => ['text' => 'やることが重なったとき、順序を組み直すのが嫌いではない。', 'primary' => 'WK'],
+        'Q11' => ['text' => '誰かと役割を分けて、一つのことを進めるのは楽しい。', 'primary' => 'WK'],
+        'Q12' => ['text' => '進め方の無駄に気づくと、改善案を考えたくなる。', 'primary' => 'WK'],
+        'Q13' => ['text' => '朝や夜の過ごし方が整うと、気分がよくなる。', 'primary' => 'WB'],
+        'Q14' => ['text' => '小さな習慣を積み重ねることに、達成感を覚える。', 'primary' => 'WB'],
+        'Q15' => ['text' => '一日の終わりに、自分のペースを振り返ることがある。', 'primary' => 'WB'],
+        'Q16' => ['text' => '同じ予算なら、より納得できる使い道を考えたい。', 'primary' => 'FN'],
+        'Q17' => ['text' => '買う前にいくつかの候補を比べる時間が、わりと好きだ。', 'primary' => 'FN'],
+        'Q18' => ['text' => '少し先の出費に備えて工夫すると、安心する。', 'primary' => 'FN'],
+        'Q19' => ['text' => '思い浮かんだイメージを、自分なりの形にしてみたくなる。', 'primary' => 'CT'],
+        'Q20' => ['text' => '人と違う表現を見つけると、試してみたくなる。', 'primary' => 'CT'],
+        'Q21' => ['text' => 'ちょっとした見た目や雰囲気の違いを工夫するのが好きだ。', 'primary' => 'CT'],
+        'Q22' => ['text' => '身の回りの物の置き方を変えると、少し気分が変わる。', 'primary' => 'LF'],
+        'Q23' => ['text' => '普段の暮らしの小さな不便に気づくことがある。', 'primary' => 'LF'],
+        'Q24' => ['text' => '毎日を過ごしやすくする工夫を考えるのは楽しい。', 'primary' => 'LF'],
+        'Q25' => ['text' => '知らないことは、調べるだけでなく試して確かめたくなる。', 'primary' => 'ST', 'secondary' => 'DV'],
+        'Q26' => ['text' => '初めての役割を任されると、どんな準備が要るか考えたくなる。', 'primary' => 'CR', 'secondary' => 'WK'],
+        'Q27' => ['text' => '空いた時間ができたら、普段の生活リズムを見直してみたい。', 'primary' => 'WB', 'secondary' => 'LF'],
+        'Q28' => ['text' => '買い物の記録を見返して、次の選び方を工夫したいと思う。', 'primary' => 'FN', 'secondary' => 'LF'],
+        'Q29' => ['text' => 'みんなが使う物にも、自分ならではの工夫を足したくなる。', 'primary' => 'DV', 'secondary' => 'CT'],
+        'Q30' => ['text' => '誰かと一緒に新しい目標の進め方を考えるのは楽しい。', 'primary' => 'WK', 'secondary' => 'CR'],
+    ],
+];
