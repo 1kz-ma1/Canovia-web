@@ -135,8 +135,8 @@ class Handoff(unittest.TestCase):
                     self.assertTrue(boundary.stopped);self.assertIsNone(boundary.plan)
             self.assertNotIn(CANARY,repr(boundary))
 
-    def test_inert_components_are_not_in_public_bundle_and_have_no_network_entry(self):
-        self.assertNotIn('scripts/ci/e858_phase1/connection_handoff_candidate.py',b1_package.FILES)
+    def test_inert_components_in_review_bundle_have_no_network_entry(self):
+        self.assertIn('scripts/ci/e858_phase1/connection_handoff_candidate.py',b1_package.FILES)
         for cls in (ConnectedPeer,AuthenticationBoundary,backend.PreparedChild):
             for name in ('connect','dial','open','launch','approve','retry','read_credentials'):
                 self.assertFalse(hasattr(cls,name))

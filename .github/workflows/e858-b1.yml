@@ -72,6 +72,7 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_opener_candidate.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_backend_launcher.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_connection_handoff.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_phase1_driver_candidate.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_owned_activation.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_tls_handoff.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_signature_fixture.py -v

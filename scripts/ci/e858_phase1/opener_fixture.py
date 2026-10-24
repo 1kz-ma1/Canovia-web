@@ -21,7 +21,8 @@ from .backend_candidate import PreparedChild, reap
 from .owned_activation_fixture import OwnedPhase1Activation
 from .b1_operator import Root
 from .tls_handoff_candidate import VerifiedTLSHandoff
-from .connection_handoff_candidate import ConnectedPeer, AuthenticationBoundary
+from .connection_handoff_candidate import ConnectedPeer
+from .phase1_driver_candidate import Phase1DriverCandidate
 from .private_binding import Block
 
 HOSTS=('mysql.synthetic.invalid','mismatch.synthetic.invalid')
@@ -116,7 +117,7 @@ class OwnedTLS:
         return handoff.handshake()
 
 
-class OwnedWire(old.FixtureWire):
+class OwnedWire(Phase1DriverCandidate,old.FixtureWire):
     fault='NORMAL'
     created=[]
     def initialize_fixture(self,gate,secret,target):
@@ -127,9 +128,9 @@ class OwnedWire(old.FixtureWire):
     def connect(self,sock=None):
         raw=None
         try:
-            if (sock is not None or self.connect_count or self.plan is not None
+            if (sock is not None or self.connect_count or self.plan is None
                     or type(self.worker) is not DNSWorker or self.worker.used):raise Block()
-            self.plan=OpenerCandidate(self.entry,self.gate,self.ctx)
+            self.check_binding()
             mode={'DNS_TIMEOUT':'timeout','DNS_MALFORMED':'malformed','DNS_OVERSIZE':'oversize','DNS_SIGNAL':'signal','DNS_STDERR':'stderr','DNS_FLOOD':'flood'}.get(self.fault,'normal')
             self.dns_started=True
             try:
@@ -150,7 +151,6 @@ class OwnedWire(old.FixtureWire):
             if self.fault=='TCP_PEER_CHANGED':self.plan.peer=Peer(peer.family,('198.51.100.9',3306))
             self.peer_handoff=ConnectedPeer(self.plan,raw)
             raw=self.peer_handoff.take()
-            self.auth_boundary=AuthenticationBoundary(self.plan)
             self.ctx=OwnedTLS(self)
             r.StrictConnection.connect(self,sock=raw);raw=None
             if not self.plan.verified:raise Block()
@@ -162,34 +162,13 @@ class OwnedWire(old.FixtureWire):
                 else 'AUTH_REJECTED' if error.args and error.args[0]==1045 else 'OTHER_FIXED_FAILURE')
             if raw is not None:raw.close()
             self.close();raise Block() from None
-    def _read_bytes(self,count):
-        previous=self.gate.deadline
-        try:
-            if not self.authenticated and self.plan is not None:
-                self.gate.deadline=min(previous,self.plan.until)
-                self.plan.remaining()
-            return super()._read_bytes(count)
-        finally:self.gate.deadline=previous
-    def _write_bytes(self,data):
-        previous=self.gate.deadline
-        try:
-            if not self.authenticated and self.plan is not None:
-                self.gate.deadline=min(previous,self.plan.until)
-                self.plan.remaining()
-            return super()._write_bytes(data)
-        finally:self.gate.deadline=previous
     def write_packet(self,data):
-        if not self.authenticated:
-            if self.auth_boundary is None:raise Block()
-            self.auth_boundary.packet(self._sock,data)
-            if self.plan.verified:self.authentication_packets+=1
+        if not self.authenticated and self.plan.verified:self.authentication_packets+=1
         return super().write_packet(data)
     def close(self):
         try:return super().close()
         finally:
-            if getattr(self,'auth_boundary',None) is not None:self.auth_boundary.close()
             if getattr(self,'peer_handoff',None) is not None:self.peer_handoff.close()
-            if getattr(self,'plan',None) is not None:self.plan.close()
 
 
 class OwnedBoundary(old.FixtureBoundary):
@@ -210,7 +189,7 @@ class OwnedBoundary(old.FixtureBoundary):
         try:self.launcher.before_connection(gate)
         except BaseException:self.close();raise Block() from None
         wire=super().factory(gate,fault)
-        wire.entry=self.entry;wire.worker=self.workers[len(self.wires)-1]
+        wire.bind_entry(self.entry);wire.worker=self.workers[len(self.wires)-1]
         return wire
     def close(self):
         if self.launcher is not None:self.launcher.close()

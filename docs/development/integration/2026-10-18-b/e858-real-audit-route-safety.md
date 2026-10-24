@@ -1119,3 +1119,21 @@ Past #831/#835/#837/#838 Mac, 10/18 grants/94 ledger and 10/21 private target/CA
 `TECHNICAL_WORK_REMAINING / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / P1_R1_TO_R6_NOT_ACCEPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
 
 The first candidate CI exposed an unrelated existing synthetic P256 negative-fixture no-op: replacing a random DER signature's final byte with fixed `X` leaves it unchanged when it already ends in `X`. This was reproduced without any live authority. The test now XORs one bit and asserts bytes differ; verifier/authority and public four BLOCKs are unchanged. This repairs the test input rather than treating valid bytes as a failed signature or adding an approval mechanism. Final-head CI must pass again.
+
+### 2026-10-24 Phase1共通driverと配布依存の結合（接続入口は引き続きBLOCK）
+
+#880の管理Mac10件は[本人報告6381050192](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6381050192)の `OWNER_REPORTED_PASS_10_OF_10` として再利用する。実機同一性・pip provenance・P1/B2・正式採用の証明ではなく、旧94/CA/grants/旧Mac suiteを再要求しない。
+
+| 既存/再利用 | 今回実装する結合差分 | 未実装・未承認として残す境界 |
+| --- | --- | --- |
+| BProceduralAttempt、Root、予約/事故後HOLD、Launcher、PreparedChild | Bの状態遷移とworker生成/ready/回収は無変更。共通driverを同じReviewedEntry/単一target/Gate/既存R1 secret参照へ束縛し、別Entry・複製secret・role/SQL/host/port/principal/DBの差替えを認証前に拒否する。 | 人的な本人監督とprivate custodyは運用前提。live起点、認可/対象の正式採用、trusted runtime、P1/R1〜R6、fresh B2は未成立。 |
+| PrivateWire、OpenerCandidate、AuthenticationBoundary、既存caps | 新しい `Phase1DriverCandidate` へowned fixtureの**接続を伴わない**期限/packet処理を移す。bindは1回限り・同じGate object・同じEntry/target/source/runtime/scope・既存R1 bytearrayの同一参照を検査。認証中のPyMySQL user/databaseのstr→bytes変換だけを許す。query/secret/closeは既存PrivateWire/runtimeへ委譲。 | `connect`はPrivateWireの無条件BLOCKそのものを継承。新しいraw socket/endpoint/credential/factoryを受け付ける実行メソッドを設けない。DNS/TCP/TLS producerはowned fixtureのままで、別の実用activationは未実装。 |
+| 既存B1 deterministic bundle、installed_wheel、Program/checkout integrity | 共通driverと非接続ConnectedPeer/AuthenticationBoundaryを既存inert review bundleへ含め、import closure・Git/runtime実読込bytesを固定。owned fixtureは同じ共通driverを実際のMySQLへ使用し、期限/認証処理の二重実装を除去する。 | TLS handshake実装・owned dial/activation・テスト用権限/秘密はbundleに含めない。bundleはsource-review用で実用実行配布物ではない。SHA一致はsupplier provenance/本人署名/実行許可ではない。 |
+
+Call graph: sealed Entry + existing B確認/予約/R1 → existing ordered Control/Data Gate → inert driver binding → **excluded owned-only** PreparedChild/DNS/TCP/ConnectedPeer/TLS handoff → shared pre-auth deadline/AuthenticationBoundary → pinned PyMySQL → existing SQL Gate/Bridge/normal-close Control observation. Source/SQL/Reference/strict comparison、通常15/最大42SQL、2TLS、query10s/全体120sとcapsは無変更。4 public BLOCKの本体を変更せず、driverにも別の接続APIはない。
+
+新6テスト（合成record/PTYのみ）はR1参照の一致・再bind/複製/別target field・Gate identity/role/SQL/期限・private/scope drift・PyMySQL user/database bytes・bundle依存を検証する。owned MySQL8.0/8.4の既存55ケースを変更経路の回帰に再利用し、新しい合成fixtureや署名authorityを増やさない。異常時は既存Bridgeのfinallyでsecret/FD/validator/Entryを解放し、unknown remoteはHOLD。予約markerの有無は再試行許可にしない。
+
+管理Macに新しいOS/TTY/worker syscallは追加しない。#880の10件を繰り返す必要はない。候補採用時に必要な差分受入は新driver6件と変更bundleのclosure/hashに限定し、CIを本人受入や正式tooling採用へ昇格しない。実用の認可済みsingle-target producer/activation、実用配布物のprovenance/採用、独立審査、private運用責任、P1/R1〜R6/B2はHOLD。実AivenのDNS/TLS/権限/remote終了、full17/物理構造/TRIGGER/migration/実復元/公開は別ゲート。
+
+`TECHNICAL_WORK_REMAINING / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / P1_R1_TO_R6_NOT_ACCEPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
