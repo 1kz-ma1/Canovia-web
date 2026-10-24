@@ -73,6 +73,7 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_backend_launcher.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_connection_handoff.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_phase1_driver_candidate.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_executable_candidate.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_owned_activation.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_tls_handoff.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_signature_fixture.py -v
@@ -142,7 +143,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: b1-offline-bundle-${{ matrix.os }}-${{ matrix.python }}
-          path: ${{ runner.temp }}/b1-review/b1-candidate.zip
+          path: |
+            ${{ runner.temp }}/b1-review/b1-candidate.zip
+            ${{ runner.temp }}/b1-review/phase1-offline-candidate.pyz
           if-no-files-found: error
           retention-days: 7
   mysql:

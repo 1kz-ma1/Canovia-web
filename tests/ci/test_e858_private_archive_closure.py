@@ -37,7 +37,11 @@ sys.path.insert(0,sys.argv[1])
 def deny(event,args):
     if event.startswith('socket.'): raise RuntimeError('NETWORK_DISABLED')
 sys.addaudithook(deny)
-from e858_phase1.private_candidate import Candidate, DisabledWire
+from e858_phase1.identity_core import IdentityCandidate,WindowedTTY
+from e858_tls.stream_core import StrictConnection,Block
+try:object.__new__(StrictConnection).connect()
+except Block:pass
+else:raise AssertionError("CONNECTION_ENABLED")
 from e858_phase1.private_binding import Target
 from e858_phase1.private_root import open_private_root
 from e858_phase1.private_operator import observe_foreground_terminal

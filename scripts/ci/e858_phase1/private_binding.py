@@ -11,7 +11,7 @@ import ssl
 import stat
 
 from e858_b_offline import decode, SOURCE, RELEASE, SHA
-from .r1_adapter import Q0_SHA, Q1_SHA
+from .sql_pins import Q0_SHA,Q1_SHA
 
 SQL = '8383bc16fc8b35b8413a2a6a0b0c0784c9fa646ebab119017b97c2bd8d4333d1'
 HEX = re.compile('[0-9a-f]{64}')

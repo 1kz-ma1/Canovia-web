@@ -22,12 +22,12 @@ from importlib.metadata import version
 import pymysql
 from pymysql import connections, _auth
 from e858_b_offline import canonical, digest, SOURCE, RELEASE
-from . import runtime as r, b1_package as pkg, private_distribution as dist
-from .b1_bridge import Bridge, ORDER
+from . import wire_core as r, b1_package as pkg, private_distribution as dist
+from .bridge_core import Bridge, ORDER
 from .b1_integrity import installed_wheel, native_graph
 from .b1_operator import Entry, Root, native_acl
 from .private_binding import Block, Target, read_binding, _read, HEX
-from .private_candidate import Candidate
+from .identity_core import IdentityCandidate as Candidate
 
 CAPS=dict(engine=1,identity=1,grants=8,ledger=115,table=512,column=4096,index=4096,
           foreign_key=2048,check=512,trigger=128,semantic_version=1,

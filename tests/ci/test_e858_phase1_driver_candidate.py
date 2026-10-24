@@ -2,6 +2,9 @@
 import contextlib
 import io
 import os
+import json
+import subprocess
+import sys
 import time
 import unittest
 from unittest.mock import patch
@@ -9,6 +12,9 @@ from unittest.mock import patch
 import test_e858_practical as fixture
 from e858_phase1.phase1_driver_candidate import Phase1DriverCandidate
 from e858_phase1 import b1_package
+from e858_phase1 import backend_candidate as backend
+from e858_phase1.b_procedural_attempt import BProceduralAttempt,LauncherCandidate,Root
+from e858_phase1.producer_candidate import ProducerBinding
 
 p=fixture.p
 Block=fixture.binding.Block
@@ -22,13 +28,25 @@ class DriverBinding(unittest.TestCase):
 
     def trial(self,mode):
         self.write()
+        producer_mode=mode.startswith('PRODUCER_')
+        store=self.base/('store-'+mode)
+        if producer_mode:store.mkdir(mode=0o700)
         def child(_,parent):
             if os.getppid()!=parent:raise Block()
-            entry=p.ReviewedEntry();review=None;wire=None;secret=None
+            entry=p.ReviewedEntry();review=None;wire=None;secret=None;procedure=None;worker=None;process=None
             out,err=io.StringIO(),io.StringIO()
             try:
                 with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err),patch('socket.getaddrinfo') as dns,patch('socket.socket') as sock:
                     review=self.load();entry.begin(str(self.private),human_supervised=True);entry.bind_review(review)
+                    if producer_mode:
+                        launcher=LauncherCandidate(entry,self.head,self.program.sha)
+                        procedure=BProceduralAttempt(launcher,Root(str(store)))
+                        engine=p.Adapter(entry,'phase1');engine.boundary=p.PrivateBoundary(entry)
+                        procedure.bind_engine(engine)
+                        code="import sys;sys.stdout.buffer.write(b'E858_DNS_READY\\n');sys.stdout.flush();sys.stdin.buffer.read();sys.stdout.write('[[2,1,6,\"\",[\"198.51.100.7\",9876]]]')"
+                        process=subprocess.Popen([sys.executable,'-I','-B','-c',code],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,env={})
+                        worker=backend.PreparedChild(process,time.monotonic()+2)
+                        procedure.confirm_on_tty();procedure.reserve_attempt();procedure.before_input()
                     entry.capture();secret=entry.secret._password
                     gate=p.r.Gate('control',self.program.queries['identity'],self.program.queries['grants'],entry.until)
                     wire=object.__new__(Phase1DriverCandidate);wire.initialize(gate,secret,entry.target)
@@ -39,7 +57,31 @@ class DriverBinding(unittest.TestCase):
                         wire.bind_entry(entry)
                         self.assertIs(wire.plan.entry,entry);self.assertIs(wire.gate,gate)
                         self.assertIs(wire.password,secret)
-                        if mode=='NORMAL':
+                        if producer_mode:
+                            engine.boundary.wires.append(wire);procedure.before_connection(gate)
+                            if mode=='PRODUCER_LATE':worker.ready_at=time.monotonic()
+                            if mode=='PRODUCER_LATE':
+                                with self.assertRaises(Block):ProducerBinding(wire,procedure,worker)
+                            else:
+                                producer=ProducerBinding(wire,procedure,worker)
+                                if mode=='PRODUCER_DUPLICATE':
+                                    with self.assertRaises(Block):ProducerBinding(wire,procedure,worker)
+                                elif mode=='PRODUCER_SCOPE':
+                                    engine.boundary.entry=None
+                                    with self.assertRaises(Block):producer.dns_request()
+                                else:
+                                    request=producer.dns_request()
+                                    self.assertEqual(json.loads(request),dict(host=entry.target.host,port=entry.target.port))
+                                    if mode=='PRODUCER_RETRY':
+                                        with self.assertRaises(Block):producer.dns_request()
+                                    else:
+                                        answer=json.loads(worker.exchange(request,wire.plan.until))
+                                        peer=producer.resolved(answer)
+                                        self.assertEqual(peer.address,('198.51.100.7',9876))
+                                        with self.assertRaises(Block):producer.resolved(answer)
+                                producer.close();self.assertEqual(producer.state,'STOPPED')
+                            wire.close()
+                        elif mode=='NORMAL':
                             self.assertIs(Phase1DriverCandidate.connect,p.PrivateWire.connect)
                             with self.assertRaises(Block):wire.connect()
                             wire.check_binding()  # no SQL or driver initialization on BLOCK
@@ -71,11 +113,13 @@ class DriverBinding(unittest.TestCase):
                 return dict(result='PHASE1_DRIVER_BINDING_VERIFIED',traces=[],execution_allowed=False)
             finally:
                 if wire is not None:wire.close()
+                if procedure is not None:procedure.close()
+                if process is not None:self.assertTrue(backend.reap(process,time.monotonic()+.25))
                 entry.close()
                 if review is not None:review.close()
                 if secret is not None:self.assertEqual(secret,bytearray())
         with patch.object(fixture.tty,'child_trial',side_effect=child):
-            self.assertEqual(fixture.tty.trial('NORMAL')['result'],'PHASE1_DRIVER_BINDING_VERIFIED')
+            self.assertEqual(fixture.tty.trial('NORMAL',procedural_review='MATCH' if producer_mode else None)['result'],'PHASE1_DRIVER_BINDING_VERIFIED')
 
     def test_existing_r1_alias_entry_and_inherited_connection_block(self):self.trial('NORMAL')
     def test_copy_and_rebind_rejected_without_recapture(self):
@@ -91,6 +135,12 @@ class DriverBinding(unittest.TestCase):
             self.assertIn('scripts/ci/e858_phase1/'+name,b1_package.FILES)
         for name in ('opener_fixture.py','owned_activation_fixture.py','tls_handoff_candidate.py'):
             self.assertNotIn('scripts/ci/e858_phase1/'+name,b1_package.FILES)
+
+    def test_producer_binds_preinput_worker_and_same_entry_role_to_dns_result(self):self.trial('PRODUCER_NORMAL')
+    def test_producer_rejects_worker_after_r1_and_cross_scope(self):
+        self.trial('PRODUCER_LATE');self.trial('PRODUCER_SCOPE')
+    def test_producer_worker_binding_and_dns_request_cannot_be_reused(self):
+        self.trial('PRODUCER_DUPLICATE');self.trial('PRODUCER_RETRY')
 
 
 if __name__=='__main__':unittest.main()

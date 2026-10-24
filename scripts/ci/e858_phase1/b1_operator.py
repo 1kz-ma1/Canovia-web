@@ -16,7 +16,7 @@ import threading
 import time
 
 from .private_binding import Block, read_binding
-from .private_candidate import WindowedTTY
+from .identity_core import WindowedTTY
 
 
 def identity(st):

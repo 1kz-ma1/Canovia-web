@@ -25,7 +25,7 @@ RUNTIME = tuple('scripts/ci/' + path for path in (
     'release488_runtime_ddl_restore_gate.py', 'integrated_release20_audit.py',
     'p0_mysql_full_ledger_offline_check.py'))
 # Changed procedural fixture, separately pinned; never reuse old device evidence.
-RUNTIME_DELTAS = {'scripts/ci/e858_phase1/r1_driver_fixtures.py': 'b49f200e1c45be865ed4961a29de8f8318fddc5b07211b7bb29a50c560a91419'}
+RUNTIME_DELTAS = {'scripts/ci/e858_phase1/r1_driver_fixtures.py': 'b49f200e1c45be865ed4961a29de8f8318fddc5b07211b7bb29a50c560a91419', 'scripts/ci/e858_phase1/protocol.py': '560cf2c3076382a7869d68706d2a0435323a1f30becb0851f28d85140b7b9d5d', 'scripts/ci/e858_phase1/runtime.py': 'fd3c154e0fd6ab02fc333e96ee2c212d0bf489d434d6c6f7f4827862a51773bd', 'scripts/ci/e858_tls/transport.py': '5694a5fbbe0394018c64148680017fecb51e9f7a796a9ada284fc42166d090ff'}
 REVIEW = ('scripts/ci/e858_phase1_review.py',
           'tests/ci/test_e858_phase1_review.py', '.github/workflows/e858-phase1.yml',
           'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md')

@@ -16,16 +16,11 @@ DB = 'canovia_p0_ci'
 USER = 'e858_tls_inspector'
 PASSWORD = 'ci-only-tls-inspector'
 ROOT_PASSWORD = 'ci-only-tls-root'
-CELL = 128 * 1024
-ROW = 256 * 1024
-SECTION = 8 * 1024 * 1024
-TOTAL = 16 * 1024 * 1024
-PREAMBLE = 16 * 1024
-SQL_SHA = '8383bc16fc8b35b8413a2a6a0b0c0784c9fa646ebab119017b97c2bd8d4333d1'
+try:
+    from .stream_core import (CELL,ROW,SECTION,TOTAL,PREAMBLE,SQL_SHA,Block,StrictConnection as CoreConnection,execute)
+except ImportError:
+    from stream_core import (CELL,ROW,SECTION,TOTAL,PREAMBLE,SQL_SHA,Block,StrictConnection as CoreConnection,execute)
 
-
-class Block(Exception):
-    """Only constant codes may cross the harness boundary."""
 
 
 def context(ca='/synthetic/ca.pem', mode='VERIFY_IDENTITY'):
@@ -38,38 +33,13 @@ def context(ca='/synthetic/ca.pem', mode='VERIFY_IDENTITY'):
     return value
 
 
-class StrictConnection(pymysql.connections.Connection):
-    """No SSL-less authentication; bounded protocol reads, not buffered results."""
-    def __init__(self, **kwargs):
-        self.wire_bytes = 0
-        self.connect_count = 0
-        self.authenticated = False
-        self.preamble_bytes = 0
-        super().__init__(defer_connect=True, **kwargs)
-
+class StrictConnection(CoreConnection):
+    """Legacy owned-fixture connector, not distributed in the inert runtime."""
     def connect(self, sock=None):
-        if self.connect_count:
-            raise Block('RECONNECT_REJECTED')
-        self.connect_count += 1
-        return super().connect(sock=sock)
+        if self.connect_count:raise Block('RECONNECT_REJECTED')
+        self.connect_count+=1
+        return pymysql.connections.Connection.connect(self,sock=sock)
 
-    def _request_authentication(self):
-        if not self.server_capabilities & CLIENT.SSL:
-            raise Block('TLS_REQUIRED_NO_FALLBACK')
-        value = super()._request_authentication()
-        self.authenticated = True
-        return value
-
-    def _read_bytes(self, count):
-        if not self.authenticated:
-            self.preamble_bytes += count
-            if self.preamble_bytes > PREAMBLE: raise Block('AUTH_PREAMBLE_CAP')
-        if count > ROW:
-            raise Block('WIRE_ROW_CAP')
-        self.wire_bytes += count
-        if self.wire_bytes > TOTAL:
-            raise Block('WIRE_TOTAL_CAP')
-        return super()._read_bytes(count)
 
 
 def connection(role='inspector', fault=None, sock=None):
@@ -205,47 +175,7 @@ class Session:
         # Fixed test envelope; NOT inserted into immutable metadata SQL bundle.
         self._execute('SET SESSION max_execution_time=10000', 0)
 
-    def _execute(self, sql, cap):
-        remaining = self.until - time.monotonic()
-        if remaining <= 0: raise Block('STREAM_TIMEOUT')
-        limit = min(self.query_seconds, remaining)
-        timeout_code = 'STREAM_TIMEOUT' if remaining <= self.query_seconds else 'QUERY_TIMEOUT'
-        fired = threading.Event()
-        def interrupt():
-            fired.set()
-            try: self.cancel_socket.shutdown(socket.SHUT_RDWR)
-            except OSError: pass
-        timer = threading.Timer(limit, interrupt)
-        timer.start()
-        raw = bytearray()
-        cursor = self.conn.cursor()
-        try:
-            try:
-                cursor.execute(sql)
-                for number, row in enumerate(cursor):
-                    if number >= cap: raise Block('ROW_COUNT_CAP')
-                    cells = [('NULL' if c is None else str(c)).encode('ascii') for c in row]
-                    if any(len(c) > CELL for c in cells): raise Block('CELL_CAP')
-                    line = b'\t'.join(cells) + b'\n'
-                    if len(line) > ROW: raise Block('ROW_CAP')
-                    if any(c < 32 and c not in (9, 10) or c == 127 for c in line): raise Block('OUTPUT_REJECTED')
-                    self.used += len(line)
-                    if len(raw) + len(line) > SECTION or self.used > TOTAL: raise Block('BYTE_CAP')
-                    raw.extend(line)
-            except Exception:
-                # Do not let SSCursor.close drain an unbounded rejected result.
-                try: self.cancel_socket.shutdown(socket.SHUT_RDWR)
-                except OSError: pass
-                raise
-            if fired.is_set(): raise Block(timeout_code)
-            return raw.decode('ascii')
-        except Exception:
-            if fired.is_set(): raise Block(timeout_code) from None
-            raise
-        finally:
-            timer.cancel(); timer.join(.5)
-            try: cursor.close()
-            except Exception: pass
+    _execute = execute
 
     def read(self, key, sql=None):
         if self.closed or self.failed: raise Block('NEW_OWNER_GO_REQUIRED')
