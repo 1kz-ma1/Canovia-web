@@ -20,6 +20,20 @@ class Block(Exception):
     """Deliberately contains no private filesystem or input diagnostics."""
 
 
+
+def _record(fingerprint,tooling_sha):
+    return json.dumps({
+        'kind': 'E858_B_LOCAL_ATTEMPT_RESERVATION_NOT_AUTHORITY_V0',
+        'attempt_fingerprint': fingerprint,
+        'source_sha': SOURCE, 'release_ref': RELEASE,
+        'tooling_sha': tooling_sha,
+        'scope': 'phase1',
+        'state': 'CONSUMED_ON_RESERVATION_NOT_EXECUTION',
+        'owner_approval_verified': False,
+        'execution_allowed': False,
+    },sort_keys=True,separators=(',',':'),ensure_ascii=True).encode('ascii') + b'\n'
+
+
 def reserve(directory_fd, attempt_id, tooling_sha):
     """Write-once marker BEFORE a possible future attempt; NEVER approve it.
 
@@ -44,16 +58,7 @@ def reserve(directory_fd, attempt_id, tooling_sha):
         # Still only a local filename: never a trusted replay authority.
         fingerprint = hashlib.sha256(attempt_id.encode('ascii')).hexdigest()
         name = 'attempt-' + fingerprint + '.reserved'
-        data = json.dumps({
-            'kind': 'E858_B_LOCAL_ATTEMPT_RESERVATION_NOT_AUTHORITY_V0',
-            'attempt_fingerprint': fingerprint,
-            'source_sha': SOURCE, 'release_ref': RELEASE,
-            'tooling_sha': tooling_sha,
-            'scope': 'phase1',
-            'state': 'CONSUMED_ON_RESERVATION_NOT_EXECUTION',
-            'owner_approval_verified': False,
-            'execution_allowed': False,
-        },sort_keys=True,separators=(',',':'),ensure_ascii=True).encode('ascii') + b'\n'
+        data = _record(fingerprint,tooling_sha)
         # O_EXCL rejects existing file / symlink, including interrupted runs.
         owned = os.open(name, os.O_CREAT | os.O_EXCL | os.O_WRONLY |
                         os.O_NOFOLLOW | os.O_CLOEXEC, 0o600, dir_fd=directory_fd)
@@ -99,6 +104,77 @@ def reserve(directory_fd, attempt_id, tooling_sha):
             except BaseException:
                 # A local close error cannot issue GO or safely erase a marker.
                 raise Block() from None
+
+
+
+def observe_local_attempt(directory_fd,attempt_id,tooling_sha):
+    """Recovery-only check of the local marker through a trusted caller-owned FD.
+
+    Existing / well-formed marker => HOLD; absent marker => also HOLD, never GO.
+    Partial writes, wrong tooling, unknown content, symlinks and unknown I/O
+    fail closed. There is NO network, secret read, deletion or retry API.
+    """
+    owned=None
+    try:
+        if (type(directory_fd) is not int or directory_fd<=2
+                or type(attempt_id) is not str or len(attempt_id)!=32
+                or any(c not in '0123456789abcdef' for c in attempt_id)
+                or type(tooling_sha) is not str or len(tooling_sha)!=40
+                or any(c not in '0123456789abcdef' for c in tooling_sha)
+                or os.get_inheritable(directory_fd)):
+            raise Block()
+        parent=os.fstat(directory_fd)
+        if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid!=os.geteuid()
+                or stat.S_IMODE(parent.st_mode)!=0o700):
+            raise Block()
+        fingerprint=hashlib.sha256(attempt_id.encode('ascii')).hexdigest()
+        name='attempt-'+fingerprint+'.reserved'
+        expected=_record(fingerprint,tooling_sha)
+        try:
+            owned=os.open(name,os.O_RDONLY|os.O_NONBLOCK|os.O_NOFOLLOW|os.O_CLOEXEC,
+                          dir_fd=directory_fd)
+        except FileNotFoundError:
+            after=os.fstat(directory_fd)
+            if (after.st_dev!=parent.st_dev or after.st_ino!=parent.st_ino
+                    or after.st_uid!=parent.st_uid
+                    or stat.S_IMODE(after.st_mode)!=0o700):
+                raise Block()
+            return dict(result='LOCAL_MARKER_ABSENT_NOT_PROOF_OF_RETRY_SAFETY',
+                        retry_authorized=False,remote_termination_verified=False,
+                        fresh_b2_go_granted=False,execution_allowed=False,
+                        real_aiven_connected=False,production_go=False)
+        first=os.fstat(owned)
+        if (not stat.S_ISREG(first.st_mode) or first.st_uid!=os.geteuid()
+                or stat.S_IMODE(first.st_mode)!=0o600 or first.st_nlink!=1
+                or first.st_size!=len(expected) or os.get_inheritable(owned)):
+            raise Block()
+        parts=[];count=0
+        while count<first.st_size:
+            chunk=os.read(owned,first.st_size-count)
+            if not chunk:raise Block()
+            parts.append(chunk);count+=len(chunk)
+        if b''.join(parts)!=expected or os.read(owned,1):
+            raise Block()
+        last=os.fstat(owned)
+        path=os.stat(name,dir_fd=directory_fd,follow_symlinks=False)
+        end_parent=os.fstat(directory_fd)
+        if (any(getattr(first,k)!=getattr(last,k) for k in
+                ('st_dev','st_ino','st_uid','st_gid','st_mode','st_nlink','st_size','st_mtime_ns','st_ctime_ns'))
+                or path.st_dev!=first.st_dev or path.st_ino!=first.st_ino
+                or end_parent.st_dev!=parent.st_dev or end_parent.st_ino!=parent.st_ino
+                or end_parent.st_uid!=parent.st_uid
+                or stat.S_IMODE(end_parent.st_mode)!=0o700):
+            raise Block()
+        return dict(result='LOCAL_MARKER_PRESENT_REMOTE_UNVERIFIED_HOLD',
+                    retry_authorized=False,remote_termination_verified=False,
+                    fresh_b2_go_granted=False,execution_allowed=False,
+                    real_aiven_connected=False,production_go=False)
+    except BaseException:
+        raise Block() from None
+    finally:
+        if owned is not None:
+            try:os.close(owned)
+            except BaseException:raise Block() from None
 
 
 def authorize(*_args, **_kwargs):

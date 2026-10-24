@@ -130,6 +130,63 @@ class LocalReservationTest(unittest.TestCase):
         with self.assertRaises(reservation.Block):
             reservation.reserve(self.fd,ATTEMPT,TOOLING)
 
+
+    def test_read_only_postincident_observation_is_always_hold(self):
+        # No marker is NOT an all-clear: the previous process might have
+        # stopped before creating one, or a backup/rollback may hide it.
+        with patch('socket.socket') as sock, patch('socket.getaddrinfo') as dns:
+            empty=reservation.observe_local_attempt(self.fd,ATTEMPT,TOOLING)
+            self.assertEqual(empty['result'],'LOCAL_MARKER_ABSENT_NOT_PROOF_OF_RETRY_SAFETY')
+            self.assertEqual(self.files(),[])
+            reservation.reserve(self.fd,ATTEMPT,TOOLING)
+            present=reservation.observe_local_attempt(self.fd,ATTEMPT,TOOLING)
+            self.assertEqual(present['result'],'LOCAL_MARKER_PRESENT_REMOTE_UNVERIFIED_HOLD')
+            self.assertEqual(len(self.files()),1)
+            sock.assert_not_called();dns.assert_not_called()
+        for result in (empty,present):
+            for key in ('retry_authorized','remote_termination_verified',
+                        'fresh_b2_go_granted','execution_allowed',
+                        'real_aiven_connected','production_go'):
+                self.assertIs(result[key],False)
+            self.assertNotIn(ATTEMPT,str(result))
+            self.assertNotIn(TOOLING,str(result))
+            self.assertNotIn(str(self.root),str(result))
+
+    def test_recovery_read_does_not_trust_corrupt_or_wrong_tooling_record(self):
+        reservation.reserve(self.fd,ATTEMPT,TOOLING)
+        marker=self.root/self.files()[0]
+        with self.assertRaises(reservation.Block):
+            reservation.observe_local_attempt(self.fd,ATTEMPT,'c'*40)
+        raw=marker.read_bytes()
+        marker.write_bytes(raw[:-1])
+        with self.assertRaises(reservation.Block):
+            reservation.observe_local_attempt(self.fd,ATTEMPT,TOOLING)
+        marker.write_bytes(raw)
+        os.chmod(marker,0o644)
+        with self.assertRaises(reservation.Block):
+            reservation.observe_local_attempt(self.fd,ATTEMPT,TOOLING)
+        os.chmod(marker,0o600)
+        self.assertEqual(reservation.observe_local_attempt(self.fd,ATTEMPT,TOOLING)['result'],
+                         'LOCAL_MARKER_PRESENT_REMOTE_UNVERIFIED_HOLD')
+
+    def test_recovery_read_rejects_symlink_untrusted_fd_and_partial_file(self):
+        marker='attempt-'+hashlib.sha256(ATTEMPT.encode('ascii')).hexdigest()+'.reserved'
+        (self.root/marker).symlink_to('/tmp/synthetic-not-real')
+        with self.assertRaises(reservation.Block):
+            reservation.observe_local_attempt(self.fd,ATTEMPT,TOOLING)
+        (self.root/marker).unlink()
+        for fd in (0,True):
+            with self.assertRaises(reservation.Block):
+                reservation.observe_local_attempt(fd,ATTEMPT,TOOLING)
+        with patch.object(reservation.os,'write',side_effect=OSError('PRIVATE_CANARY')):
+            with self.assertRaises(reservation.Block):
+                reservation.reserve(self.fd,ATTEMPT,TOOLING)
+        with self.assertRaises(reservation.Block) as ex:
+            reservation.observe_local_attempt(self.fd,ATTEMPT,TOOLING)
+        self.assertEqual(str(ex.exception),'')
+        with self.assertRaises(reservation.Block):
+            reservation.reserve(self.fd,ATTEMPT,TOOLING)
+
     def test_neither_review_nor_reservation_activates_live_paths(self):
         self.assertIn('scripts/ci/e858_phase1/b1_attempt_reservation.py',b1_package.FILES)
         with patch('socket.socket') as sock, patch('socket.getaddrinfo') as dns:

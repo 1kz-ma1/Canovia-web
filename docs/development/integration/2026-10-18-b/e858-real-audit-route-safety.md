@@ -1087,3 +1087,15 @@ New delta tests use synthetic roots/reviews/CA and fresh child PTYs: matching/wr
 `B_PROCEDURAL_CONTRACT_CANDIDATE_ONLY / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / INDEPENDENT_REVIEW_UNMET / P1_R1_TO_R6_NOT_ACCEPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
 
 The private TTY output path keeps the existing `Terminal` owner/SID/foreground/termios checks. Darwin devfs updates a device's ctime on write ([XNU devfs spec-write](https://github.com/apple-oss-distributions/xnu/blob/main/bsd/miscfs/devfs/devfs_vnops.c)); only the owned successful output operation advances that observation after checking unchanged device/inode/UID/GID/mode. It never refreshes Root seals or accepts unexplained pre-write drift. Same-UID/hostile-OS metadata ABA during that output cannot be excluded and remains outside B's trusted-Mac assumption. New output tests reject owner/mode changes; real macOS PTYs exercise the platform path. The older Phase1 source inventory now pins the changed PTY harness separately and labels its device acceptance `NOT_CLAIMED`, retaining strict historical comparisons for unchanged files instead of asserting the old harness bytes are unchanged.
+
+
+### 2026-10-24 B運用の中断後ローカル照合：再試行は常にHOLD（実Aiven接続なし）
+
+#878のB手続で確保した予約markerを、端末停止・処理中断後に**既存のprivate 0700 directory FD経由で無変更確認**するため、#876 `b1_attempt_reservation.py`に `observe_local_attempt()` を追加。レビュー済み `_record()` にreservation時と全く同じ固定記録形式を集約する。読込は `O_RDONLY|O_NONBLOCK|O_NOFOLLOW|O_CLOEXEC`、ファイル/親dirの所有者・mode・inodeと固定length/content・読込前後の安定性を照合し、秘密/実endpoint/CA/password/ネットワーク/DB/TTYは不要。既存の予約処理を取り替えず、元の試行markerを**変更・削除しない**。
+
+- 固定同一形式のmarkerあり：`LOCAL_MARKER_PRESENT_REMOTE_UNVERIFIED_HOLD`。途中書込み・改変・権限不一致・symlink・異なるtoolingはBlock（内容・pathを表示しない）。
+- markerなし：`LOCAL_MARKER_ABSENT_NOT_PROOF_OF_RETRY_SAFETY`。**「再実行できる」ではない**。予約前の中断、別dir/端末、消去・snapshot/backup rollbackの可能性が残る。
+- どちらの正常分類も `retry_authorized=false / remote_termination_verified=false / fresh_b2_go_granted=false / execution_allowed=false / real_aiven_connected=false / production_go=false`。実Aiven遠隔処理の終了、独立authorized DBAへの実際の連絡、owner本人認証、P1/R1〜R6・B2同意を証明しない。観測結果を実行許可として消費する経路は存在しない。
+- 既存Linux/macOS B1とowned MySQL8.0/8.4 CIで追加3テストを実行。以前のMac owner差分受入・10/18台帳/grants・10/21の無接続target/CAの再実行は依頼しない。正式なprivate保管・incident担当/連絡/停止方針と実用入口の独立審査・採用は未達のまま。
+
+`LOCAL_INCIDENT_REVIEW_HOLD_ONLY / LIVE_ENTRY_NOT_ENABLED / P1_R1_TO_R6_NOT_ACCEPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
