@@ -14,6 +14,7 @@ on:
       - 'tests/ci/test_e858_owned_activation.py'
       - 'tests/ci/test_e858_tls_handoff.py'
       - 'tests/ci/test_e858_b2_signature_fixture.py'
+      - 'tests/ci/test_e858_b2_synthetic_consumption.py'
       - 'tests/ci/test_e858_b1_*.py'
       - '.github/workflows/e858-b1.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
@@ -69,6 +70,7 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_owned_activation.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_tls_handoff.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_signature_fixture.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_b2_synthetic_consumption.py -v
       - uses: actions/upload-artifact@v4
         with:
           name: b1-offline-bundle-${{ matrix.os }}-${{ matrix.python }}
