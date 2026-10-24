@@ -56,6 +56,23 @@ class Readiness(unittest.TestCase):
             self.assertEqual(caught.exception.dns_status,'DNS_CHILD_CLEANUP_UNVERIFIED')
         finally:kill();p.wait(timeout=2)
 
+    def test_interrupt_or_selector_cleanup_failure_reaps_before_r1(self):
+        for mode in ('INTERRUPT','CLOSE'):
+            p=self.launch("import sys;sys.stdout.buffer.write(b'E858_DNS_READY\\n');sys.stdout.flush();sys.stdin.buffer.read()")
+            cls=backend.selectors.DefaultSelector
+            method='select' if mode=='INTERRUPT' else 'close'
+            original=cls.close;selectors=[];create=backend.selectors.DefaultSelector
+            def build():
+                value=create();selectors.append(value);return value
+            try:
+                with patch.object(backend.selectors,'DefaultSelector',side_effect=build),patch.object(cls,method,side_effect=KeyboardInterrupt(CANARY)):
+                    with self.assertRaises(Block) as caught:backend.PreparedChild(p,time.monotonic()+2)
+                self.assertTrue(caught.exception.dns_reaped);self.assertIsNotNone(p.poll())
+                self.assertNotIn(CANARY,str(caught.exception))
+                if mode=='CLOSE':self.assertEqual(caught.exception.dns_status,'DNS_CHILD_CLEANUP_UNVERIFIED')
+            finally:
+                for value in selectors:original(value)
+
     def test_changed_pipe_and_parent_rejected_without_request(self):
         for mode in ('FD','PARENT'):
             p=self.launch("import sys;sys.stdout.buffer.write(b'E858_DNS_READY\\n');sys.stdout.flush();sys.stdin.buffer.read()")

@@ -47,15 +47,17 @@ class PreparedChild:
                     output.extend(data)
                     if not READY.startswith(output):raise Block()
             if self._identity()!=self.identity or not time.monotonic()<until:raise Block()
+            selector.close();selector=None
             self.ready=True
         except BaseException:
-            self.used=True
+            self.used=True;local_cleanup=True
+            if selector is not None:
+                try:selector.close()
+                except BaseException:local_cleanup=False
             okay=reap(process,until)
             error=Block();error.dns_reaped=okay
-            error.dns_status='DNS_CHILD_PREPARATION_REJECTED' if okay else 'DNS_CHILD_CLEANUP_UNVERIFIED'
+            error.dns_status='DNS_CHILD_PREPARATION_REJECTED' if okay and local_cleanup else 'DNS_CHILD_CLEANUP_UNVERIFIED'
             raise error from None
-        finally:
-            if selector is not None:selector.close()
 
     def _identity(self):
         if os.getpid()!=self.parent or self.process.poll() is not None:raise Block()
