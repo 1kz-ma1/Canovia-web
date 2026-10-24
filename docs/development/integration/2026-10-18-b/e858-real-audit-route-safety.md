@@ -1013,3 +1013,26 @@ The #871 comparison identifies a potential **P-256 ECDSA / Ed25519 protocol mism
 Even if all synthetic P-256 claims verify, `verify_synthetic_p256()` returns `execution_allowed=false`, `owner_identity_verified=false`, `fresh_owner_consent_verified=false`, `revocation_verified=false`, `secure_enclave_key_verified=false`, `durable_one_shot_verified=false`, `real_aiven_connected=false` and `production_go=false`; `authorize()` always raises `Block`. No actual key created on owner's Mac, no private identity, target, CA, TTY/password, connection, SQL, migration, backup, Auth0/Render or production action.
 
 **Status:** `P256_SYNTHETIC_SOFTWARE_FORMAT_VERIFICATION_ONLY / TRUST_ROOT_NOT_SELECTED / REAL_B2_OWNER_GO_NOT_GRANTED / TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
+
+
+## 2026-10-24 B2 supervised review briefing — public scope, no approval emission
+
+> **B0 HUMAN-SUPERVISED BASELINE REMAINS SELECTED / OWNER REVIEW NOT ATTESTED / B2 FRESH GO NOT GRANTED / TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD.** This is a human-comprehension aid and fail-closed contract, not another signing, execution, or operator-authentication mechanism. No Secure Enclave/Ed25519/P-256 adoption or live B2 access is selected by this change.
+
+After #869–#872 established that local signatures, local transaction atomics and CryptoKit/P-256 compatibility do **not** authenticate the owner, the next bounded B step is to make the *already selected* owner-supervised scope review explicit and separate from issuance.
+
+**Implemented:** `scripts/ci/e858_phase1/b2_owner_briefing.py`, an archive-excluded offline, input-free, non-secret text briefing. The command
+
+```bash
+PYTHONPATH=scripts/ci python3 -B -m e858_phase1.b2_owner_briefing --print-public-briefing
+```
+
+prints the pinned **e858 source/release, Phase1-only scope and eight readable P1, R1–R6, B2 explanations**, including the actual **2 TLS / 15 normal / 42 maximum SQL / 2-second connection / 120-second total** boundaries, TTY password risk, Mac outage/unknown remote end, failover/CID ambiguity, no KILL, non-atomic B replay caveat, Full17/physical metadata/recovery/publication exclusions and necessity of a **distinct fresh owner decision**. The command never reads an actual host, target record, password, CA, Keychain, GitHub identity or private file; accepts **no target/approval/pin/secret parameters**, generates no receipt or signature and cannot start a network operation. This is a **public review template**, not a statement that any of these concerns were reviewed on the owner's Mac or that actual e858 tooling has been adopted.
+
+The pure `template()` and `assess(packet)` methods support a **separate simulated reading-state contract** with exactly eight ordered items and strict unchanged public meanings. The only self-reported states are `PENDING`, `SELF_REPORTED_READ_NOT_VERIFIED`, and `DECLINED`. Unknown/new fields, reordered/missing/duplicate items, changed source/scope/mode/text, `APPROVED`, `execution_allowed=true` and `b2_fresh_owner_go=GRANTED` all fail closed. Even if a caller marks **all eight** items as self-reported read, the result keeps `authentic_owner_approval_verified=false`, `operator_authentication_verified=false`, `fresh_owner_go_granted=false`, `independent_key_authority_verified=false`, `durable_one_shot_verified=false`, `execution_allowed=false`, and `production_go=false`. `authorize(...)` always `Block`. No private readback or accepted live-state transition exists in this component, and none should be inferred.
+
+CI runs six relevant negative/positive cases plus the public CLI smoke on Linux 3.9/3.12 and macOS 3.12 via existing B1 workflow, while retaining owned MySQL8.0/8.4 and security regressions. This change does **not** modify the existing `PrivateReview` contract, which still accepts **only** `OWNER_REVIEW_PENDING_NOT_GO`; it does not affect `LauncherCandidate.run()`, `OpenerCandidate.open()`, `Adapter.prepare()` or `PrivateWire.connect()`, all still unconditional BLOCK. The new module is intentionally **excluded from the immutable public B1 archive**; B1 release pins/#795–797, existing #869/#870/#872 test experiments, Render/Auth0, real Aiven and production are unchanged.
+
+**Next real prerequisites, not silently promoted:** independently verify a *particular* fixed private target/principal/CA/tooling provenance, supervised owner identity and P1/R1–R6 residual risk decisions, new just-in-time B2 permission on the exact scope/attempt/window, Mac device and remote termination evidence, and deliberate risk acceptance that B's single-shot safeguard is *procedural* rather than rollback-resistant. A person viewing the briefing, clicking a checkbox, or producing a self-report must never be interpreted as a fresh B2 GO. Do not ask the owner to re-run earlier Mac tests or expose any private materials for this source-only slice.
+
+**Status:** `B2_BRIEFING_PREPARED_ONLY / OWNER_AUTHENTICATION_NOT_PROVEN / B2_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
