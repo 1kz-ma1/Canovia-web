@@ -147,7 +147,7 @@ def trial(fault='TTY_ONLY',*,procedural_review=None):
             with os.fdopen(write_fd,'wb') as output: output.write(json.dumps(value).encode('ascii'))
         finally: os._exit(0)
     os.close(write_fd)
-    raw=bytearray();terminal=bytearray();sent=False;exited=False;status=None;confirmed=False
+    raw=bytearray();terminal=bytearray();sent=False;exited=False;status=None;confirmed=False;stage='WAIT_FOR_CHILD'
     try:
         streams={read_fd,master}
         while streams or not exited:
@@ -174,17 +174,19 @@ def trial(fault='TTY_ONLY',*,procedural_review=None):
                 if len(target)>65536: raise r.Block('R1_FIXTURE_CAP')
             if not exited:
                 done,status=os.waitpid(pid,os.WNOHANG);exited=done==pid
+        stage='TERMINAL_TRANSCRIPT'
         if status!=0 or (terminal and not procedural_review):raise r.Block('R1_TTY_OUTPUT_BLOCK')
         if procedural_review and terminal and (terminal.count(b'B_PRIVATE_REVIEW_NOT_GO')!=1
                 or terminal.count(b'B_CONFIRM_RESPONSE=')!=1
                 or SYNTHETIC_PASSWORD in terminal or not confirmed):raise r.Block('B_PROCEDURE_FIXTURE_BLOCK')
+        stage='CHILD_RESULT'
         value=json.loads(raw)
         if value['result']=='BLOCK':raise r.Block('R1_CHILD_BLOCK')
         value.update(driver_refs_cleared=True,owned_buffer_erased=True,controlling_tty_closed=True)
         if procedural_review:value['procedural_review_response_sent']=confirmed
         return value
     except BaseException:
-        raise r.Block('R1_TRIAL_BLOCK') from None
+        raise r.Block('B_PROCEDURE_'+stage if procedural_review else 'R1_TRIAL_BLOCK') from None
     finally:
         os.close(read_fd);os.close(master)
         if not exited:

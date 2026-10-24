@@ -129,6 +129,14 @@ class Procedure(unittest.TestCase):
                 self.assertEqual(out.getvalue()+err.getvalue(),'')
                 return dict(result='B_PROCEDURE_SYNTHETIC_VERIFIED',traces=[],execution_allowed=False,
                             real_aiven_connected=False,production_go=False)
+            except BaseException as failure:
+                # Synthetic unit diagnostics: source line numbers/type only. Never
+                # serialize the TTY transcript, error text, private paths or values.
+                trace=failure.__traceback__;lines=[]
+                while trace is not None:
+                    if trace.tb_frame.f_code.co_filename.endswith(('test_e858_b_procedural_attempt.py','b_procedural_attempt.py')):lines.append(trace.tb_lineno)
+                    trace=trace.tb_next
+                return dict(result='B_PROCEDURE_CHILD_TEST_FAILED',error_type=type(failure).__name__,lines=lines,traces=[],execution_allowed=False)
             finally:
                 if procedure is not None:procedure.close()
                 if root is not None:root.close()
@@ -136,7 +144,7 @@ class Procedure(unittest.TestCase):
                 if review is not None:review.close()
         with patch.object(fixture.tty,'child_trial',side_effect=child):
             result=fixture.tty.trial('NORMAL',procedural_review=response)
-        self.assertEqual(result['result'],'B_PROCEDURE_SYNTHETIC_VERIFIED')
+        self.assertEqual(result['result'],'B_PROCEDURE_SYNTHETIC_VERIFIED',str({k:result[k] for k in ('error_type','lines') if k in result}))
         self.assertFalse(result['execution_allowed'])
         return result
 

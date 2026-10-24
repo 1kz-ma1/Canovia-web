@@ -24,6 +24,8 @@ RUNTIME = tuple('scripts/ci/' + path for path in (
     'p0_mysql_metadata_grants_input.py', 'p0_mysql_metadata_grants_guard.py',
     'release488_runtime_ddl_restore_gate.py', 'integrated_release20_audit.py',
     'p0_mysql_full_ledger_offline_check.py'))
+# Changed procedural fixture, separately pinned; never reuse old device evidence.
+RUNTIME_DELTAS = {'scripts/ci/e858_phase1/r1_driver_fixtures.py': 'b49f200e1c45be865ed4961a29de8f8318fddc5b07211b7bb29a50c560a91419'}
 REVIEW = ('scripts/ci/e858_phase1_review.py',
           'tests/ci/test_e858_phase1_review.py', '.github/workflows/e858-phase1.yml',
           'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md')
@@ -36,8 +38,11 @@ def inventory(root, head):
     files = {}
     for path in RUNTIME + REVIEW:
         raw = b.git(root, 'show', head + ':' + path)
-        if path in RUNTIME and raw != b.git(root, 'show', EVIDENCE + ':' + path):
-            raise b.Block('DEPENDENCY_CHANGED')
+        if path in RUNTIME:
+            if path in RUNTIME_DELTAS:
+                if hashlib.sha256(raw).hexdigest() != RUNTIME_DELTAS[path]:raise b.Block('DEPENDENCY_CHANGED')
+            elif raw != b.git(root, 'show', EVIDENCE + ':' + path):
+                raise b.Block('DEPENDENCY_CHANGED')
         files[path] = hashlib.sha256(raw).hexdigest()
     value = b.outcome('OFFLINE_REVIEW_INVENTORY', 'REVIEW_ONLY')
     value.update(kind='E858_PHASE1_PUBLIC_REVIEW_V1', pins=pins,
@@ -45,7 +50,10 @@ def inventory(root, head):
         public_source_index_sha256=b.digest(files), pymysql_wheel=WHEEL.copy(),
         live_distribution='NOT_BUILT', live_tooling='NOT_ADOPTED',
         runtime_artifact_lock='UNVERIFIED', mac_delta_acceptance='NOT_REQUIRED_REVIEW_ONLY',
-        approval='NOT_GRANTED')
+        approval='NOT_GRANTED',
+        changed_runtime_source=sorted(RUNTIME_DELTAS),
+        reused_evidence_scope='UNCHANGED_RUNTIME_FILES_ONLY',
+        changed_runtime_owner_acceptance='NOT_CLAIMED')
     return value
 
 

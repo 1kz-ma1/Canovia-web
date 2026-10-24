@@ -45,9 +45,11 @@ class BProceduralAttempt:
             forbidden=self.entry.root.stats+self.entry.review.root.stats
             if self._store_identity[:2] in [row[:2] for row in forbidden]:raise Block()
             now=time.time();mono=time.monotonic()
-            if not value['starts_at']<=now<value['expires_at']:raise Block()
+            self.starts=max(value['starts_at'],self.entry.target.starts_at)
+            self.expires=min(value['expires_at'],self.entry.target.expires_at)
+            if not self.starts<=now<self.expires:raise Block()
             # Never reset/extend Entry's 120s; clamp it to the existing UTC window.
-            self.entry.until=min(self.entry.until,mono+value['expires_at']-now)
+            self.entry.until=min(self.entry.until,mono+self.expires-now)
             self.launcher.until=self.entry.until;self.until=self.entry.until;self.last_wall=now
             self._seal=self._context()
             self.state='PREFLIGHTED';self.outcome='PENDING_PROCEDURAL_REVIEW'
@@ -65,7 +67,7 @@ class BProceduralAttempt:
             if self.state in ('STOPPED','NORMAL_FINISHED') or self.entry is None:raise Block()
             self.entry.check()
             now=time.time()
-            if (not self.last_wall<=now<self.entry.review.value['expires_at']
+            if (not self.last_wall<=now<self.expires
                     or self.entry.until!=self.until or not time.monotonic()<self.until
                     or self._context()!=self._seal):raise Block()
             self.last_wall=now
@@ -111,7 +113,7 @@ class BProceduralAttempt:
                 runtime=value['runtime_sha256'],binding=value['binding_sha256'],
                 host=target.host,port=target.port,database=target.database,principal=target.principal,
                 ca_sha256=hashlib.sha256(target.ca).hexdigest(),attempt_id=value['attempt_id'],
-                starts_at=value['starts_at'],expires_at=value['expires_at'])
+                starts_at=self.starts,expires_at=self.expires)
             token=hashlib.sha256(canonical(private)+secrets.token_bytes(32)).hexdigest().encode('ascii')
             self._write_private(b'B_PRIVATE_REVIEW_NOT_GO\n'+canonical(private)+b'\nB_CONFIRM_RESPONSE='+token+b'\n')
             capture=WindowedTTY(self.until)
