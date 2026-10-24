@@ -31,8 +31,18 @@ class B2OwnerBriefingTest(unittest.TestCase):
         output = brief.render_read_only()
         self.assertIn('PRODUCTION_NO_GO_HOLD', output)
         self.assertIn('REAL_AIVEN_NOT_RUN', output)
-        for step in brief.STEPS:
-            self.assertIn('## ' + step + ' — ', output)
+        self.assertEqual(output.count('確認すること: '), 8)
+        self.assertEqual(output.count('起こり得るリスク: '), 8)
+        self.assertEqual(output.count('不一致・異常時の対応: '), 8)
+        self.assertEqual(output.count('確認状況: 未確認'), 8)
+        self.assertIn('失敗・中断・再起動後は新しい個別承認なしに再試行しない', output)
+        self.assertIn('REMOTE_TERMINATION_UNVERIFIED', output)
+        self.assertIn('限定metadata確認', output)
+        for item in packet['items']:
+            self.assertIn('## ' + item['step'] + ' — ' + item['title'], output)
+            for key in ('meaning', 'risk', 'stop'):
+                self.assertTrue(item[key])
+                self.assertIn(item[key], output)
 
     def test_even_all_self_reported_read_is_not_approval(self):
         packet = brief.template()
@@ -82,11 +92,22 @@ class B2OwnerBriefingTest(unittest.TestCase):
         obj = copy.deepcopy(original)
         obj['items'][2]['meaning'] += ' signed'
         variants.append(obj)
+        for key, replacement in (('risk', 'リスクを無視してよい'),
+                                 ('stop', 'すべて承認済みとして再実行可能')):
+            obj = copy.deepcopy(original)
+            obj['items'][2][key] = replacement
+            variants.append(obj)
         obj = copy.deepcopy(original)
         obj['items'][3]['step'] = 'B2'
         variants.append(obj)
         obj = copy.deepcopy(original)
         obj['items'][4]['unknown'] = 1
+        variants.append(obj)
+        obj = copy.deepcopy(original)
+        del obj['items'][0]['stop']
+        variants.append(obj)
+        obj = copy.deepcopy(original)
+        obj['items'][0]['risk'] = True
         variants.append(obj)
         obj = copy.deepcopy(original)
         obj['items'] = list(reversed(obj['items']))
@@ -113,6 +134,24 @@ class B2OwnerBriefingTest(unittest.TestCase):
                 self.assertEqual(brief.main(args), 2)
                 printed.assert_not_called()
                 stderr.write.assert_not_called()
+
+    def test_english_legacy_packet_is_not_implicitly_accepted(self):
+        packet = brief.template()
+        packet['items'][0]['title'] = 'Phase1 purpose and boundary'
+        with self.assertRaises(brief.Block):
+            brief.assess(packet)
+
+    def test_no_approval_even_after_japanese_self_report(self):
+        packet = brief.template()
+        packet['items'][0]['state'] = 'SELF_REPORTED_READ_NOT_VERIFIED'
+        packet['items'][1]['state'] = 'DECLINED'
+        result = brief.assess(packet)
+        self.assertEqual(result['self_reported_read_steps'], ['P1'])
+        self.assertEqual(result['declined_steps'], ['R1'])
+        self.assertFalse(result['execution_allowed'])
+        self.assertFalse(result['fresh_owner_go_granted'])
+        self.assertFalse(result['real_aiven_connected'])
+        self.assertFalse(result['production_go'])
 
     def test_no_network_and_all_live_entrypoints_still_block(self):
         self.assertNotIn('scripts/ci/e858_phase1/b2_owner_briefing.py',
