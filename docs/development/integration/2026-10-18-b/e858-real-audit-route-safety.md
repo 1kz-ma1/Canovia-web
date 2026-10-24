@@ -1055,3 +1055,15 @@ CI runs six relevant negative/positive cases plus the public CLI smoke on Linux 
 #874で作成した固定worktreeを変更せず、GitHubの新しい**レビュー済み開発main SHA**を別worktreeに固定し、`PYTHONPATH=scripts/ci python3 -S -B -m e858_phase1.b2_owner_briefing --print-public-briefing` を**閲覧のみ**で確認する。元の監査用worktreeを `pull`/ `checkout`/ `reset` しない。以前に取得した実Mac証拠を「日本語化後も実機確認済」と流用しない。今回の文字列とテストが通っても実Aiven実行の安全性・本人同意・production GOのゲートは一つも解除されない。
 
 **継続する未達:** 採用済み実tooling/監査対象/CA/最小権限の独立検証、正当なowner/operator認証とR1〜R6/P1の個別受入、開始直前の新B2一回GO、actual TLS session/remote terminationの実証、B方式の手続上再実行禁止の残留リスク受容、独立backup/restore/物理metadata/production release検証。**STATUS:** `B2_JAPANESE_BRIEFING_ONLY / B2_OWNER_GO_NOT_GRANTED / TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
+
+
+## 2026-10-24 B方式・同一試行のローカル再使用防止（隔離のみ／未採用）
+
+> **LOCAL_RESERVATION_ONLY / NO_LIVE_ENTRY / NO_B2_AUTHORITY / NOT_ROLLBACK_RESISTANT / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD.** 既存の実装・CI・Mac証跡を再利用し、監査の実用入口が未完成という#838/#866の主判定は変えない。B方式の人間監督付き1回運用を補助する *ローカル試行記録* を最小差分として用意したが、現時点の実行コードには結線していない。
+
+- 追加の `scripts/ci/e858_phase1/b1_attempt_reservation.py` は **caller所有の既存0700ディレクトリFD** と固定形式の試行ID・tooling SHAだけを入力とする。**実private target/CA/認証情報/実owner recordを読まない**。既存dirを作り替えず、名前は試行IDのSHA256で導出、`O_NOFOLLOW|O_CREAT|O_EXCL|O_CLOEXEC` で0600の単一ローカルmarkerを作成し、完全write・file fsync・directory fsync・owner/mode/inode安定性を検査する。同期・失敗・部分書込みの途中でSTOPしたときもファイルを消さず、同じprivateディレクトリ・試行IDの次回作成を拒否する。markerの内容はPUBLIC source/release/tooling/scope、ハッシュ化試行IDと `CONSUMED_ON_RESERVATION_NOT_EXECUTION` のみ。**SQLを実施した、遠隔停止した、真正なGOを得た等の証拠ではない**。
+- このAPIは `owner_identity_verified=false`, `fresh_b2_go_granted=false`, `execution_allowed=false`, `real_aiven_connected=false`, `production_go=false`, `durable_rollback_resistance=false` を返し、`authorize()` は無条件BLOCK。形式検査だけでは真正なowner/ディレクトリ祖先・ACL・クラウド/Time Machine除外/restore後の記録継続を保証しない。**別ディレクトリ・snapshot rollback・悪意あるoperatorのファイル削除・別Mac**には効かない。A方式の耐rollbackなatomic one-shotではなく、採用済みB方式の人間による再実行禁止と私的証跡の補助に限る。途中失敗は再試行可能という判定に変換しない。
+- 新テストは合成0700ディレクトリだけを使い、1回成功と並行試行の重複拒否・既存ファイル・再open・変更tooling・不正FD/permission/symlink・`write`/`fsync`失敗後の再試行拒否・秘密/端末/network/DNSが不使用・既存public B1 bundle未変更・4つの実用入口の無条件BLOCKを確認する。既存e858 B1 Linux3.9/3.12・macOS3.12・owned MySQL8.0/8.4・Workspace/Migration回帰を**新規テストのためだけに増設せず**再利用する。古い管理Mac受入を再要求しない。
+- 次の実用入口では、本コンポーネントを**直接「接続許可」へ格上げせず**、別に成立した正当なP1/R1〜R6受入と接続直前B2の対象/UTC/権限/試行IDに束縛し、秘密入力・DNS・TCPより前に記録を消費する設計審査が必要。現在はその正当性・認可源・実private記録先・remote異常時の処理責任が未受入のため、実行入口への呼出しは追加しない。
+
+**残ゲート（変化なし）:** 独立に審査された実用activation/backendの実装と採用、実対象/CA/grants/remote終了の事実、trusted runtimeと私的保管、P1/R1〜R6個別受入、新B2 GO。`TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`。
