@@ -9,7 +9,7 @@ archive and not imported by the live gate.
 import argparse
 import sys
 
-from e858_b_offline import SOURCE, RELEASE, canonical, decode
+from e858_b_offline import SOURCE, RELEASE
 from .private_binding import Block
 
 KIND = 'E858_B2_HUMAN_REVIEW_BRIEFING_ONLY_V0'
