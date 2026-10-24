@@ -18,7 +18,7 @@ from . import practical_fixture as old, practical as p, runtime as r
 from .opener_candidate import OpenerCandidate, Peer
 from .phase1_application import _phase1_program
 from .backend_candidate import exchange, reap
-from .launcher_candidate import LauncherCandidate
+from .owned_activation_fixture import OwnedPhase1Activation
 from .private_binding import Block
 
 HOSTS=('mysql.synthetic.invalid','mismatch.synthetic.invalid')
@@ -188,13 +188,13 @@ class OwnedBoundary(old.FixtureBoundary):
         try:
             if entry.secret is not None or entry.target.host not in HOSTS:raise Block()
             value=namespace()
-            self.launcher=LauncherCandidate(entry,value['pins']['tooling_sha'],value['bundle_sha256'])
+            self.launcher=OwnedPhase1Activation(entry,value)
             for _ in range(2):
                 entry.check();self.workers.append(DNSWorker())
         except BaseException:
             self.close();raise Block() from None
     def factory(self,gate,fault=None):
-        try:self.launcher._connection(gate)
+        try:self.launcher.before_connection(gate)
         except BaseException:self.close();raise Block() from None
         wire=super().factory(gate,fault)
         wire.entry=self.entry;wire.worker=self.workers[len(self.wires)-1]
@@ -227,7 +227,7 @@ def child_case(fault,parent):
     def before_input(entry):
         if len(DNSWorker.created)!=2 or any(w.used or w.process.poll() is not None for w in DNSWorker.created):raise Block()
         if len(OwnedBoundary.created)!=1:raise Block()
-        OwnedBoundary.created[0].launcher._before_input()
+        OwnedBoundary.created[0].launcher.before_input()
         captures.append(True)
         return capture(entry)
     original_read=old.b.Channel.read
