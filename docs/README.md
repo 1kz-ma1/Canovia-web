@@ -1,5 +1,10 @@
 # Canovia documentation index (2026-10-13)
 
+## 2026-10-24 Follow-up: indirect 30-question diagnostic
+
+- [D-2026-10-24-02](development/decisions/2026-10-24_INDIRECT_INTEREST_30_ITEM_DIAGNOSTIC_DECISION.md): **直接カテゴリを聞く診断を後続判断で置換**。何気ない日常の30問・「わからない」を含む計5択→本人の関心プロフィールのグラフ→Canovia Future→任意Plan。
+- [関心診断30問アイテムバンク v0（レビュー用）](development/PRELAUNCH_INTEREST_DIAGNOSTIC_ITEM_BANK_V0_2026_10_24.md): オリジナル設問・内部カテゴリタグと重み・Unknown除外・データ互換/Privacy注意。**科学的妥当性未検証・製品未実装・HOLD維持**。技術的な最新版は[先行公開戦略 §12](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md)を参照。
+
 ## 2026-10-24 Broad interest diagnosis / demand validation
 
 - [横断的な関心プロフィール・割合チャート・Canovia Future導線](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#11-2026-10-24-横断的な関心診断グラフ結果futureへの導線製品決定): **先行の入口診断をStudy/Dev限定から多カテゴリの自己申告興味へ広げる製品方向**。興味割合は自己申告・市場需要や適性ではない。Future紹介は承認済み公開情報のみ、任意Plan作成と本人継続性を維持。**詳細スコア/UX実装は提案、未実装・本番HOLD**。
