@@ -1232,3 +1232,15 @@ Full17 metadata scope is separately unapproved: Phase1 remains fixed Q0/Q1,
 TRIGGER visibility, migration principal/binlog, restore, shared-DB readiness and
 public release remain separate gates. No signature can substitute for missing
 implementation. This remains A: TECHNICAL_WORK_REMAINING, not B.
+
+The first Mac delta run rejected the new normal binding inside the unchanged
+2-second open window. Review also found that a full RuntimeFileLock recheck
+would spawn Git after R1. Full Git/checkout/runtime validation is now strictly
+pre-input. The original full `check()` gate is retained; `check_sources()`
+factors its same loaded-module, sys.path, source bytes/file identities and root
+drift checks without subprocess or native-program callbacks. After R1 the
+binding uses that source-only observation plus the existing B trial/Entry/Program
+runtime checks. No deadline is enlarged or restarted; a true overrun still BLOCKs.
+A regression asserts no Popen at role binding and no checkout/Program callback
+inside source-only observation. Source-only is explicitly not a fresh Git audit,
+operator authorization or live-runtime provenance proof.

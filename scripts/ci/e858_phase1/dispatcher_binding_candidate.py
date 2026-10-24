@@ -46,7 +46,12 @@ class DispatcherBindingCandidate:
     def check(self):
         try:
             if self.state=='STOPPED' or os.getpid()!=self.pid or time.monotonic()>=self.until:raise Block()
-            self.lock.check();self.placement.check();p=self.procedure;p.check()
+            p=self.procedure
+            if p.r1_started_at is None:
+                self.lock.check()  # read-only Git may spawn ONLY before R1
+            else:
+                self.lock.check_sources()  # never fork/exec a password-bearing process
+            self.placement.check();p.check()  # existing Entry/Program checks retained
             value=self.entry.review.check()
             if (p.entry is not self.entry or p._runtime_dispatch_binding is not self
                     or p._seal!=self.seal or p.until<self.until

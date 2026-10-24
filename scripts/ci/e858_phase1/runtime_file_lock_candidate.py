@@ -81,7 +81,12 @@ class RuntimeFileLockCandidate:
             self.close()
             raise Block() from None
 
-    def check(self):
+    def check_sources(self):
+        """Cheap loaded-source/FD observation; NO process/Git/native invocation.
+
+        Use after R1 only with the existing Entry/Program runtime checks. This
+        is not a full checkout verification or an execution/adoption permit.
+        """
         try:
             if self._closed or tuple(sys.path) != self._sys_path:
                 raise Block()
@@ -94,10 +99,6 @@ class RuntimeFileLockCandidate:
                         self._root_identity.st_uid, self._root_identity.st_gid,
                         self._root_identity.st_mode, self._root_identity.st_ctime_ns)):
                 raise Block()
-            # The existing verifier binds the actual file bytes, Git HEAD,
-            # frozen B1 sources and review archive. Do NOT fork that logic.
-            self._program.check()
-            b1_integrity.checkout(self._root, self._head, self._archive, self._sha)
             current = {name: sys.modules[name] for name in self._expected
                        if name in sys.modules}
             if (set(current) != set(self._modules)
@@ -119,8 +120,7 @@ class RuntimeFileLockCandidate:
             if any(_identity(self._root / name) != identity
                    for name, identity in self._source_ids.items()):
                 raise Block()
-            self._program.check()
-            return dict(result='B1_PUBLIC_RUNTIME_FILE_ORIGIN_RECHECKED',
+            return dict(result='B1_PUBLIC_SOURCE_IDENTITIES_RECHECKED',
                         tooling_sha=self._head, source_count=len(self._source_ids),
                         loaded_source_modules=len(current),
                         lock_type='READ_ONLY_DRIFT_DETECTION_NOT_OS_ENFORCED',
@@ -129,6 +129,20 @@ class RuntimeFileLockCandidate:
                         owner_approval_verified=False, live_tooling_adopted=False,
                         execution_allowed=False, real_aiven_connected=False,
                         production_go=False)
+        except BaseException:
+            self.close()
+            raise Block() from None
+
+    def check(self):
+        """Full pre-input checkout/runtime check, retaining the original gate."""
+        try:
+            self.check_sources()
+            self._program.check()
+            b1_integrity.checkout(self._root, self._head, self._archive, self._sha)
+            result=self.check_sources()
+            self._program.check()
+            result['result']='B1_PUBLIC_RUNTIME_FILE_ORIGIN_RECHECKED'
+            return result
         except BaseException:
             self.close()
             raise Block() from None

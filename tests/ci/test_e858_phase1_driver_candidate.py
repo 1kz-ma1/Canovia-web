@@ -87,7 +87,8 @@ class DriverBinding(unittest.TestCase):
                                         with self.assertRaises(Block):dispatch.bind_producer(producer)
                                         self.assertEqual(dispatch.state,'STOPPED')
                                     else:
-                                        report=dispatch.bind_producer(producer)
+                                        with patch('subprocess.Popen',side_effect=AssertionError('NO_CHILD_AFTER_R1')):
+                                            report=dispatch.bind_producer(producer)
                                         self.assertEqual(report['roles_bound'],1)
                                         self.assertFalse(report['execution_allowed'])
                                         self.assertIs(dispatch.program,self.program)

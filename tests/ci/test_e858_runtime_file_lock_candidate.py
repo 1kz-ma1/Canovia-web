@@ -44,6 +44,16 @@ class RuntimeFileLock(unittest.TestCase):
         with self.assertRaises(Block):
             candidate.check()
 
+    def test_source_only_recheck_never_invokes_checkout_or_program(self):
+        candidate=self.new_lock()
+        try:
+            with patch.object(b1_package, 'verify', side_effect=AssertionError('NO_GIT_AFTER_R1')), \
+                 patch.object(self.program, 'check', side_effect=AssertionError('PROGRAM_OWNED_BY_ENTRY')):
+                report=candidate.check_sources()
+                self.assertEqual(report['result'],'B1_PUBLIC_SOURCE_IDENTITIES_RECHECKED')
+                self.assertFalse(report['execution_allowed'])
+        finally:candidate.close()
+
     def test_unknown_pins_or_untrusted_program_blocks(self):
         for program, root, archive, sha, head in (
             (object(), str(self.root), self.archive, self.archive_sha, self.head),
