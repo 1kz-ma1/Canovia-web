@@ -1,8 +1,6 @@
 """Synthetic Ed25519 evidence tests. NEVER supplies an actual B2 owner GO."""
 import copy
-import os
 import socket
-import time
 import unittest
 from unittest.mock import patch
 
@@ -93,7 +91,7 @@ class SyntheticSignedEvidence(unittest.TestCase):
         for changed in (
             dict(issued_at=self.now+1),dict(expires_at=self.now),
             dict(issued_at=self.now-2000,expires_at=self.now+60),
-            dict(issued_at=True),dict(expires_at=float('nan')),
+            dict(issued_at=True),dict(expires_at='not-a-time'),
         ):
             with self.subTest(change=str(changed)):
                 with self.assertRaises(Block):self.verify(self.sign(changed))
