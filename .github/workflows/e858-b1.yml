@@ -71,6 +71,27 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_tls_handoff.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_signature_fixture.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_synthetic_consumption.py -v
+      - name: Read-only macOS B2 candidate capability inventory (not owner GO)
+        if: runner.os == 'macOS'
+        run: |
+          swift scripts/ci/e858_phase1/b2_mac_capability_probe.swift | python3 -c '
+          import json,sys
+          obj=json.load(sys.stdin)
+          assert set(obj) == {
+            "kind", "secure_enclave_available", "biometric_policy_evaluable",
+            "signing_key_created", "owner_identity_verified",
+            "fresh_owner_consent_verified", "independent_authority_verified",
+            "revocation_verified", "durable_one_shot_verified",
+            "execution_allowed", "real_aiven_connected", "production_go"
+          }
+          assert obj["kind"] == "E858_B2_MAC_LOCAL_CAPABILITY_REVIEW_V0"
+          assert type(obj["secure_enclave_available"]) is bool
+          assert type(obj["biometric_policy_evaluable"]) is bool
+          for key in obj:
+            if key not in ("kind", "secure_enclave_available", "biometric_policy_evaluable"):
+              assert obj[key] is False, key
+          print("MAC_CAPABILITY_ONLY_NOT_AUTHORIZED")
+          '
       - uses: actions/upload-artifact@v4
         with:
           name: b1-offline-bundle-${{ matrix.os }}-${{ matrix.python }}
