@@ -1169,3 +1169,34 @@ Call graph: sealed Entry + existing B確認/予約/R1 → existing ordered Contr
 **残る実用bootstrap設計:** 検証済みsourceの専用配置と実読込originの原子的結合・OS権限/管理Mac整合、正式な認可起点と単一対象live dispatcherが未接続。今のreadonly lockをGOやtooling正式採用の代用品にしない。
 
 `TECHNICAL_WORK_REMAINING / RUNTIME_FILE_REVIEW_ONLY / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
+
+### 2026-10-25 Runtime public-byte placement / snapshot import candidate
+
+Reuses #883's existing-checkout RuntimeFileLock, Program/check and Git/bundle/wheel
+integrity. The new placement candidate verifies the existing archive before any
+write, creates one fixed child exclusively beneath an owner-supplied 0700 anchor
+FD, and writes only the exact public closure/frozen assets/pinned wheel payload.
+No overwrite, path-selected source, credential, endpoint, GO or live CLI is added.
+Pinned no-follow FDs, file/directory identities, exact entries/bytes and a maximum
+120-second lease detect replacement, links, extra files and expiry. Snapshot
+module loaders compile the held verified bytes, never reread a mutable import
+pathname. Failure/close invalidates loaders and releases FDs; partial/public files
+are retained under the private candidate root for owner disposal, never recursively
+deleted after an ambiguous pathname change. Existing root means BLOCK, not retry.
+
+This is NOT a live bootstrap: isolated module source loading does not prove the
+entire loaded Program/native dependency graph is installed/adopted. Existing
+Program/RuntimeFileLock still verify the actual checkout/runtime independently.
+Same-UID/OS/import-hook trust and the original anchor's ancestry/native ACL are
+external conditions, not software guarantees. Atomic source byte acquisition does
+not grant execution permission. Four public connection BLOCKs remain unchanged.
+
+New offline tests use only synthetic roots and public bytes. #882 owner Mac pyz
+PASS and #883 CI remain historical evidence, not acceptance of this new boundary.
+Managed-Mac delta, if considered for adoption: exclusive dir_fd placement,
+no-follow/pread/fsync, snapshot loader and FD cleanup; no private CA/password or
+old Mac/94/grants recheck is requested. Final SHA/CI evidence belongs in #488.
+Shared canonical-DB readiness, actual schema/restore/auth/release gates remain
+BLOCKING_SHARED under the preparation-first strategy. This candidate alone does
+not authorize preparation publication or prove an alternative deployment safe.
+`TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
