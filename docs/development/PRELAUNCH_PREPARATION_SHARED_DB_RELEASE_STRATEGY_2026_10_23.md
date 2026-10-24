@@ -286,6 +286,9 @@ Mac Safari本人受入、iPhone実機、実効全runtime profile/旧worker/cache
 
 ## 11. 2026-10-24 横断的な関心診断・グラフ結果・Futureへの導線（製品決定）
 
+> **2026-10-24 後続決定 D-2026-10-24-02:** 本§11.2/§11.5の「直接カテゴリを複数選ぶ/自分で各分野の興味強度を答える」は初期提案であり、**先行診断の入口としては採用しない**。最新の体験/30問/5択・Unknownの具体設計は§12および[30問オリジナルドラフト](PRELAUNCH_INTEREST_DIAGNOSTIC_ITEM_BANK_V0_2026_10_24.md)に従う。§11.1・§11.3・§11.4の広い関心・Future連携・Canonical保存/安全ゲートは継続。
+
+
 > Product decision: [D-2026-10-24-01](decisions/2026-10-24_PRELAUNCH_BROAD_INTEREST_DISCOVERY_DECISION.md)
 >
 > **PRODUCT DIRECTION ACCEPTED / INTERACTION & DATA CONTRACT PROPOSED / NOT IMPLEMENTED / NOT DEPLOYED / PRODUCTION_NO_GO_HOLD**。本項は§1・§9の「先行診断＝Study/Development現在地入力」という**入口UIの具体的な対象を更新**する。従来の深い診断・本人Plan/Task/履歴/認可を削除・改変しない。§3・§10・Issue #488の全HOLD継続。
@@ -341,3 +344,36 @@ Mac Safari本人受入、iPhone実機、実効全runtime profile/旧worker/cache
 6. **Analyticsは最後に最小範囲で**：明示された利用意向と結果閲覧を無関係な既存Plan実績から推論せず、Privacy・集計仕様が確認された範囲だけ実装。分布の採用判断はサンプル数・分母・選択バイアスを明記。
 
 **新チャット用追記**：「先行診断はStudy/Developmentの計画作成フォームから、広いカテゴリの相対的な関心プロフィールと独立した利用意向の検証へ製品方針が変わった。現行L1詳細診断・自己申告/Planのcanonical semanticsを守り、結果を横棒%グラフ、承認済みFutureへCTA、任意Plan保存へ接続する。§11とD-2026-10-24-01を読み、PRを小分けで作る。productionはNO-GO。」
+
+## 12. 2026-10-24 後続決定 — MBTI風「何気ない30問」からの関心推定
+
+> [D-2026-10-24-02 製品決定](decisions/2026-10-24_INDIRECT_INTEREST_30_ITEM_DIAGNOSTIC_DECISION.md) / [30問アイテムバンク・内部タグ・採点例 v0](PRELAUNCH_INTEREST_DIAGNOSTIC_ITEM_BANK_V0_2026_10_24.md)
+>
+> **PRODUCT DIRECTION ACCEPTED / QUESTION BANK & SCORING PROPOSED (NOT VALIDATED) / IMPLEMENTATION NOT STARTED / PRODUCTION_NO_GO_HOLD**。本節は`11.2の直接カテゴリ選択方式より新しい決定。`1の正式版へのデータ継続と`3・`10の安全HOLDに影響しない。
+
+### 12.1 UXを修正する理由
+
+- Safari実機の本人レビューで元Webの準備診断は表示/動作は正常だったが「目標作成フォームに見え、診断らしくなかった」。`11の「学習・開発・就活などを複数選んで興味強度を付ける」方式も**直接聞くアンケート**に留まる。
+- 最初の30問前後は**日常の行動や考え方の軽いシチュエーション**で問い、質問に紐づくカテゴリは内部で複数の仮重みを用いて採点する。**心理尺度の検証はされておらず、MBTI商標・公式設問・タイプ分類・妥当性の主張を流用しない**。
+- 導入で「日常への回答をもとに興味を推定し、製品の改善にも任意同意に基づいて活用することがある」と説明する。質問の裏にあるカテゴリ採点を画面内に表示しないことと、調査目的を隠すことは別。
+
+### 12.2 決定した体験の骨格
+
+1. 任意の30問診断に入るか、スキップしてPlan作成/Canovia Futureへ進むか本人が選ぶ。**初手でカテゴリを直接選択しない**。
+2. 回答は**わからないを含む計5択**を初期案とする：とても当てはまる / やや当てはまる / あまり当てはまらない / まったく当てはまらない / わからない。Unknownを0や中立に換算しない。「どちらでもない」がないため回答者に無理をさせる可能性がある点はUX検証課題。厳密な5段階賛否尺度にUnknownを追加する6択は後続判断でのみ採用。
+3. 5問程度ずつのカード、進捗、戻る/修正、途中中断/再開を支援。質問IDと版を固定して、ユーザーが未回答やUnknownを残しても誤って「興味なし」と診断しない。
+4. 全体の回答から8つの分野（学習・開発・就職・仕事・健康習慣・家計・趣味創作・暮らし）の相対的関心スコアの**暫定推定**を計算。「その他/未定」は答え合わせ/本人補正の入口で、隠れた内部第9スコアにしない。
+5. 結果は**%の横棒グラフ+数値/テキスト**。「あなたの回答に基づく現在の関心の傾向」と明記し、未判定・偏りの弱さ・結果を修正できることを示す。百分率は8領域の相対的な重みの表示用であり、才能、適性、関心の絶対水準や製品需要を表さない。
+6. 結果画面に**Canovia Futureを見る**を目立つCTAとして、本人に関心の高いカテゴリを基に**承認済み公開ロードマップ**だけを紹介。「学習/開発/就活で正式版にできること」を構想・開発中・検証中・提供済みの正しい成熟度ラベルで区別し、未承認事項や約束を創作しない。
+7. 別の任意ステップとして「Canoviaの支援を将来使いたい領域があるか」を確認する。**間接推定の興味と本人が明示した利用意向を別のデータに記録**する。希望者のみ、詳しいStudy/Development既存診断・汎用Plan入力へ進む。
+
+### 12.3 採点/分析・既存保存契約・受入の境界
+
+- 30問の暫定内部対応と計算/欠測/閾値/丸め、8カテゴリのID一覧は[質問バンク v0](PRELAUNCH_INTEREST_DIAGNOSTIC_ITEM_BANK_V0_2026_10_24.md)を正本とする。各領域の主設問3、横断6で重なりを表現。ただし**この設問群で関心領域を正しく計測できるかはUNVALIDATED**。初見試用とユーザー本人の結果フィードバックで校正し、本番の「精度」を宣伝しない。
+- **分離保存**：間接診断の回答/Unknown/推定値/版/本人訂正を、既存の`study/development/unsure`という`PersonalizationController::store`の旧`domains`や`PersonalizationBootstrapService`の既存意味へ直接書き換えない。`PersonalizationContextService::normalize()/selfReportedPayload()`で新namespaceが脱落しないよう版付きの読書きを定義し、既存Canonical Account/Plan/Task/採点/第一回診断結果を保存・復帰・更新しても非破壊なことを証明。DDLが必要なら別HOLDのもとで検討。
+- **権限**：現行L1`/personalization`を一般L0へ無差別開放しない。先行新規ユーザーが回答できるL0スコープが必要なら、別の最小権限ルートと本人帰属・途中保存/再ログイン・CSRF/IDORを設計し、`EnsurePreparationSurface`のdeny-by-defaultとAdmin/Worker禁止を破らない。
+- **プライバシー**：本人に興味を可視化する個人目的と、Canovia側の改善目的での集計は別。目的/任意性/同意/撤回/削除/保存期間を設計。病気、収入/債務、宗教、政治信条、家族事情、面接で不利になる属性を質問/推定しない。個別回答をサイト内の他者ランキングや外部AI/計測へ出さない。
+- **実装分割**：①オリジナル30問のレビューと採点版固定→②純粋な採点/Unknown/丸めテスト→③Canonical読書き/権限/旧Context保護→④元Webの質問/進捗/途中保存/結果→⑤公開承認済みFuture導線・任意利用希望・Plan→⑥合成ブラウザ/本人Safari受入。分析集計は本人の同意・Privacy評価後。
+- **既存HOLDは維持**：AP学習画面を閉じてしまう`preparation_only`全員適用、20件の新migration/実Aiven照合、復元、worker/runtime config、Mac/iPhone本人受入、公開候補の固定SHA/Owner GO。`main`統合、合成E2E、文書変更のいずれも本番配備の証明ではない。
+
+**新チャット/ Codex追加指示:** 「先行関心診断の最初にカテゴリを直接選ばせない。`12/D-2026-10-24-02`と30問アイテムバンクv0を最新の入口にする。回答5択のUnknownは欠測。本人結果はグラフとCanovia Future承認済み情報/任意Planにつなぎ、需要/利用意向は別質問。旧Study/Dev ContextとPlanを壊さず小PRで実装。実Aiven・Render・production/HOLDに触れない。」
