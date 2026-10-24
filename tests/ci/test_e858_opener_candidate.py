@@ -145,7 +145,7 @@ class OpenerPolicy(unittest.TestCase):
         # Even if OS kill were unavailable, the timeout fixture must NEVER
         # fall through to DNS when its artificial sleep eventually completes.
         data=Mock(buffer=io.BytesIO(b'{"host":"mysql.synthetic.invalid","mode":"timeout"}'))
-        with patch('sys.stdin',data),patch('time.sleep') as wait,patch('socket.getaddrinfo') as dns:
+        with patch('sys.stdin',data),patch('sys.stdout',Mock(buffer=io.BytesIO())),patch('time.sleep') as wait,patch('socket.getaddrinfo') as dns:
             with self.assertRaises(SystemExit) as stopped:exec(owned.DNS_CHILD,{})
         self.assertEqual(stopped.exception.code,2);wait.assert_called_once_with(60);dns.assert_not_called()
 

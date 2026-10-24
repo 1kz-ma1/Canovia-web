@@ -8,6 +8,8 @@ The owned fixture is the only producer/consumer of DNS requests today.
 import math
 import os
 import selectors
+import stat
+from subprocess import Popen
 import time
 
 from .private_binding import Block
@@ -15,6 +17,74 @@ from .private_binding import Block
 OUTPUT_CAP=8192
 REQUEST_CAP=256
 CLEANUP_SECONDS=.25  # reserved INSIDE the existing shared connect budget
+READY=b'E858_DNS_READY\n'
+
+
+class PreparedChild:
+    """Readiness/FD ownership for an already-spawned direct child, before R1.
+
+    No executable, command, endpoint, launch, DNS or retry API. The separately
+    owned fixture is the only producer. Readiness proves a bounded local
+    handshake, not OS/NSS trust or independent authorization.
+    """
+    def __init__(self,process,until):
+        self.process=process;self.used=False;self.ready=False;self.parent=os.getpid()
+        selector=None
+        try:
+            if (type(process) is not Popen or type(until) not in (int,float)
+                    or not math.isfinite(until) or process.poll() is not None):raise Block()
+            self.identity=self._identity()
+            selector=selectors.DefaultSelector();output=bytearray()
+            for stream in (process.stdout,process.stderr):
+                os.set_blocking(stream.fileno(),False);selector.register(stream,selectors.EVENT_READ)
+            while bytes(output)!=READY:
+                remaining=until-CLEANUP_SECONDS-time.monotonic()
+                if remaining<=0:raise Block()
+                for key,_ in selector.select(min(.02,remaining)):
+                    try:data=os.read(key.fileobj.fileno(),len(READY)+1-len(output))
+                    except BlockingIOError:continue
+                    if key.fileobj is process.stderr or not data:raise Block()
+                    output.extend(data)
+                    if not READY.startswith(output):raise Block()
+            if self._identity()!=self.identity or not time.monotonic()<until:raise Block()
+            selector.close();selector=None
+            self.ready=True
+        except BaseException:
+            self.used=True;local_cleanup=True
+            if selector is not None:
+                try:selector.close()
+                except BaseException:local_cleanup=False
+            okay=reap(process,until)
+            error=Block();error.dns_reaped=okay
+            error.dns_status='DNS_CHILD_PREPARATION_REJECTED' if okay and local_cleanup else 'DNS_CHILD_CLEANUP_UNVERIFIED'
+            raise error from None
+
+    def _identity(self):
+        if os.getpid()!=self.parent or self.process.poll() is not None:raise Block()
+        result=[]
+        for stream in (self.process.stdin,self.process.stdout,self.process.stderr):
+            fd=stream.fileno();info=os.fstat(fd)
+            if os.get_inheritable(fd) or not stat.S_ISFIFO(info.st_mode):raise Block()
+            result.append((fd,info.st_dev,info.st_ino))
+        if len(set(row[0] for row in result))!=3:raise Block()
+        return self.process.pid,tuple(result)
+
+    def exchange(self,request,until):
+        try:
+            self.check()
+            self.used=True
+            return exchange(self.process,request,until)
+        except BaseException as caught:
+            self.used=True;okay=reap(self.process,until)
+            error=Block();error.dns_reaped=okay
+            error.dns_status=getattr(caught,'dns_status','DNS_CHILD_PREPARATION_REJECTED') if okay else 'DNS_CHILD_CLEANUP_UNVERIFIED'
+            raise error from None
+
+    def check(self):
+        try:
+            if self.used or not self.ready or self._identity()!=self.identity:raise Block()
+        except BaseException:
+            self.used=True;raise Block() from None
 
 
 def reap(process,until):

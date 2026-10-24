@@ -17,14 +17,16 @@ from unittest.mock import patch
 from . import practical_fixture as old, practical as p, runtime as r
 from .opener_candidate import OpenerCandidate, Peer
 from .phase1_application import _phase1_program
-from .backend_candidate import exchange, reap
+from .backend_candidate import PreparedChild, reap
 from .owned_activation_fixture import OwnedPhase1Activation
 from .b1_operator import Root
 from .tls_handoff_candidate import VerifiedTLSHandoff
+from .connection_handoff_candidate import ConnectedPeer, AuthenticationBoundary
 from .private_binding import Block
 
 HOSTS=('mysql.synthetic.invalid','mismatch.synthetic.invalid')
 DNS_CHILD='''import json,socket,sys,time,os,signal
+sys.stdout.buffer.write(b'E858_DNS_READY\\n');sys.stdout.buffer.flush()
 v=json.loads(sys.stdin.buffer.read(256))
 if set(v)!={'host','mode'} or v['host'] not in ('mysql.synthetic.invalid','mismatch.synthetic.invalid'):sys.exit(2)
 mode=v['mode']
@@ -56,10 +58,11 @@ _reap=reap  # existing fixture callers; portable supervisor owns pipe cleanup
 class DNSWorker:
     """Fixed child starts BEFORE R1 capture; no password-bearing fork/exec."""
     created=[]
-    def __init__(self):
+    def __init__(self,until=None):
         self.used=False;self.process=subprocess.Popen([sys.executable,'-I','-B','-c',DNS_CHILD],stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,stderr=subprocess.PIPE,close_fds=True,cwd='/',
             env={'PYTHONDONTWRITEBYTECODE':'1'})
+        self.prepared=PreparedChild(self.process,time.monotonic()+2 if until is None else until)
         self.created.append(self)
     def close(self,until):return _reap(self.process,until)
 
@@ -77,14 +80,16 @@ def owned_resolve(host,until,mode='normal',worker=None):
         if worker is None:worker=DNSWorker()
         if type(worker) is not DNSWorker or worker.used:raise Block()
         worker.used=True;proc=worker.process
-        try:raw=exchange(proc,json.dumps(dict(host=host,mode=mode)).encode('ascii'),until)
+        try:raw=worker.prepared.exchange(json.dumps(dict(host=host,mode=mode)).encode('ascii'),until)
         except Block as error:
             reaped=error.dns_reaped;status=error.dns_status;raise
         reaped=True
         status='DNS_RESPONSE_INVALID'
         result=json.loads(raw)
     except subprocess.TimeoutExpired:failed=True;status='DNS_TIMEOUT'
-    except BaseException:failed=True
+    except BaseException as error:
+        failed=True
+        if hasattr(error,'dns_reaped'):reaped=error.dns_reaped;status=error.dns_status
     finally:
         if proc is not None:reaped=_reap(proc,until)
     if failed or not reaped:
@@ -104,6 +109,7 @@ class OwnedTLS:
         if wire.fault=='CA_STORE_CHANGED':
             plan.context.load_verify_locations(cadata=Path('/synthetic/wrong-ca.pem').read_text())
         if wire.fault=='PEER_CHANGED':plan.peer=Peer(plan.peer.family,('198.51.100.9',3306))
+        if wire.fault=='TLS_BYPASS':return raw  # negative fixture, never auth
         handoff=VerifiedTLSHandoff(plan,raw,server_hostname)
         wire.tls_handoff=handoff
         wire.tls_handshake_started=True
@@ -117,6 +123,7 @@ class OwnedWire(old.FixtureWire):
         super().initialize_fixture(gate,secret,target)  # fixed owned name/CA/DB/principal/password guard
         self.created.append(self);self.plan=None;self.dns_started=False;self.dns_reaped=False
         self.authentication_packets=0;self.tls_handshake_started=False;self.tls_handoff=None
+        self.auth_boundary=None;self.peer_handoff=None
     def connect(self,sock=None):
         raw=None
         try:
@@ -139,7 +146,11 @@ class OwnedWire(old.FixtureWire):
             if any(a[4][0] not in self.namespace['owned_ips'] for a in answers):raise Block()
             raw=socket.socket(peer.family,socket.SOCK_STREAM,socket.IPPROTO_TCP)
             raw.settimeout(self.plan.remaining());raw.connect(peer.address)
-            if raw.getpeername()!=peer.address:raise Block()
+            if self.fault=='TCP_HANDOFF_EXPIRED':self.plan.until=time.monotonic()-1
+            if self.fault=='TCP_PEER_CHANGED':self.plan.peer=Peer(peer.family,('198.51.100.9',3306))
+            self.peer_handoff=ConnectedPeer(self.plan,raw)
+            raw=self.peer_handoff.take()
+            self.auth_boundary=AuthenticationBoundary(self.plan)
             self.ctx=OwnedTLS(self)
             r.StrictConnection.connect(self,sock=raw);raw=None
             if not self.plan.verified:raise Block()
@@ -168,13 +179,16 @@ class OwnedWire(old.FixtureWire):
             return super()._write_bytes(data)
         finally:self.gate.deadline=previous
     def write_packet(self,data):
-        if isinstance(getattr(self,'_sock',None),ssl.SSLSocket) and not self.authenticated:
-            if not self.plan.verified:raise Block()
-            self.authentication_packets+=1
+        if not self.authenticated:
+            if self.auth_boundary is None:raise Block()
+            self.auth_boundary.packet(self._sock,data)
+            if self.plan.verified:self.authentication_packets+=1
         return super().write_packet(data)
     def close(self):
         try:return super().close()
         finally:
+            if getattr(self,'auth_boundary',None) is not None:self.auth_boundary.close()
+            if getattr(self,'peer_handoff',None) is not None:self.peer_handoff.close()
             if getattr(self,'plan',None) is not None:self.plan.close()
 
 
@@ -187,8 +201,9 @@ class OwnedBoundary(old.FixtureBoundary):
             if entry.secret is not None or entry.target.host not in HOSTS:raise Block()
             value=namespace()
             self.launcher=OwnedPhase1Activation(entry,value)
+            preparation_until=min(entry.until,time.monotonic()+2)
             for _ in range(2):
-                entry.check();self.workers.append(DNSWorker())
+                entry.check();self.workers.append(DNSWorker(preparation_until))
         except BaseException:
             self.close();raise Block() from None
     def factory(self,gate,fault=None):
@@ -229,7 +244,8 @@ class OwnedAdapter(old.IsolatedAdapter):
 CASES=('NORMAL','DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_UNOWNED','DNS_BAD_PORT',
        'PEER_CHANGED','SNI_CHANGED','CA_STORE_CHANGED','WRONG_CA','WRONG_HOST','AUTH_FAILURE',
        'GRANTS_MISSING','GRANTS_EXCESS','SERVER_CHANGED','CONTROL_LOST','TIMEOUT','QUIT_FAILURE',
-       'DNS_SIGNAL','DNS_STDERR','DNS_FLOOD','INTERRUPT','RECONNECT','REVIEW_REVOKED','DATA_LOST')
+       'DNS_SIGNAL','DNS_STDERR','DNS_FLOOD','INTERRUPT','RECONNECT','REVIEW_REVOKED','DATA_LOST',
+       'TLS_BYPASS','TCP_HANDOFF_EXPIRED','TCP_PEER_CHANGED')
 
 
 def child_case(fault,parent):
@@ -237,7 +253,8 @@ def child_case(fault,parent):
     mapped='PHASE1' if fault=='NORMAL' else fault
     capture=p.ReviewedEntry.capture;captures=[]
     def before_input(entry):
-        if len(DNSWorker.created)!=2 or any(w.used or w.process.poll() is not None for w in DNSWorker.created):raise Block()
+        if len(DNSWorker.created)!=2 or any(w.used or not w.prepared.ready or w.process.poll() is not None for w in DNSWorker.created):raise Block()
+        for worker in DNSWorker.created:worker.prepared.check()
         if len(OwnedBoundary.created)!=1:raise Block()
         OwnedBoundary.created[0].launcher.before_input()
         captures.append(True)
@@ -264,6 +281,11 @@ def child_case(fault,parent):
             except Block:pass
             else:raise Block()
     if fault in CASES[1:11] and any(w.authentication_packets for w in wires):raise Block()
+    if fault in ('TLS_BYPASS','TCP_HANDOFF_EXPIRED','TCP_PEER_CHANGED'):
+        if result['sql_count'] or any(w.authentication_packets or w.authenticated for w in wires):raise Block()
+    for wire in wires:
+        if wire.peer_handoff is not None and (wire.peer_handoff.raw is not None or not wire.peer_handoff.used):raise Block()
+        if wire.auth_boundary is not None and not wire.auth_boundary.stopped:raise Block()
     if fault in ('DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_SIGNAL','DNS_STDERR','DNS_FLOOD'):
         expected={'DNS_TIMEOUT':'DNS_TIMEOUT','DNS_SIGNAL':'DNS_CHILD_SIGNAL','DNS_STDERR':'DNS_CHILD_ERROR'}.get(fault,'DNS_RESPONSE_INVALID')
         if (len(wires)!=1 or wires[0].dns_status!=expected or result['sql_count']
@@ -271,6 +293,7 @@ def child_case(fault,parent):
     if any(v.launcher.state!='STOPPED' or v.launcher.entry is not None for v in OwnedBoundary.created):raise Block()
     result.update(launcher_stopped=True,tls_verified_before_auth=(fault=='NORMAL' and all(w.tls_verified for w in wires)),
         dns_workers_started_before_input=True,dns_children_reaped=True,dns_status=[w.dns_status for w in wires],
+        dns_workers_ready_before_input=True,tcp_ownership_handoff_enforced=True,preauth_packet_boundary_enforced=True,
         authentication_packets=sum(w.authentication_packets for w in wires),
         tls_handshakes_started=sum(w.tls_handshake_started for w in wires),
         server_sessions_observed=sum(hasattr(w,'server_thread_id') for w in wires),
