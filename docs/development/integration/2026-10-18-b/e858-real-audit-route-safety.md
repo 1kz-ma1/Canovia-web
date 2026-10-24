@@ -1153,3 +1153,19 @@ Call graph: sealed Entry + existing B確認/予約/R1 → existing ordered Contr
 新しい検証はproducerの遅延worker/別scope/再利用、caps/stream/identityの移設前後AST一致、fixture-free executableの再現性・孤立import・tamper/未知mode/秘密引数/環境変数/symlink拒否に限定。既存owned MySQL8.0/8.4の変更経路へ統合し、R1後workerの負例だけ追加する。既存schemaを新しいfixture系統へ作り直さない。Mac差分はこの新pyzのhashと無接続verifyだけで確認でき、旧テストの再実行や実CA/passwordは不要。最終HEAD/CI/配布SHAと最小コマンドは#488に記録する。
 
 `TECHNICAL_WORK_REMAINING / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / P1_R1_TO_R6_NOT_ACCEPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
+
+### 2026-10-25 Runtime File Lock 候補 — 既存checkoutの読取検証（本番未採用）
+
+前提: [#882の新pyz本人Mac無接続検証](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6390847872) は \`OWNER_REPORTED_MAC_PR882_PYZ_OFFLINE_VERIFY_PASS / SHA_MATCH\`。この記録を再利用し、過去のMac差分・94/CA/grantsを繰り返さない。
+
+残Gapのうち **public sourceの実ファイルと読み込まれたコードの出自のドリフト検出**を、現行\`Program.check\`、\`b1_integrity.checkout\`、wheel/native/stdlib源照合を**新規実装せず再利用**して追加。新\`RuntimeFileLockCandidate\` は既に存在する公開Git checkout上の実ファイル、ファイルidentity、\`sys.modules\`の実オブジェクトと\`__file__ / __spec__.origin\`、\`sys.path\`を観測して、初回・再検査時に変更があれば不可逆BLOCKとする。公開B1レビューbundleのsource closureにのみ含め、既存の\`phase1-offline-candidate.pyz --verify\`以外の起動モードは増やさない。
+
+**実装の境界:**
+- コードは実ファイルを配置・展開・修復しない。読み取り専用の**既存Git checkoutに対する候補**であり、採用済みのisolated runtime installer、ハードウェア保護、ファイル置換不可能性、Python importフック/悪意ある同一UID、OS/dyld root of trustを保証しない。ファイル変更と検査の間のTOCTOUも別途継続審査。
+- 本候補は\`Program\`とB1 archiveのsource/tooling SHAを完全一致させ、再検査時にも既存全体検証を呼ぶ。本人の署名・P1/R1〜R6/B2・独立審査・実target検証を認可に変換しない。実用live dispatcherと独立したruntimeの正式採用は**未実装**。
+- \`LauncherCandidate.run\` / \`OpenerCandidate.open\` / \`Adapter.prepare\` / \`PrivateWire.connect\` には触れず無条件BLOCKを維持。実Aiven DNS/TLS/MySQL/API、credential、CA、実DB、Render、Auth0、production/deployは実行しない。
+- 新規差分テストは同一Git/Program/Archiveからの正常な再検査、改ざん・import元変更・\`sys.path\`変更・bundle不一致・使用後の失効を合成検証。Linux3.9/3.12/macOS3.12および既存MySQL8.0/8.4 CIの最終HEAD結果で判断。過去のMac結果を変更後sourceへ昇格させない。
+
+**残る実用bootstrap設計:** 検証済みsourceの専用配置と実読込originの原子的結合・OS権限/管理Mac整合、正式な認可起点と単一対象live dispatcherが未接続。今のreadonly lockをGOやtooling正式採用の代用品にしない。
+
+\`TECHNICAL_WORK_REMAINING / RUNTIME_FILE_REVIEW_ONLY / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD\`
