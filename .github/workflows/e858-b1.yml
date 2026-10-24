@@ -14,6 +14,7 @@ on:
       - 'tests/ci/test_e858_owned_activation.py'
       - 'tests/ci/test_e858_tls_handoff.py'
       - 'tests/ci/test_e858_b2_signature_fixture.py'
+      - 'tests/ci/test_e858_b2_p256_synthetic_interop.py'
       - 'tests/ci/test_e858_b2_synthetic_consumption.py'
       - 'tests/ci/test_e858_b1_*.py'
       - '.github/workflows/e858-b1.yml'
@@ -70,6 +71,7 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_owned_activation.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_tls_handoff.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_signature_fixture.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_b2_p256_synthetic_interop.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_synthetic_consumption.py -v
       - name: Read-only macOS B2 candidate capability inventory (not owner GO)
         if: runner.os == 'macOS'
@@ -91,6 +93,40 @@ jobs:
             if key not in ("kind", "secure_enclave_available", "biometric_policy_evaluable"):
               assert obj[key] is False, key
           print("MAC_CAPABILITY_ONLY_NOT_AUTHORIZED")
+          '
+      - name: Verify synthetic software CryptoKit P256 x963/DER via Python
+        if: runner.os == 'macOS'
+        run: |
+          set -o pipefail
+          swift scripts/ci/e858_phase1/b2_p256_software_interop.swift | python3 -c '
+          import json,sys
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.asymmetric import ec,utils
+          packet=json.load(sys.stdin)
+          assert set(packet) == {
+              "kind", "message", "public_key_x963_hex", "signature_der_hex",
+              "secure_enclave_used", "key_persisted", "owner_authenticated",
+              "execution_allowed", "production_go"
+          }
+          assert packet["kind"]=="E858_B2_SYNTHETIC_SOFTWARE_P256_INTEROP_V0"
+          assert packet["message"]=="CANOVIA_E858_B2_SYNTHETIC_SOFTWARE_P256_INTEROP_V0"
+          for name in ("secure_enclave_used", "key_persisted",
+                       "owner_authenticated", "execution_allowed", "production_go"):
+              assert packet[name] is False, name
+          public_bytes=bytes.fromhex(packet["public_key_x963_hex"])
+          signature=bytes.fromhex(packet["signature_der_hex"])
+          assert len(public_bytes)==65 and public_bytes[0]==4
+          r,s=utils.decode_dss_signature(signature)
+          assert utils.encode_dss_signature(r,s)==signature
+          public=ec.EllipticCurvePublicKey.from_encoded_point(ec.SECP256R1(),public_bytes)
+          public.verify(signature,packet["message"].encode("ascii"),ec.ECDSA(hashes.SHA256()))
+          try:
+              public.verify(signature,packet["message"].encode("ascii")+b"!",ec.ECDSA(hashes.SHA256()))
+          except Exception:
+              pass
+          else:
+              raise AssertionError("TAMPER_NOT_REJECTED")
+          print("SYNTHETIC_SOFTWARE_P256_INTEROP_ONLY_NOT_OWNER_GO")
           '
       - uses: actions/upload-artifact@v4
         with:
