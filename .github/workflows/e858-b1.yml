@@ -75,6 +75,7 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_p256_synthetic_interop.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_owner_briefing.py -v
           PYTHONPATH=scripts/ci python3 -S -B -m e858_phase1.b2_owner_briefing --print-public-briefing | grep -F 'PRODUCTION_NO_GO_HOLD'
+          PYTHONPATH=scripts/ci python3 -S -B -m e858_phase1.b2_owner_briefing --print-public-briefing | grep -F '不一致・異常時の対応:'
           ! (PYTHONPATH=scripts/ci python3 -S -B -m e858_phase1.b2_owner_briefing --print-public-briefing --target PRIVATE_VALUE_TO_BE_REDACTED 2>&1 | grep -F PRIVATE_VALUE_TO_BE_REDACTED)
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_synthetic_consumption.py -v
       - name: Read-only macOS B2 candidate capability inventory (not owner GO)
