@@ -9,11 +9,10 @@ a socket, SQL or any executable capability.
 
 Not part of public B1 artifact. No live entrypoint imports this module.
 """
-import hashlib
 import re
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-from e858_b_offline import canonical, decode
+from e858_b_offline import canonical, decode, SOURCE, RELEASE
 from .private_binding import Block
 
 STEPS=('P1','R1','R2','R3','R4','R5','R6','B2')
@@ -40,7 +39,8 @@ def _binding(value):
                 'bundle_sha256','sql_sha256','reference_sha256',
                 'binding_sha256','runtime_sha256','target_ca_sha256'))
             or not HEXA32.fullmatch(value['attempt_id'])
-            or value['release_ref']!='e858b9c855970fbe73f37a2d60c9db6525b132d6'
+            or value['source_sha']!=SOURCE
+            or value['release_ref']!=RELEASE
             or value['scope']!='phase1'
             or value['engine'] not in ('8.0','8.4')):
         raise Block()
