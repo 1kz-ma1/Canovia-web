@@ -48,7 +48,9 @@ class VerifiedTLSHandoff:
             try:raw.close()
             except BaseException:pass
             self._plan=None;self._raw=None;self._hostname=None
-            raise Block() from None
+            # The existing owned driver classifies the original TLS cause and
+            # converts it to a fixed private failure code. Never log it here.
+            raise
 
     def __repr__(self):
         return '<single-use TLS handoff; no connection authority>'
