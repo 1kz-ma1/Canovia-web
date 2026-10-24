@@ -1,8 +1,12 @@
 """Synthetic Ed25519 evidence tests. NEVER supplies an actual B2 owner GO."""
 import copy
+from pathlib import Path
 import socket
+import sys
 import unittest
 from unittest.mock import patch
+
+sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'scripts/ci'))
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
