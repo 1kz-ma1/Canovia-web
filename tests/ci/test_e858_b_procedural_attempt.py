@@ -175,6 +175,34 @@ class Procedure(unittest.TestCase):
         for mode in ('WRONG_ORDER','FAKE_GATE','SQL','THIRD','UNKNOWN_REMOTE'):
             with self.subTest(mode=mode):self.trial(mode)
 
+    def test_private_writer_only_advances_own_ctime_not_owner_or_mode(self):
+        from e858_phase1 import b1_operator as operator
+        def child(_,parent):
+            if os.getppid()!=parent:raise Block()
+            for change in ('CTIME','OWNER','MODE'):
+                terminal=operator.Terminal();wrote=False;actual=os.fstat
+                def fstat(fd):
+                    st=actual(fd)
+                    if fd!=terminal.fd or not wrote:return st
+                    return types.SimpleNamespace(st_dev=st.st_dev,st_ino=st.st_ino,
+                        st_uid=st.st_uid+(1 if change=='OWNER' else 0),st_gid=st.st_gid,
+                        st_mode=st.st_mode^(0o020 if change=='MODE' else 0),st_ctime_ns=st.st_ctime_ns+1)
+                def write(fd,raw):
+                    nonlocal wrote
+                    self.assertEqual(fd,terminal.fd);wrote=True
+                    return len(raw)  # synthetic I/O event; no transcript is written
+                try:
+                    with patch.object(operator.os,'fstat',side_effect=fstat),patch.object(operator.os,'write',side_effect=write):
+                        if change=='CTIME':terminal.write_private(b'fixed synthetic view',time.monotonic()+2)
+                        else:
+                            with self.assertRaises(Block):terminal.write_private(b'fixed synthetic view',time.monotonic()+2)
+                    self.assertTrue(wrote)
+                finally:terminal.close()
+            return dict(result='PRIVATE_WRITER_IDENTITY_GUARDS_VERIFIED',traces=[],execution_allowed=False)
+        with patch.object(fixture.tty,'child_trial',side_effect=child):
+            result=fixture.tty.trial('NORMAL')
+        self.assertEqual(result['result'],'PRIVATE_WRITER_IDENTITY_GUARDS_VERIFIED')
+
     def test_review_archive_contains_contract_without_live_activation(self):
         self.assertIn('scripts/ci/e858_phase1/b_procedural_attempt.py',b1_package.FILES)
         self.assertIn('scripts/ci/e858_phase1/b1_attempt_reservation.py',b1_package.FILES)

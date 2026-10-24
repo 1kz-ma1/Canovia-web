@@ -8,7 +8,6 @@ Included as an inert review library; no adopted live distribution exists.
 import hashlib
 import os
 import secrets
-import select
 import time
 
 from e858_b_offline import canonical
@@ -77,27 +76,9 @@ class BProceduralAttempt:
             self.close();raise Block() from None
 
     def _write_private(self, raw):
-        """Bounded owned TTY output, never stdout/stderr or an arbitrary FD."""
-        duplicate=None;blocking=None
-        try:
-            if type(raw) is not bytes or not 0<len(raw)<=8192:raise Block()
-            fd=self.entry.terminal.check();duplicate=os.dup(fd)
-            blocking=os.get_blocking(duplicate);os.set_blocking(duplicate,False)
-            sent=0
-            while sent<len(raw):
-                self.check();remaining=self.until-time.monotonic()
-                if remaining<=0:raise Block()
-                _,ready,_=select.select([], [duplicate], [], min(.1,remaining))
-                if not ready:continue
-                try:count=os.write(duplicate,raw[sent:])
-                except BlockingIOError:continue
-                if count<=0:raise Block()
-                sent+=count
-        finally:
-            if duplicate is not None:
-                try:
-                    if blocking is not None:os.set_blocking(duplicate,blocking)
-                finally:os.close(duplicate)
+        self.check()
+        self.entry.terminal.write_private(raw,self.until)
+        self.check()
 
     def confirm_on_tty(self, *args, **kwargs):
         capture=None
