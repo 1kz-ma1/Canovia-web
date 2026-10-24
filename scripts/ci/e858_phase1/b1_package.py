@@ -7,7 +7,7 @@ from . import private_distribution as d
 from .private_binding import Block
 from e858_b_offline import canonical, decode, integrity, git, COLLECTOR
 
-FILES=tuple('scripts/ci/'+p for p in ('e858_phase1/b1_operator.py','e858_phase1/b1_bridge.py',
+FILES=tuple('scripts/ci/'+p for p in ('e858_phase1/b1_operator.py',
     'e858_phase1/b1_integrity.py','e858_phase1/b1_package.py','e858_phase1/practical.py',
     'e858_phase1/phase1_application.py','e858_phase1/opener_candidate.py',
     'e858_phase1/backend_candidate.py','e858_phase1/launcher_candidate.py',
