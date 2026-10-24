@@ -125,6 +125,7 @@ class OwnedWire(Phase1DriverCandidate,old.FixtureWire):
     def initialize_fixture(self,gate,secret,target):
         super().initialize_fixture(gate,secret,target)  # fixed owned name/CA/DB/principal/password guard
         self.created.append(self);self.plan=None;self.dns_started=False;self.dns_reaped=False
+        self.dns_status='DNS_NOT_STARTED'
         self.authentication_packets=0;self.tls_handshake_started=False;self.tls_handoff=None
         self.auth_boundary=None;self.peer_handoff=None
         self.producer=None;self.procedure=None
