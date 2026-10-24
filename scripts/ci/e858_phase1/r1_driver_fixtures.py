@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import pty
+import re
 import select
 import signal
 import stat
@@ -133,8 +134,8 @@ def child_trial(fault, parent):
             legacy.require(not captured._password)
 
 
-def trial(fault='TTY_ONLY'):
-    if fault not in CASES+('TTY_ONLY',): raise r.Block('R1_FIXTURE_SCOPE_BLOCK')
+def trial(fault='TTY_ONLY',*,procedural_review=None):
+    if fault not in CASES+('TTY_ONLY',) or procedural_review not in (None,'MATCH','WRONG','STALE','CANCEL'): raise r.Block('R1_FIXTURE_SCOPE_BLOCK')
     # A fresh session/controlling PTY is always created. No real terminal input.
     read_fd,write_fd=os.pipe();parent=os.getpid();start=time.monotonic()
     pid,master=pty.fork()
@@ -146,7 +147,7 @@ def trial(fault='TTY_ONLY'):
             with os.fdopen(write_fd,'wb') as output: output.write(json.dumps(value).encode('ascii'))
         finally: os._exit(0)
     os.close(write_fd)
-    raw=bytearray();terminal=bytearray();sent=False;exited=False;status=None
+    raw=bytearray();terminal=bytearray();sent=False;exited=False;status=None;confirmed=False
     try:
         streams={read_fd,master}
         while streams or not exited:
@@ -155,7 +156,12 @@ def trial(fault='TTY_ONLY'):
                 try: hidden=not termios.tcgetattr(master)[3] & (termios.ECHO|termios.ECHONL)
                 except OSError: hidden=False
                 if hidden:
-                    os.write(master,SYNTHETIC_PASSWORD+b'\n');sent=True
+                    prompt=re.search(rb'B_CONFIRM_RESPONSE=([0-9a-f]{64})\r?\n',terminal)
+                    if procedural_review and not confirmed and prompt:
+                        response=prompt.group(1) if procedural_review=='MATCH' else (b'0'*64 if procedural_review=='STALE' else b'CANCEL')
+                        os.write(master,response+b'\n');confirmed=True
+                    elif not procedural_review or confirmed and b'B_CONFIRMATION_FINISHED_NOT_GO' in terminal:
+                        os.write(master,SYNTHETIC_PASSWORD+b'\n');sent=True
             ready,_,_=select.select(list(streams),[],[],.01)
             for fd in ready:
                 try: data=os.read(fd,4096)
@@ -168,10 +174,14 @@ def trial(fault='TTY_ONLY'):
                 if len(target)>65536: raise r.Block('R1_FIXTURE_CAP')
             if not exited:
                 done,status=os.waitpid(pid,os.WNOHANG);exited=done==pid
-        if terminal or status!=0: raise r.Block('R1_TTY_OUTPUT_BLOCK')
+        if status!=0 or (terminal and not procedural_review):raise r.Block('R1_TTY_OUTPUT_BLOCK')
+        if procedural_review and terminal and (terminal.count(b'B_PRIVATE_REVIEW_NOT_GO')!=1
+                or terminal.count(b'B_CONFIRM_RESPONSE=')!=1
+                or SYNTHETIC_PASSWORD in terminal or not confirmed):raise r.Block('B_PROCEDURE_FIXTURE_BLOCK')
         value=json.loads(raw)
         if value['result']=='BLOCK':raise r.Block('R1_CHILD_BLOCK')
         value.update(driver_refs_cleared=True,owned_buffer_erased=True,controlling_tty_closed=True)
+        if procedural_review:value['procedural_review_response_sent']=confirmed
         return value
     except BaseException:
         raise r.Block('R1_TRIAL_BLOCK') from None

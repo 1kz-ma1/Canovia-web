@@ -9,6 +9,7 @@ the B1 public review archive or use it as a B2 approval credential.
 from .launcher_candidate import LauncherCandidate
 from .private_binding import Block
 from .protocol import Gate
+from .b_procedural_attempt import BProceduralAttempt
 from . import practical as p, runtime as r
 
 
@@ -17,6 +18,7 @@ class OwnedPhase1Activation:
 
     def __init__(self, entry, fixture):
         self._launcher = None
+        self._procedure = None
         try:
             if (type(entry) is not p.ReviewedEntry or type(fixture) is not dict
                     or fixture.get('kind') != 'OWNED_INTERNAL_DOCKER_ONLY'
@@ -39,11 +41,24 @@ class OwnedPhase1Activation:
             self.close()
             raise Block() from None
 
+    def bind_procedure(self, reservation_root, engine):
+        # Only the already namespace-checked owned fixture calls this seam.
+        try:
+            if self._launcher is None or self._procedure is not None:raise Block()
+            self._procedure=BProceduralAttempt(self._launcher,reservation_root)
+            self._procedure.bind_engine(engine)
+        except BaseException:
+            self.close();raise Block() from None
+
     def before_input(self):
         try:
             if self._launcher is None:
                 raise Block()
-            self._launcher._before_input()
+            if self._procedure is None:self._launcher._before_input()
+            else:
+                self._procedure.confirm_on_tty()
+                self._procedure.reserve_attempt()
+                self._procedure.before_input()
         except BaseException:
             self.close()
             raise Block() from None
@@ -52,7 +67,8 @@ class OwnedPhase1Activation:
         try:
             if self._launcher is None or type(gate) is not Gate:
                 raise Block()
-            self._launcher._connection(gate)
+            if self._procedure is None:self._launcher._connection(gate)
+            else:self._procedure.before_connection(gate)
         except BaseException:
             self.close()
             raise Block() from None
@@ -71,6 +87,7 @@ class OwnedPhase1Activation:
         raise Block()
 
     def close(self):
+        if self._procedure is not None:self._procedure.close()
         if self._launcher is not None:
             self._launcher.close()
             self._launcher = None

@@ -94,6 +94,7 @@ def child_case(fault,parent):
     entry=p.ReviewedEntry();review=None;adapter=None
     with tempfile.TemporaryDirectory(dir='/b1',prefix='practical-') as temporary:
         base=Path(temporary);private=base/'private';private.mkdir(mode=0o700)
+        (base/'attempt-store').mkdir(mode=0o700)
         independent=base/'owner-record';independent.mkdir(mode=0o700)
         now=int(time.time());scope='metadata' if fault=='METADATA' else 'phase1'
         ca=Path('/synthetic/'+('wrong-ca.pem' if fault=='WRONG_CA' else 'ca.pem')).read_bytes()

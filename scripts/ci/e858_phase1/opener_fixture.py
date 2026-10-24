@@ -19,6 +19,7 @@ from .opener_candidate import OpenerCandidate, Peer
 from .phase1_application import _phase1_program
 from .backend_candidate import exchange, reap
 from .owned_activation_fixture import OwnedPhase1Activation
+from .b1_operator import Root
 from .tls_handoff_candidate import VerifiedTLSHandoff
 from .private_binding import Block
 
@@ -208,7 +209,21 @@ class OwnedAdapter(old.IsolatedAdapter):
         value=namespace();_phase1_program(self.entry,value['pins']['tooling_sha'],value['bundle_sha256'])
         config,bundle=self.prepare_reviewed()
         self.boundary=OwnedBoundary(self.entry)
+        store=Path('/').joinpath(*self.entry.root.names[:-1],'attempt-store')
+        self.boundary.launcher.bind_procedure(Root(str(store)),self)
         return config,bundle
+
+    def report(self, success):
+        if self.boundary is not None and self.boundary.launcher is not None:
+            procedure=self.boundary.launcher._procedure
+            if procedure is not None:
+                if success:procedure.finish()
+                else:procedure.close()
+        value=super().report(success)
+        if self.boundary is not None and self.boundary.launcher is not None:
+            procedure=self.boundary.launcher._procedure
+            if procedure is not None:value['b_procedure']=procedure.report()
+        return value
 
 
 CASES=('NORMAL','DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_UNOWNED','DNS_BAD_PORT',
@@ -271,7 +286,7 @@ def run():
     traces=json.loads(Path('/b1/traces.json').read_text());cids=[]
     for fault in CASES:
         with patch.object(old.tty,'child_trial',side_effect=lambda _,parent:child_case(fault,parent)):
-            result=old.tty.trial('NORMAL')
+            result=old.tty.trial('NORMAL',procedural_review='MATCH')
         traces.extend(result.pop('traces'));cids.extend(result.pop('private_cids'))
         previous['cases']['OPENER_'+fault]=result
     Path('/b1/traces.json').write_text(json.dumps(traces));os.chmod('/b1/traces.json',0o600)
