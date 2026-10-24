@@ -22,6 +22,15 @@ class OwnedActivationContract(unittest.TestCase):
     load = fixture.Practical.load
 
     def trial(self, fault='NORMAL'):
+        # The generic Practical fixture intentionally uses a non-owned
+        # private target. This admission suite uses ONLY the explicitly
+        # allowed owned Docker name and preserves its independent binding.
+        self.record['target'].update(
+            service='ONE_SYNTHETIC_SERVICE', database=p.r.DB,
+            host='mysql.synthetic.invalid', port=3306,
+            principal='e858_review_inspector')
+        self.record['tls']['san'] = 'mysql.synthetic.invalid'
+        self.review['binding_sha256'] = p.dist._sha(fixture.old.canonical(self.record))
         self.write()
         if fault == 'METADATA':
             self.review['scope'] = 'metadata'
