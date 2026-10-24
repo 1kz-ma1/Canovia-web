@@ -42,6 +42,13 @@ class DriverBinding(unittest.TestCase):
             out,err=io.StringIO(),io.StringIO()
             try:
                 with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err),patch('socket.getaddrinfo') as dns,patch('socket.socket') as sock:
+                    if dispatch_mode:
+                        # Finish public writes before sealing private ancestors.
+                        anchor=self.base/'runtime-anchor';anchor.mkdir(mode=0o700)
+                        fd=os.open(anchor,os.O_RDONLY|os.O_DIRECTORY|os.O_CLOEXEC)
+                        try:placement=RuntimePlacementCandidate(fd,self.archive,self.program.sha,self.pins,time.monotonic()+120)
+                        finally:os.close(fd)
+                        runtime_lock=RuntimeFileLockCandidate(self.program,str(offline.ROOT),self.archive,self.program.sha,self.head)
                     review=self.load();entry.begin(str(self.private),human_supervised=True);entry.bind_review(review)
                     if producer_mode:
                         launcher=LauncherCandidate(entry,self.head,self.program.sha)
@@ -49,11 +56,6 @@ class DriverBinding(unittest.TestCase):
                         engine=p.Adapter(entry,'phase1');engine.boundary=p.PrivateBoundary(entry)
                         procedure.bind_engine(engine)
                         if dispatch_mode:
-                            anchor=self.base/'runtime-anchor';anchor.mkdir(mode=0o700)
-                            fd=os.open(anchor,os.O_RDONLY|os.O_DIRECTORY|os.O_CLOEXEC)
-                            try:placement=RuntimePlacementCandidate(fd,self.archive,self.program.sha,self.pins,time.monotonic()+120)
-                            finally:os.close(fd)
-                            runtime_lock=RuntimeFileLockCandidate(self.program,str(offline.ROOT),self.archive,self.program.sha,self.head)
                             dispatch=DispatcherBindingCandidate(runtime_lock,placement,procedure)
                             self.assertFalse(dispatch.check()['execution_allowed'])
                         code="import sys;sys.stdout.buffer.write(b'E858_DNS_READY\\n');sys.stdout.flush();sys.stdin.buffer.read();sys.stdout.write('[[2,1,6,\"\",[\"198.51.100.7\",9876]]]')"
