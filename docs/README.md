@@ -1,5 +1,10 @@
 # Canovia documentation index (2026-10-13)
 
+## 2026-10-24 Broad interest diagnosis / demand validation
+
+- [横断的な関心プロフィール・割合チャート・Canovia Future導線](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#11-2026-10-24-横断的な関心診断グラフ結果futureへの導線製品決定): **先行の入口診断をStudy/Dev限定から多カテゴリの自己申告興味へ広げる製品方向**。興味割合は自己申告・市場需要や適性ではない。Future紹介は承認済み公開情報のみ、任意Plan作成と本人継続性を維持。**詳細スコア/UX実装は提案、未実装・本番HOLD**。
+- [D-2026-10-24-01 Product Decision](development/decisions/2026-10-24_PRELAUNCH_BROAD_INTEREST_DISCOVERY_DECISION.md): 本人のSafari UX観測と需要検証の目的・同意/計測/旧診断互換/後回し境界を記録。
+
 ## 2026-10-23 Product decision: preparation-first prelaunch
 
 - [先行リリース事前準備 / 同一DB第一候補 / HOLD分類・Codex新チャット引継ぎ](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md): **先行は診断・目標・計画の保存と正式版への継続性を成功条件に変更**。A=既存Canovia Webと同じCanonical DBが第一候補、B=安全な別DB移行は別判断。安全HOLD/本番GOは未解除。§5は技術実行パケット、§6は新チャットで使うプロンプト。
