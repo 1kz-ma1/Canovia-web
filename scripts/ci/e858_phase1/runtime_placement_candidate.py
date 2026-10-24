@@ -80,9 +80,9 @@ class RuntimePlacementCandidate:
             self._anchor = os.dup(anchor_fd)
             os.set_inheritable(self._anchor, False)
             self._fds.append(self._anchor)
-            self._anchor_id = _identity(os.fstat(self._anchor))[:6]
             # Atomic no-overwrite mkdir; even an old empty candidate is refused.
             os.mkdir(BASENAME, 0o700, dir_fd=self._anchor)
+            self._anchor_id = _identity(os.fstat(self._anchor))[:6]
             flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
             root = os.open(BASENAME, flags, dir_fd=self._anchor)
             self._fds.append(root)
