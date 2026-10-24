@@ -131,7 +131,7 @@ class LocalReservationTest(unittest.TestCase):
             reservation.reserve(self.fd,ATTEMPT,TOOLING)
 
     def test_neither_review_nor_reservation_activates_live_paths(self):
-        self.assertNotIn('scripts/ci/e858_phase1/b1_attempt_reservation.py',b1_package.FILES)
+        self.assertIn('scripts/ci/e858_phase1/b1_attempt_reservation.py',b1_package.FILES)
         with patch('socket.socket') as sock, patch('socket.getaddrinfo') as dns:
             reservation.reserve(self.fd,ATTEMPT,TOOLING)
             for obj,method in ((launcher_candidate.LauncherCandidate,'run'),

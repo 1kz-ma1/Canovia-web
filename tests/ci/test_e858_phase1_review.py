@@ -21,6 +21,8 @@ class ReviewInventory(unittest.TestCase):
         sha, path = spec.split(':', 1)
         self.assertIn(sha, (self.head, review.EVIDENCE))
         self.assertIn(path, review.RUNTIME + review.REVIEW)
+        if path in review.RUNTIME_DELTAS:
+            return (Path(__file__).resolve().parents[2]/path).read_bytes()
         return ('public source ' + path).encode()
 
     def test_public_inventory_is_deterministic_and_never_authorizes(self):
@@ -30,11 +32,21 @@ class ReviewInventory(unittest.TestCase):
             integrity.assert_called_with(Path('/unused'), self.head)
         self.assertEqual(len(result['public_source_sha256']), len(review.RUNTIME + review.REVIEW))
         for path, digest in result['public_source_sha256'].items():
-            self.assertEqual(digest, hashlib.sha256(('public source ' + path).encode()).hexdigest())
+            self.assertEqual(digest, hashlib.sha256(self.blobs(Path('/unused'),'show',self.head+':'+path)).hexdigest())
         for flag in ('execution_allowed', 'owner_approval_verified', 'real_aiven_connected', 'strict_block_waived', 'release_authorized'):
             self.assertIs(result[flag], False)
         self.assertEqual(result['live_distribution'], 'NOT_BUILT')
         self.assertEqual(result['runtime_artifact_lock'], 'UNVERIFIED')
+
+    def test_changed_runtime_has_its_own_pin_and_no_old_device_acceptance(self):
+        with patch.object(review.b, 'integrity', return_value={}), patch.object(review.b, 'git', side_effect=self.blobs):
+            result=review.inventory(Path('/unused'),self.head)
+            self.assertEqual(result['changed_runtime_source'],sorted(review.RUNTIME_DELTAS))
+            self.assertEqual(result['reused_evidence_scope'],'UNCHANGED_RUNTIME_FILES_ONLY')
+            self.assertEqual(result['changed_runtime_owner_acceptance'],'NOT_CLAIMED')
+            self.assertFalse(result['execution_allowed'])
+            with patch.dict(review.RUNTIME_DELTAS,{key:'0'*64 for key in review.RUNTIME_DELTAS}):
+                with self.assertRaises(review.b.Block):review.inventory(Path('/unused'),self.head)
 
     def test_any_runtime_change_refuses_historical_evidence_reuse(self):
         for changed in review.RUNTIME:

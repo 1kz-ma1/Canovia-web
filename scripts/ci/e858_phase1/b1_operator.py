@@ -6,6 +6,7 @@ by the callers supplied in this change.
 """
 import ctypes
 import os
+import select
 from pathlib import PurePath
 import stat
 import struct
@@ -151,6 +152,37 @@ class Terminal:
                     or os.tcgetpgrp(self.fd)!=self.group or termios.tcgetattr(self.fd)!=self.mode): raise Block()
             return self.fd
         except BaseException: raise Block() from None
+
+    def write_private(self, raw, until):
+        """Bounded output on this owned TTY; never stdout or an arbitrary FD.
+
+        Darwin devfs updates character-device ctime on write. Advance that
+        observation only after our own successful write, with device/inode/
+        owner/group/mode unchanged; every other Terminal check stays strict.
+        This does not detect a hostile same-UID/OS ABA during the write.
+        """
+        fd=None;blocking=None
+        try:
+            if (threading.current_thread() is not threading.main_thread()
+                    or type(raw) is not bytes or not 0<len(raw)<=8192):raise Block()
+            fd=self.check();blocking=os.get_blocking(fd);os.set_blocking(fd,False)
+            sent=0
+            while sent<len(raw):
+                self.check();remaining=until-time.monotonic()
+                if remaining<=0:raise Block()
+                if not select.select([], [fd], [], min(.1,remaining))[1]:continue
+                try:count=os.write(fd,raw[sent:])
+                except BlockingIOError:continue
+                if count<=0:raise Block()
+                observed=identity(os.fstat(fd))
+                if observed[:5]!=self.st[:5]:raise Block()
+                self.st=observed
+                self.check();sent+=count
+        except BaseException:raise Block() from None
+        finally:
+            if fd is not None and blocking is not None:
+                try:os.set_blocking(fd,blocking)
+                except BaseException:raise Block() from None
 
     def close(self):
         if self.fd is not None:
