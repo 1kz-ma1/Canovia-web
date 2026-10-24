@@ -38,13 +38,14 @@ class Phase1DriverCandidate(p.PrivateWire):
             entry=self.entry;entry.check();target=entry.target
             if (self.connect_count not in (0,1) or self.target!=self._target or target!=self._target or self.gate is not self._gate
                     or self.plan.entry is not entry or self.plan.gate is not self.gate
-                    or (self.host,self.port,self.db)!=(target.host,target.port,target.database)
+                    or (self.host,self.port)!=(target.host,target.port)
+                    or self.db not in (target.database,target.database.encode('ascii'))
                     or self.user not in (target.principal,target.principal.encode('ascii'))
                     or self.gate.role!=self.plan.role or entry.review.check()['scope']!='phase1'
                     or self.gate.q0!=entry.review.program.queries['identity']
                     or self.gate.q1!=entry.review.program.queries['grants']
                     or not time.monotonic()<self.gate.deadline<=entry.until):raise Block()
-            # PyMySQL changes self.user to bytes during authentication.
+            # PyMySQL changes self.user AND self.db to bytes during auth.
         except BaseException:
             self.close();raise Block() from None
 

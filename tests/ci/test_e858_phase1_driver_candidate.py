@@ -43,8 +43,10 @@ class DriverBinding(unittest.TestCase):
                             self.assertIs(Phase1DriverCandidate.connect,p.PrivateWire.connect)
                             with self.assertRaises(Block):wire.connect()
                             wire.check_binding()  # no SQL or driver initialization on BLOCK
-                        elif mode=='USER_BYTES':
-                            wire.user=entry.target.principal.encode('ascii');wire.check_binding()
+                        elif mode in ('USER_BYTES','DB_BYTES'):
+                            if mode=='USER_BYTES':wire.user=entry.target.principal.encode('ascii')
+                            else:wire.db=entry.target.database.encode('ascii')
+                            wire.check_binding()
                         elif mode=='REBIND':
                             with self.assertRaises(Block):wire.bind_entry(entry)
                         else:
@@ -60,7 +62,7 @@ class DriverBinding(unittest.TestCase):
                             elif mode=='PRIVATE':(self.private/'target.json').write_bytes(b'{}')
                             elif mode=='RECONNECT':wire.connect_count=2
                             with self.assertRaises(Block):wire.check_binding()
-                    if mode not in ('NORMAL','USER_BYTES'):
+                    if mode not in ('NORMAL','USER_BYTES','DB_BYTES'):
                         self.assertEqual(wire.password,b'');self.assertIsNone(wire.entry)
                         with self.assertRaises(Block):wire.bind_entry(entry)
                     self.assertNotIn(fixture.CANARY,repr(wire))
@@ -82,8 +84,8 @@ class DriverBinding(unittest.TestCase):
         for mode in ('HOST','PORT','USER','DB'):self.trial(mode)
     def test_gate_identity_role_sql_and_deadline_are_bound(self):
         for mode in ('GATE','ROLE','SQL','DEADLINE','RECONNECT'):self.trial(mode)
-    def test_private_or_scope_drift_stops_and_pymysql_user_bytes_are_supported(self):
-        self.trial('PRIVATE');self.trial('SCOPE');self.trial('USER_BYTES')
+    def test_private_or_scope_drift_stops_and_pymysql_auth_bytes_are_supported(self):
+        self.trial('PRIVATE');self.trial('SCOPE');self.trial('USER_BYTES');self.trial('DB_BYTES')
     def test_closed_review_archive_contains_inert_driver_not_dialer(self):
         for name in ('phase1_driver_candidate.py','connection_handoff_candidate.py'):
             self.assertIn('scripts/ci/e858_phase1/'+name,b1_package.FILES)
