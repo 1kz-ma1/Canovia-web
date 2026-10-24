@@ -52,7 +52,7 @@ class ProducerBinding:
             self.check()
             if self.state!='BOUND_NOT_AUTHORIZED':raise Block()
             self.worker.check();self.state='DNS_REQUESTED_NOT_AUTHORIZED'
-            return canonical(dict(host=self.entry.target.host,mode='normal'))
+            return canonical(dict(host=self.entry.target.host,port=self.entry.target.port))
         except BaseException:
             self.close();raise Block() from None
 

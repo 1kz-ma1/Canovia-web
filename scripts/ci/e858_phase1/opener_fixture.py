@@ -82,7 +82,7 @@ def owned_resolve(host,until,mode='normal',worker=None,request=None):
         if worker is None:worker=DNSWorker()
         if type(worker) is not DNSWorker or worker.used:raise Block()
         worker.used=True;proc=worker.process
-        if request is not None and json.loads(request)!=dict(host=host,mode='normal'):raise Block()
+        if request is not None and json.loads(request)!=dict(host=host,port=3306):raise Block()
         try:raw=worker.prepared.exchange(json.dumps(dict(host=host,mode=mode)).encode('ascii'),until)
         except Block as error:
             reaped=error.dns_reaped;status=error.dns_status;raise

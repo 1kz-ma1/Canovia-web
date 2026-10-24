@@ -71,6 +71,7 @@ class DriverBinding(unittest.TestCase):
                                     with self.assertRaises(Block):producer.dns_request()
                                 else:
                                     request=producer.dns_request()
+                                    self.assertEqual(json.loads(request),dict(host=entry.target.host,port=entry.target.port))
                                     if mode=='PRODUCER_RETRY':
                                         with self.assertRaises(Block):producer.dns_request()
                                     else:
