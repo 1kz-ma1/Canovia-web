@@ -10,7 +10,9 @@ import argparse
 import sys
 
 from e858_b_offline import SOURCE, RELEASE
-from .private_binding import Block
+class Block(Exception):
+    """Non-authorizing briefing format error, no private payload echo."""
+
 
 KIND = 'E858_B2_HUMAN_REVIEW_BRIEFING_ONLY_V0'
 MODE = 'B_HUMAN_SUPERVISED_PROCEDURAL_NO_RETRY'
@@ -145,8 +147,18 @@ def authorize(*_args, **_kwargs):
     raise Block()
 
 
+class NoEchoParser(argparse.ArgumentParser):
+    """Suppress untrusted argument text even for malformed operator commands."""
+    def error(self, _message):
+        raise Block()
+
+    def exit(self, status=0, message=None):
+        raise Block()
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(
+    parser = NoEchoParser(
+        add_help=False,
         description='Print public B2 scope briefing; cannot approve or connect.')
     parser.add_argument('--print-public-briefing', action='store_true', required=True)
     try:
@@ -154,7 +166,7 @@ def main(argv=None):
         print(render_read_only())
         return 0
     except BaseException:
-        # No packet, target or exception details belong in logs.
+        # Invalid argv, including private target strings, is never echoed.
         return 2
 
 
