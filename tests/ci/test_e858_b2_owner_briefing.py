@@ -26,7 +26,7 @@ class B2OwnerBriefingTest(unittest.TestCase):
         self.assertEqual(status['declined_steps'], [])
         self.assertFalse(status['execution_allowed'])
         self.assertFalse(status['authentic_owner_approval_verified'])
-        with self.assertRaises(Block):
+        with self.assertRaises(brief.Block):
             brief.authorize(packet)
         output = brief.render_read_only()
         self.assertIn('PRODUCTION_NO_GO_HOLD', output)
@@ -46,7 +46,7 @@ class B2OwnerBriefingTest(unittest.TestCase):
         self.assertFalse(result['independent_key_authority_verified'])
         self.assertFalse(result['durable_one_shot_verified'])
         self.assertFalse(result['execution_allowed'])
-        with self.assertRaises(Block): brief.authorize(result)
+        with self.assertRaises(brief.Block): brief.authorize(result)
 
     def test_decline_never_becomes_retry_or_fresh_go(self):
         packet = brief.template()
@@ -102,16 +102,17 @@ class B2OwnerBriefingTest(unittest.TestCase):
         variants.append(obj)
         for i, packet in enumerate(variants):
             with self.subTest(case=i):
-                with self.assertRaises(Block): brief.assess(packet)
-        with self.assertRaises(Block): brief.assess(None)
+                with self.assertRaises(brief.Block): brief.assess(packet)
+        with self.assertRaises(brief.Block): brief.assess(None)
 
     def test_cli_rejects_other_modes_without_printing_private_values(self):
         self.assertEqual(brief.main(['--print-public-briefing']), 0)
         for args in ([], ['--connect'], ['--print-public-briefing', '--approve'],
                      ['--print-public-briefing', '--target', 'private.example.test']):
-            with self.subTest(args=args), patch('builtins.print') as printed:
+            with self.subTest(args=args), patch('builtins.print') as printed, patch('sys.stderr') as stderr:
                 self.assertEqual(brief.main(args), 2)
                 printed.assert_not_called()
+                stderr.write.assert_not_called()
 
     def test_no_network_and_all_live_entrypoints_still_block(self):
         self.assertNotIn('scripts/ci/e858_phase1/b2_owner_briefing.py',
@@ -119,7 +120,7 @@ class B2OwnerBriefingTest(unittest.TestCase):
         with patch('socket.getaddrinfo') as dns, patch('socket.socket') as sock:
             brief.assess(brief.template())
             brief.render_read_only()
-            with self.assertRaises(Block): brief.authorize(brief.template())
+            with self.assertRaises(brief.Block): brief.authorize(brief.template())
             with self.assertRaises(Block):
                 object.__new__(launcher_candidate.LauncherCandidate).run()
             with self.assertRaises(Block):
