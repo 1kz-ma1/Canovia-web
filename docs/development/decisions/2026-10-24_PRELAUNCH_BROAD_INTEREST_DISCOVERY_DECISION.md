@@ -8,6 +8,8 @@
 >
 > 詳細な候補仕様・Codex引継ぎ：[先行リリース共通DB戦略 §11](../PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md)。安全ゲート：[Issue #488](https://github.com/1kz-ma1/Canovia-web/issues/488)。
 
+> **2026-10-24 amendment:** 後続[D-2026-10-24-02](2026-10-24_INDIRECT_INTEREST_30_ITEM_DIAGNOSTIC_DECISION.md)により、本決定で検討した「カテゴリを直接複数選ぶ/その強度を答える」入口UXは**後続の30問間接診断に置換**。広範な興味を拾う、本人に割合の結果を返す、Canovia Futureへの導線と需要を別に検証する目的は継続。設問は[オリジナルアイテムバンクv0](../PRELAUNCH_INTEREST_DIAGNOSTIC_ITEM_BANK_V0_2026_10_24.md)を参照し、未検証/未実装/未配備。
+
 ## Problem and observed feedback
 
 Owner's 2026-10-24 Mac Safari screenshot/feedback: `tester@example.test` の準備診断は**正常表示**されたが、実態はStudy/Developmentだけを中心とする目標入力フォームで、ユーザーが期待する「診断」と認識しにくい。これはL1/保存バグの確認ではなく、**価値提案とUIの不一致という本人のUX観測**。実データ一般利用者による評価はまだない。
