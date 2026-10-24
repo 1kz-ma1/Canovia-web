@@ -12,6 +12,7 @@ This fixture is intentionally excluded from the public B1 archive.
 import hashlib
 import os
 import sqlite3
+from contextlib import closing
 
 from .b2_signature_fixture import verify_synthetic_claims
 from .private_binding import Block
@@ -34,9 +35,8 @@ def consume_synthetic_once(records, expected_binding, public_key, now, ledger_pa
 
     For local tests only. The return value intentionally cannot authorize work.
     Signature verification precedes any ledger file creation; it is repeated
-    under the write lock, so expiration during lock acquisition is not silently
-    accepted according to the supplied synthetic clock. Neither clock nor
-    storage path are independently trusted.
+    under the write lock against the same caller-supplied synthetic clock.
+    Neither time source nor storage path is independently trusted.
     """
     try:
         if (type(ledger_path) is not str or not os.path.isabs(ledger_path)
@@ -49,7 +49,7 @@ def consume_synthetic_once(records, expected_binding, public_key, now, ledger_pa
         digest = _fingerprint(records)
         # DB name and all contents are synthetic. No caller-supplied SQL or
         # secrets. DELETE journal + FULL synchronous on one local filesystem.
-        with sqlite3.connect(ledger_path, timeout=5, isolation_level=None) as db:
+        with closing(sqlite3.connect(ledger_path, timeout=5, isolation_level=None)) as db:
             db.execute('PRAGMA journal_mode=DELETE')
             db.execute('PRAGMA synchronous=FULL')
             db.execute('BEGIN IMMEDIATE')
