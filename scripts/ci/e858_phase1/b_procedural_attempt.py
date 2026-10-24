@@ -16,7 +16,7 @@ from .b1_operator import Root, identity
 from .b1_attempt_reservation import reserve
 from .launcher_candidate import LauncherCandidate
 from .private_binding import Block
-from .private_candidate import WindowedTTY
+from .identity_core import WindowedTTY
 from .protocol import Gate
 
 
@@ -32,6 +32,7 @@ class BProceduralAttempt:
         self.launcher=None;self.entry=None;self.store=None;self.engine=None
         self.state='STOPPED';self.outcome='NOT_STARTED';self.reserved=False
         self.confirmed=False;self._seal=None;self._store_identity=None
+        self.r1_started_at=None
         try:
             if type(launcher) is not LauncherCandidate or type(reservation_root) is not Root:raise Block()
             self.launcher=launcher;self.entry=launcher.entry;self.store=reservation_root
@@ -138,7 +139,7 @@ class BProceduralAttempt:
         try:
             self.check()
             if self.state!='RESERVED_NOT_AUTHORITY' or not self.reserved or self.engine is None:raise Block()
-            self.launcher._before_input();self.state='INPUT_STARTED'
+            self.launcher._before_input();self.r1_started_at=time.monotonic();self.state='INPUT_STARTED'
         except BaseException:
             self.close();raise Block() from None
 

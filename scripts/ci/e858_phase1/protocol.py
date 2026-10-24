@@ -1,7 +1,7 @@
 """Closed synthetic Phase1 SQL inventory. No caller SQL or execution permit."""
 import time
 
-from e858_tls.transport import Block
+from e858_tls.stream_core import Block
 
 INIT = b'SET NAMES ascii'
 CID = b'SELECT CONNECTION_ID();'

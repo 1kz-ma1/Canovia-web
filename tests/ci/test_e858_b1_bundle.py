@@ -44,7 +44,7 @@ def deny(event,args):
     if event.startswith('socket.'):raise RuntimeError('NETWORK_FORBIDDEN')
 sys.addaudithook(deny)
 from e858_phase1.b1_operator import Entry
-from e858_phase1.b1_bridge import Bridge
+from e858_phase1.bridge_core import Bridge
 from e858_phase1.practical import Adapter, PrivateReview, PrivateWire, Program, ReviewedEntry
 from e858_phase1.phase1_application import Phase1ApplicationReview
 from e858_phase1.opener_candidate import OpenerCandidate, select_peer

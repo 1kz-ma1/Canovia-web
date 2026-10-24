@@ -1137,3 +1137,19 @@ Call graph: sealed Entry + existing B確認/予約/R1 → existing ordered Contr
 管理Macに新しいOS/TTY/worker syscallは追加しない。#880の10件を繰り返す必要はない。候補採用時に必要な差分受入は新driver6件と変更bundleのclosure/hashに限定し、CIを本人受入や正式tooling採用へ昇格しない。実用の認可済みsingle-target producer/activation、実用配布物のprovenance/採用、独立審査、private運用責任、P1/R1〜R6/B2はHOLD。実AivenのDNS/TLS/権限/remote終了、full17/物理構造/TRIGGER/migration/実復元/公開は別ゲート。
 
 `TECHNICAL_WORK_REMAINING / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / P1_R1_TO_R6_NOT_ACCEPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
+
+### 2026-10-25 Producer結合・fixture-free kernel・実行形式のオフライン配布候補
+
+#881 Mac driver6件＋bundle1件の本人報告[6385992668](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6385992668)を再利用し、#880 Mac10件・旧94/CA/grantsを再要求しない。今回の差分は次の実装であり、認可の再研究や新しい署名authorityではない。
+
+- **fixture-free kernel:** 固定caps/認証/stream reader、Phase1 Wire/Channel/Budget、Bridge本体、identity/WindowedTTYを共通coreへ移す。旧owned fixtureは同じ関数/クラスを継承して使う。旧collector/observer/KILL、固定合成credentials、synthetic R1/driver/bootstrapは実用側のimport closureから外す。共通kernelのconnectとBridge.prepareは無条件BLOCK。4公開入口の既存本体は無変更。固定Q0/Q1/Reference/strictとcaps、2TLS、通常15/最大42SQL、query10s/全体120sを保持する。旧runtime/transportを変更しているため、旧Mac証拠を変更後sourceの受入へ昇格せず、旧Phase1 inventoryに変更ファイルの明示hashを追加する。
+- **ProducerBinding:** 同じBProceduralAttempt/engine/Entry/Gate/driverと、R1開始より前にreadyになった同じPreparedChildを結ぶ。workerは1つのbindingに一度だけ所属。固定targetから1回のDNS要求を生成し、回収済みchild→全DNS回答/peer→ConnectedPeer所有権→同じ検証済みTLS/auth→identity検査待ちまでの工程を固定する。別Entry/role/Gate、途中差替え、遅いworker、再bind/再要求、未知cleanupはSTOP。これはresolver/dialer/secret loaderではなく、JSON/marker/TTYを実GOへ変換しない。実I/Oは既存の固定owned executorだけで行う。
+- **実行形式の配布候補:** 既存のdeterministic B1 bundle/固定Git blob/SQL/Reference/pinned PyMySQL wheelから、`phase1-offline-candidate.pyz`を再現可能に構築する。fixture/credentials/test authority/actual openerは除外。入口は `python -I -S -B ... --verify` だけで、他のmode/GO/target/password引数は固定BLOCK。自己artifactの安定したread-only snapshotを検証し、検証済みbyte列からimportするため、検証後のpath差替えを再読込しない。socket/subprocess/exec/秘密ファイル読込/書込を拒否し、site-packages不要で共通部品のimport closure・wheel/source/固定資産を確認する。
+
+このpyzは**オフライン検証を実行できる候補**で、live auditの実行配布物・採用・GOではない。起動するPython/OS/entry codeの信頼は外部の管理Mac条件であり、自己manifestは独立署名ではない。実行前には別の信頼できる経路の公表SHA256と照合する。snapshot importはsource closure検証用で、現行Programの実ファイル/runtime provenanceモデルをlive実行へ結線していない。正式認可の起点も未実装のため、**判定は A: TECHNICAL_WORK_REMAINING**。Bへ昇格しない。
+
+最小の残技術工程は、独立審査された認可起点へ単一対象producerを接続するlive dispatcherと、検証済み公開sourceの実ファイル配置/loaded origin/runtime lockを一体化するbootstrapである。今回は別API/flag/factoryで実接続BLOCKを迂回する変更を含めない。P1/R1〜R6、正式tooling・実行配布物採用、managed Mac/private custody/事故時担当、新しいB2、実Aiven TLS/grants/remote状態と本番昇格は別ゲート。
+
+新しい検証はproducerの遅延worker/別scope/再利用、caps/stream/identityの移設前後AST一致、fixture-free executableの再現性・孤立import・tamper/未知mode/秘密引数/環境変数/symlink拒否に限定。既存owned MySQL8.0/8.4の変更経路へ統合し、R1後workerの負例だけ追加する。既存schemaを新しいfixture系統へ作り直さない。Mac差分はこの新pyzのhashと無接続verifyだけで確認でき、旧テストの再実行や実CA/passwordは不要。最終HEAD/CI/配布SHAと最小コマンドは#488に記録する。
+
+`TECHNICAL_WORK_REMAINING / LIVE_ENTRY_NOT_ENABLED / LIVE_TOOLING_NOT_ADOPTED / P1_R1_TO_R6_NOT_ACCEPTED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`

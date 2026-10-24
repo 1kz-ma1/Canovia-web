@@ -26,7 +26,7 @@ class OwnedActivationContract(unittest.TestCase):
         # private target. This admission suite uses ONLY the explicitly
         # allowed owned Docker name and preserves its independent binding.
         self.record['target'].update(
-            service='ONE_SYNTHETIC_SERVICE', database=p.r.DB,
+            service='ONE_SYNTHETIC_SERVICE', database='canovia_p0_ci',
             host='mysql.synthetic.invalid', port=3306,
             principal='e858_review_inspector')
         self.record['tls']['san'] = 'mysql.synthetic.invalid'

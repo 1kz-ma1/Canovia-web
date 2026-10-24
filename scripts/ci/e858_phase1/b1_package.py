@@ -13,7 +13,9 @@ FILES=tuple('scripts/ci/'+p for p in ('e858_phase1/b1_operator.py','e858_phase1/
     'e858_phase1/backend_candidate.py','e858_phase1/launcher_candidate.py',
     'e858_phase1/b_procedural_attempt.py','e858_phase1/b1_attempt_reservation.py',
     'e858_phase1/phase1_driver_candidate.py','e858_phase1/connection_handoff_candidate.py',
-    'e858_phase1/r1_driver.py','e858_tls/bridge.py'))
+    'e858_phase1/producer_candidate.py',
+    'e858_phase1/bridge_core.py','e858_phase1/wire_core.py',
+    'e858_phase1/identity_core.py','e858_phase1/sql_pins.py','e858_tls/compare_core.py','e858_tls/stream_core.py'))
 KEYS=('engine','identity','grants','ledger','table','column','index','foreign_key','check','trigger',
       'semantic_version','semantic_index','semantic_foreign_key','column_extra')
 FROZEN=tuple('scripts/ci/'+p for p in ('e858_audit/core.py','integrated_release20_audit.py',

@@ -29,6 +29,7 @@ class PreparedChild:
     """
     def __init__(self,process,until):
         self.process=process;self.used=False;self.ready=False;self.parent=os.getpid()
+        self._producer_binding=None
         selector=None
         try:
             if (type(process) is not Popen or type(until) not in (int,float)
@@ -48,7 +49,7 @@ class PreparedChild:
                     if not READY.startswith(output):raise Block()
             if self._identity()!=self.identity or not time.monotonic()<until:raise Block()
             selector.close();selector=None
-            self.ready=True
+            self.ready_at=time.monotonic();self.ready=True
         except BaseException:
             self.used=True;local_cleanup=True
             if selector is not None:

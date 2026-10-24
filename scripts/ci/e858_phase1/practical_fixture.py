@@ -111,7 +111,7 @@ def child_case(fault,parent):
             starts_at=now-1,expires_at=now+120)
         for directory,name,data in ((private,'target.json',raw),(private,'ca.pem',ca),(independent,'review.json',canonical(value))):
             path=directory/name;path.write_bytes(data);path.chmod(0o600)
-        original_read=b.Channel.read;original_write=r.Wire._write_bytes;capture=p.ReviewedEntry.capture
+        original_read=b.Channel.read;original_write=p.r.Wire._write_bytes;capture=p.ReviewedEntry.capture
         secret_refs=[]
         def capture_once(obj):
             result=capture(obj);secret_refs.append(result._password)
@@ -142,7 +142,7 @@ def child_case(fault,parent):
             review=p.PrivateReview(str(independent),sha(canonical(value)),program)
             entry.begin(str(private),human_supervised=True);entry.bind_review(review)
             adapter=IsolatedAdapter(entry,scope)
-            with patch.object(p.ReviewedEntry,'capture',capture_once),patch.object(b.Channel,'read',read),patch.object(r.Wire,'_write_bytes',send):
+            with patch.object(p.ReviewedEntry,'capture',capture_once),patch.object(b.Channel,'read',read),patch.object(p.r.Wire,'_write_bytes',send):
                 result=adapter.run()
             wires=adapter.boundary.wires
             traces=[dict(role=w.gate.role,cid=w.thread_id(),sql=w.gate.sent,quit_written=w.quit_written) for w in wires if w.gate.sent]

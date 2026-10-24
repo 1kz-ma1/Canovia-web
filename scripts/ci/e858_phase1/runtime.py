@@ -17,121 +17,51 @@ from e858_tls.control_contract import Attempt, Binding, ExpectedTarget, Observat
 from e858_b_offline import validate, outcome, canonical, SOURCE, RELEASE, COLLECTOR, TRANSPORT, CONTRACT
 from p0_mysql_metadata_grants_guard import verify_grants
 from .protocol import Gate, INIT, CID, CONTROL_ID, MAX_POLLS
+from .wire_core import Wire as CoreWire,Channel as CoreChannel,SharedBudget
 
 
-class Wire(StrictConnection):
-    """Both roles use the fixed existing synthetic inspector; no kwargs input."""
+class Wire(CoreWire):
     def __init__(self, gate, fault=None):
-        if fault not in (None, 'wrong_ca', 'wrong_host', 'expired'):
-            raise Block('PHASE1_FIXTURE_REJECTED')
-        self.gate = gate
-        host = {'wrong_host':'mismatch.synthetic.invalid','expired':'expired.synthetic.invalid'}.get(fault,HOST)
-        ca = '/synthetic/wrong-ca.pem' if fault=='wrong_ca' else '/synthetic/ca.pem'
-        super().__init__(host=host, port=3306, user=USER, password=PASSWORD, database=DB,
-            ssl=context(ca), charset='ascii', autocommit=None, sql_mode=None,
-            connect_timeout=2, read_timeout=10, write_timeout=10,
-            cursorclass=pymysql.cursors.SSCursor)
-        self.quit_written = False
+            if fault not in (None, 'wrong_ca', 'wrong_host', 'expired'):
+                raise Block('PHASE1_FIXTURE_REJECTED')
+            self.gate = gate
+            host = {'wrong_host':'mismatch.synthetic.invalid','expired':'expired.synthetic.invalid'}.get(fault,HOST)
+            ca = '/synthetic/wrong-ca.pem' if fault=='wrong_ca' else '/synthetic/ca.pem'
+            super().__init__(host=host, port=3306, user=USER, password=PASSWORD, database=DB,
+                ssl=context(ca), charset='ascii', autocommit=None, sql_mode=None,
+                connect_timeout=2, read_timeout=10, write_timeout=10,
+                cursorclass=pymysql.cursors.SSCursor)
+            self.quit_written = False
 
     def connect(self, sock=None):
-        if sock is not None:
-            raise Block('PHASE1_SOCKET_OVERRIDE_REJECTED')
-        result = super().connect()
-        if (not isinstance(self._sock,ssl.SSLSocket) or not self._sock.getpeercert()
-                or not self._sock.cipher()):
-            self._force_close();raise Block('PHASE1_TLS_UNVERIFIED')
-        return result
-
-    def _read_bytes(self,count):
-        remaining=self.gate.deadline-time.monotonic()
-        if remaining<=0:raise Block('STREAM_TIMEOUT')
-        self.gate.budget.wire_bytes+=count
-        if self.gate.budget.wire_bytes>TOTAL:raise Block('WIRE_TOTAL_CAP')
-        self._read_timeout=min(10,remaining)
-        return super()._read_bytes(count)
-
-    def _write_bytes(self,data):
-        remaining=self.gate.deadline-time.monotonic()
-        if remaining<=0:raise Block('STREAM_TIMEOUT')
-        self._write_timeout=min(10,remaining)
-        return super()._write_bytes(data)
-
-    def _execute_command(self, command, sql):
-        sql = self.gate.claim(command, sql)
-        result = super()._execute_command(command, sql)
-        self.gate.sent.append(sql.decode('ascii'))
-        return result
-
-    def graceful_close(self):
-        # PyMySQL close() suppresses COM_QUIT write failure. Record successful
-        # write explicitly; neither this nor local close proves remote absence.
-        if self._closed or self._sock is None or self.quit_written:
-            raise Block('PHASE1_CLOSE_UNVERIFIED')
-        self._closed = True
-        try:
-            self._write_bytes(struct.pack('<iB',1,1))  # COM_QUIT, not SQL.
-            self.quit_written = True
-        except Exception:
-            raise Block('PHASE1_CLOSE_UNVERIFIED') from None
-        finally:
-            self._force_close()
-
-    def close(self):
-        # Error cleanup is local-only, never emits a hidden QUIT or KILL.
-        self._force_close()
+            if sock is not None:
+                raise Block('PHASE1_SOCKET_OVERRIDE_REJECTED')
+            result = StrictConnection.connect(self)
+            if (not isinstance(self._sock,ssl.SSLSocket) or not self._sock.getpeercert()
+                    or not self._sock.cipher()):
+                self._force_close();raise Block('PHASE1_TLS_UNVERIFIED')
+            return result
 
 
-class SharedBudget:
-    def __init__(self):
-        self.until = time.monotonic()+120
-        self.used = 0
-        self.wire_bytes = 0
 
 
-class Channel:
-    """Reuse #806 bounded stream reader without its observer/abort interface."""
+
+class Channel(CoreChannel):
     def __init__(self, role, config, budget, fault=None):
-        self.budget = budget
-        self.until = budget.until
-        self.query_seconds = 10
-        self.gate = Gate(role, config['q0'], config['q1'], self.until)
-        self.gate.budget = budget
-        self.conn = Wire(self.gate, fault)
-        try: self.conn.connect()
-        except BaseException:
-            self.conn.close();raise
-        self.original, self.tls = self.conn, self.conn._sock
-        self.cid = self.conn.thread_id()
-        self.cancel_socket = socket.socket(fileno=os.dup(self.tls.fileno()))
-        self.closed = False
+            self.budget = budget
+            self.until = budget.until
+            self.query_seconds = 10
+            self.gate = Gate(role, config['q0'], config['q1'], self.until)
+            self.gate.budget = budget
+            self.conn = Wire(self.gate, fault)
+            try: self.conn.connect()
+            except BaseException:
+                self.conn.close();raise
+            self.original, self.tls = self.conn, self.conn._sock
+            self.cid = self.conn.thread_id()
+            self.cancel_socket = socket.socket(fileno=os.dup(self.tls.fileno()))
+            self.closed = False
 
-    @property
-    def used(self): return self.budget.used
-
-    @used.setter
-    def used(self,value): self.budget.used = value
-
-    def check_owned(self):
-        if (self.conn is not self.original or self.conn.thread_id()!=self.cid
-                or self.conn.connect_count!=1 or type(self.cid) is not int or not 0<self.cid<2**32
-                or (not self.closed and (self.conn._sock is not self.tls or not self.conn.open))):
-            raise Block('PHASE1_CID_CONTINUITY_UNVERIFIED')
-
-    def read(self, sql, cap=1):
-        if self.closed:raise Block('PHASE1_CHANNEL_CLOSED')
-        self.check_owned()
-        return Session._execute(self,sql.decode('ascii'),cap)
-
-    def normal_close(self):
-        self.check_owned()
-        self.conn.graceful_close()
-        self.closed = True
-        self.cancel_socket.close()
-
-    def drop(self):
-        self.conn.close()
-        self.cancel_socket.close()
-        self.closed = True
 
 
 def load():

@@ -23,6 +23,7 @@ from .b1_operator import Root
 from .tls_handoff_candidate import VerifiedTLSHandoff
 from .connection_handoff_candidate import ConnectedPeer
 from .phase1_driver_candidate import Phase1DriverCandidate
+from .producer_candidate import ProducerBinding
 from .private_binding import Block
 
 HOSTS=('mysql.synthetic.invalid','mismatch.synthetic.invalid')
@@ -68,7 +69,7 @@ class DNSWorker:
     def close(self,until):return _reap(self.process,until)
 
 
-def owned_resolve(host,until,mode='normal',worker=None):
+def owned_resolve(host,until,mode='normal',worker=None,request=None):
     proc=None;reaped=False;failed=False;result=None;status='DNS_SCOPE_REJECTED'
     try:
         if host not in HOSTS or mode not in ('normal','timeout','malformed','oversize','stderr','signal','flood'):raise Block()
@@ -81,6 +82,7 @@ def owned_resolve(host,until,mode='normal',worker=None):
         if worker is None:worker=DNSWorker()
         if type(worker) is not DNSWorker or worker.used:raise Block()
         worker.used=True;proc=worker.process
+        if request is not None and json.loads(request)!=dict(host=host,mode='normal'):raise Block()
         try:raw=worker.prepared.exchange(json.dumps(dict(host=host,mode=mode)).encode('ascii'),until)
         except Block as error:
             reaped=error.dns_reaped;status=error.dns_status;raise
@@ -125,16 +127,20 @@ class OwnedWire(Phase1DriverCandidate,old.FixtureWire):
         self.created.append(self);self.plan=None;self.dns_started=False;self.dns_reaped=False
         self.authentication_packets=0;self.tls_handshake_started=False;self.tls_handoff=None
         self.auth_boundary=None;self.peer_handoff=None
+        self.producer=None;self.procedure=None
     def connect(self,sock=None):
         raw=None
         try:
             if (sock is not None or self.connect_count or self.plan is None
                     or type(self.worker) is not DNSWorker or self.worker.used):raise Block()
             self.check_binding()
+            if self.fault=='WORKER_AFTER_INPUT':self.worker.prepared.ready_at=time.monotonic()
+            self.producer=ProducerBinding(self,self.procedure,self.worker.prepared)
+            request=self.producer.dns_request()
             mode={'DNS_TIMEOUT':'timeout','DNS_MALFORMED':'malformed','DNS_OVERSIZE':'oversize','DNS_SIGNAL':'signal','DNS_STDERR':'stderr','DNS_FLOOD':'flood'}.get(self.fault,'normal')
             self.dns_started=True
             try:
-                answers=owned_resolve(self.target.host,self.plan.until,mode,self.worker)
+                answers=owned_resolve(self.target.host,self.plan.until,mode,self.worker,request)
                 self.dns_reaped=True;self.dns_status='DNS_ANSWERED'
             except Block as error:
                 self.dns_reaped=getattr(error,'dns_reaped',False)
@@ -142,18 +148,18 @@ class OwnedWire(Phase1DriverCandidate,old.FixtureWire):
                 raise
             if self.fault=='DNS_UNOWNED':answers.append([socket.AF_INET,socket.SOCK_STREAM,6,'',['198.51.100.9',3306]])
             if self.fault=='DNS_BAD_PORT':answers[0][4][1]=3307
-            peer=self.plan.resolution(answers)
+            peer=self.producer.resolved(answers)
             # Synthetic containment only. This list is NOT an Aiven IP policy.
             if any(a[4][0] not in self.namespace['owned_ips'] for a in answers):raise Block()
             raw=socket.socket(peer.family,socket.SOCK_STREAM,socket.IPPROTO_TCP)
             raw.settimeout(self.plan.remaining());raw.connect(peer.address)
             if self.fault=='TCP_HANDOFF_EXPIRED':self.plan.until=time.monotonic()-1
             if self.fault=='TCP_PEER_CHANGED':self.plan.peer=Peer(peer.family,('198.51.100.9',3306))
-            self.peer_handoff=ConnectedPeer(self.plan,raw)
-            raw=self.peer_handoff.take()
+            raw=self.producer.take_socket(raw)
             self.ctx=OwnedTLS(self)
             r.StrictConnection.connect(self,sock=raw);raw=None
             if not self.plan.verified:raise Block()
+            self.producer.authenticated()
             self.tls_verified=True
         except BaseException as error:
             original=getattr(error,'original_exception',error)
@@ -169,6 +175,8 @@ class OwnedWire(Phase1DriverCandidate,old.FixtureWire):
         try:return super().close()
         finally:
             if getattr(self,'peer_handoff',None) is not None:self.peer_handoff.close()
+            if getattr(self,'producer',None) is not None:self.producer.close()
+            self.procedure=None
 
 
 class OwnedBoundary(old.FixtureBoundary):
@@ -190,6 +198,7 @@ class OwnedBoundary(old.FixtureBoundary):
         except BaseException:self.close();raise Block() from None
         wire=super().factory(gate,fault)
         wire.bind_entry(self.entry);wire.worker=self.workers[len(self.wires)-1]
+        wire.procedure=self.launcher._procedure
         return wire
     def close(self):
         if self.launcher is not None:self.launcher.close()
@@ -224,7 +233,7 @@ CASES=('NORMAL','DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_UNOWNED','DNS_
        'PEER_CHANGED','SNI_CHANGED','CA_STORE_CHANGED','WRONG_CA','WRONG_HOST','AUTH_FAILURE',
        'GRANTS_MISSING','GRANTS_EXCESS','SERVER_CHANGED','CONTROL_LOST','TIMEOUT','QUIT_FAILURE',
        'DNS_SIGNAL','DNS_STDERR','DNS_FLOOD','INTERRUPT','RECONNECT','REVIEW_REVOKED','DATA_LOST',
-       'TLS_BYPASS','TCP_HANDOFF_EXPIRED','TCP_PEER_CHANGED')
+       'TLS_BYPASS','TCP_HANDOFF_EXPIRED','TCP_PEER_CHANGED','WORKER_AFTER_INPUT')
 
 
 def child_case(fault,parent):
@@ -246,6 +255,9 @@ def child_case(fault,parent):
             patch.object(p.ReviewedEntry,'capture',before_input):
         result=old.child(mapped,parent)
     wires=OwnedWire.created
+    if fault=='WORKER_AFTER_INPUT':
+        if result['sql_count'] or any(w.authenticated or w.worker.process.poll() is None for w in wires):raise Block()
+        for wire in wires:wire.dns_reaped=True  # actual boundary cleanup, no DNS request issued
     if fault in CASES[1:9] and (result['sql_count'] or any(w.authenticated for w in wires)):raise Block()
     if not wires or not all(w.dns_reaped for w in wires):raise Block()
     if len(DNSWorker.created)!=2 or any(w.process.poll() is None for w in DNSWorker.created):raise Block()
