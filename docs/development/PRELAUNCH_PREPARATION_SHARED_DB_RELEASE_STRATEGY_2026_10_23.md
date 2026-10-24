@@ -283,3 +283,61 @@ python3 scripts/ci/preparation_mac_lab.py --source-sha "$ACCEPTANCE_SHA" --profi
 Mac Safari本人受入、iPhone実機、実効全runtime profile/旧worker/cache/SW/静的経路、既存ユーザーのAP画面停止影響、候補固定/実DB・追加20件/独立実backup restore/Privacy/各Owner GOは未解除。今回のlabでDB互換や本番認証/session/運用復旧をPASSにしない。**次の推奨操作は上記のMac Safari無公開受入だけ**。本番flag変更や実Aiven監査を依頼する段階ではない。
 
 `DEVICE_NOT_RUN / NOT_DEPLOYED / A_SHARED_DB_PRELAUNCH_NO_GO / PRODUCTION_NO_GO_HOLD`
+
+## 11. 2026-10-24 横断的な関心診断・グラフ結果・Futureへの導線（製品決定）
+
+> Product decision: [D-2026-10-24-01](decisions/2026-10-24_PRELAUNCH_BROAD_INTEREST_DISCOVERY_DECISION.md)
+>
+> **PRODUCT DIRECTION ACCEPTED / INTERACTION & DATA CONTRACT PROPOSED / NOT IMPLEMENTED / NOT DEPLOYED / PRODUCTION_NO_GO_HOLD**。本項は§1・§9の「先行診断＝Study/Development現在地入力」という**入口UIの具体的な対象を更新**する。従来の深い診断・本人Plan/Task/履歴/認可を削除・改変しない。§3・§10・Issue #488の全HOLD継続。
+
+### 11.1 製品目的と用語（2つの独立した成果）
+
+1. **本人向けの関心プロフィール:** 学習や開発に限定せず、あらゆる目標領域に対する現在の自己申告の興味の強さを可視化し、後から修正できる。グラフは**性格/才能/適性・実際に使う可能性**の測定ではない。
+2. **Canovia側の需要検証:** どの分野に興味を持つ登録者がいるかと、**「Canoviaがその領域を支援したら使いたい」かという利用意向**を分離して理解する。選択したカテゴリーの%を市場シェア/課金意思/需要予測とみなさない。個人の興味を公開ランキングや勝手な他者比較に使わない。
+
+先行リリースにおける成功は、興味分布の結果・本人の必要に応じた準備Planへの接続・承認済みFuture案内、本人アカウントでの保持/再訪。正式版の専門機能をこの診断で解放しない。
+
+### 11.2 画面体験：横断→自己理解→期待→任意のPlan
+
+| Step | 画面 | 必須/省略可 | 受入と境界 |
+| --- | --- | --- | --- |
+| 0 | 「Canoviaで何を目指したい？」／診断の趣旨・利用範囲 | 診断自体スキップ可 | 既存の手入力Plan・Future・Helpへ自由に進める。自動でPlan作成しない |
+| 1 | 興味のあるカテゴリを複数選択 | 任意、未定/その他あり | 学習・開発に限定しない。専門サービスの提供状況と関心カテゴリを混同しない |
+| 2 | 選んだ領域ごとに興味の強さを軽く入力（例：1〜5の5段階） | 質問数を選択数に合わせる | 100点の手動割振りは要求しない。未回答・スキップも有効な状態 |
+| 3 | **「あなたの現在の関心」結果画面**。カテゴリ別横棒グラフ/数値表、本人が修正できる | これが初回診断のユーザー価値 | 興味の合計を100%に正規化し各カテゴリの割合を表示。本人回答由来・基準日・計算方法を記載。能力/目標の完成度とは言わない |
+| 4 | 目立つ**「興味のある機能の今後を見る（Canovia Future）」** と、関心の高いカテゴリに対する将来体験の公開カード | Futureは任意 | 「開発中」「検証中」「検討中/今後の予定」の**承認済み**状態・公開説明を表示。現行公開ロードマップに対応しないカテゴリには虚偽の約束を出さず、全体のFutureへ |
+| 5 | **「この関心から目標を準備する」**（任意）と利用意向の任意質問 | Plan作成/調査利用は任意 | 選んだカテゴリをPlanの入力補助に使う前に本人確認。Career等の未実装専門Plan生成を自動で開かず汎用Planを利用できる |
+| 6 | 保存/再訪/編集 | 本人認証を伴う永続化 | 同じCanonical Accountで保持。既存Plan、Self-Reported Study/Development情報と両立し、正式リリース時に再入力強制しない |
+
+**候補カテゴリ（表示名/コードはオーナー承認後固定・バージョン管理）**：`study`（学習）、`development`（開発・ものづくり）、`career`（就職・キャリア）、`work`（仕事・生産性）、`life`（暮らし・習慣）、`creative`（趣味・創作）、`finance`（お金・家計）、`wellbeing`（健康・ウェルネス）、`other`（その他）と「まだ決めていない」。将来のカテゴリ分割・統合に対応できるよう識別子/カテゴリ定義版を残す。「健康」「お金」は*興味カテゴリのみ*で病歴・収入額・借入・家庭環境など詳細を聞かない。カテゴリーが多すぎるなら初回選択は表示グループ化で軽くする。
+
+**割合の具体例（採用前テストで決定）**：本人が選択したカテゴリに1〜5の整数点を設定し、`share_i=100*score_i/sum(score)` を表示用に算出。丸め後の合計は100%となる決定論的な余り配分を用いる。元の点数・カテゴリ版も保持し、図表に「自己申告の興味の配分。将来の利用予測や適性評価ではありません」を表示する。全0/未選択なら「まだ決めていない」、グラフの強制表示なし。**横棒グラフ＋ラベル/割合**を第一候補とし、色だけで意味を表現せず、390px・Safari・キーボード/スクリーンリーダー用に同じ情報をテキストでも表示する。レーダーグラフはカテゴリ数が多く比較/理解が難しいため初回標準にしない。
+
+### 11.3 結果からの「将来こんな体験ができます」連携
+
+- User interest categoryとCanovia Futureの**公開カテゴリ/カード識別子**は別。手動審査された `category_key → approved_public_roadmap_key(s)` の**許可リスト**を作り、`PublicRoadmapProjectionService` と `config/canovia_public_roadmap.php` の**公開済みprojectionだけ**を紹介に使用。
+- 学習：学習計画→演習/理解度/次Actionなどの**将来体験の方向性**。開発：作業記録→進捗/次Action/連携などの方向性。就活：応募/準備/選考の整理などの**将来候補**。Careerは正式版でカバー**予定/検討**でも現時点では実提供/時期を約束しない。公表文はロードマップのowner審査を要する。
+- Futureに適合する公開カードがない場合は「この分野の機能は現在検討中／紹介可能な具体的な内容はありません」等の安全な汎用案内に止め、私的なFuture仕様や架空の進捗・Support票数を公開しない。
+- 結果画面のFuture CTAを明瞭に（主CTAに近い位置）。Futureから結果へ戻れるようにするが、結果のprivate detailsをURL/queryや第三者参照へ漏らさない。
+- **結果画面の中心は本人のグラフ**。市場データ・他ユーザーランキング・内部検証数値を混ぜない。
+
+### 11.4 保存・既存機能・安全の互換性
+
+現行は `PersonalizationController::store` が `study/development/unsure` だけを検証し、`PersonalizationBootstrapService::buildContext` はその2分野用に組み立てる。`PersonalizationContextService::normalize()` と `selfReportedPayload()` は固定キーを再構成するため、**未知キー追加だけでは自己申告が継続保存されない可能性がある**。したがって、全カテゴリを既存 `domains` に単純に混ぜ込んだり、Study/DevのFeature readiness・本人Progressの意味を変えたりしない。
+
+- **データ契約の実装候補**：`interest_profile`（schema_version, category_version, score_map, recorded_at, optional_intent_map）を本人の自己申告として**既存Canonical UserPersonalizationContextの安全な名前空間**または審査された別構造へ保存。既存JSONカラム再利用の安全性は`current/normalize/selfReportedPayload/buildContext`等の実コードを検証し、更新時に双方の回答が保持されることをテストで証明した場合に限る。新migrationが不要と推定しない。既存Plan/Task/Study/Development/Goal IDとowner・historyに干渉しない。
+- **Authorization**：準備診断の一般向け入口をL0に開放する設計が必要なら、現在のL1 `/personalization` を黙って緩めず、別の最小scope route/controller/deny test・本人認証/Guest責任を定義する。L1既存詳細診断は互換維持。Admin bypassや専門機能の解放なし。
+- **研究データ**：本人が結果を見るための保存と、改善目的の集計用利用/計測を分け、明瞭に説明して選択可能にする。集計はカテゴリコード/利用希望など必要最小限、同意/撤回・目的/保存期間・削除・同一ユーザー重複の扱いを設計する。ユーザーの自由記述Plan全文、金融/健康の詳細を解析用イベントに複写しない。集計結果を外部/全ユーザー向けに公開しない。
+- **無配備の受入**：新規L0／既存L1／Admin／非ログイン、開始/skip/途中離脱/訂正/再診断、割合合計=100・整数丸め・未選択・旧Context共存・正式UI復帰、Future対象あり/なし/状態変更時の表示、本人Plan関連付け/他人アクセス拒否、XSS/CSRF/IDOR、390px・Mac Safari実機と合成ブラウザ。個人データの保存失敗で成功を表示しない。
+- **公開ゲート**：20 migrations・実Aiven/schema・独立restore・配置候補・全runtime/旧worker・Privacy・owner GOなどは完全維持。興味診断の実装でこれらのHOLDを解除したとみなさない。
+
+### 11.5 Codexの次の実装スライス（方針承認後の推奨順）
+
+1. **契約を先に固定**：カテゴリコード・interest intensityと利用意向の別質問・個人データ保存/分析同意・現在地詳細の既存セマンティクスの影響図。合成fixtureと少数の画面設計を合わせて合意する。
+2. **純粋関数とテスト**：versioned分類、重み正規化、未選択/丸め、既存診断の自己申告と共存する読み書き、無断書換え防止。DB新DDLが必要なら本番HOLDに統合し、最小実装を選ぶ。
+3. **元CanoviaのPreparation UI**：横断カテゴリ選択→関心配分チャート→「Canovia Future」「任意のPlan準備」。既存詳細診断/Planを破壊しない。全く新しい独立Local-first UIに置換しない。
+4. **ロードマップ接続**：ownerが承認した公開コピー・成熟度にしか接続しない。Careerを完成扱いしない。書込み投票/Supportは先行profileの閉鎖境界を維持。
+5. **合成Browser/E2E・実機UX**：L0/L1、本人帰属、保存/編集、別ユーザー、外部通信ゼロ、Futureからの復帰、近似アクセシビリティ。緊急公開切替/既存AP停止HOLDは別。
+6. **Analyticsは最後に最小範囲で**：明示された利用意向と結果閲覧を無関係な既存Plan実績から推論せず、Privacy・集計仕様が確認された範囲だけ実装。分布の採用判断はサンプル数・分母・選択バイアスを明記。
+
+**新チャット用追記**：「先行診断はStudy/Developmentの計画作成フォームから、広いカテゴリの相対的な関心プロフィールと独立した利用意向の検証へ製品方針が変わった。現行L1詳細診断・自己申告/Planのcanonical semanticsを守り、結果を横棒%グラフ、承認済みFutureへCTA、任意Plan保存へ接続する。§11とD-2026-10-24-01を読み、PRを小分けで作る。productionはNO-GO。」
