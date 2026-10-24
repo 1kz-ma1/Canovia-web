@@ -1200,3 +1200,35 @@ Shared canonical-DB readiness, actual schema/restore/auth/release gates remain
 BLOCKING_SHARED under the preparation-first strategy. This candidate alone does
 not authorize preparation publication or prove an alternative deployment safe.
 `TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
+
+### 2026-10-25 Inert Runtime / B trial / Producer context binding
+
+The dispatcher binding candidate transfers the existing RuntimeFileLock and new
+public placement lease, and borrows the already reviewed BProceduralAttempt.
+It pins the identical Program object, runtime digest, archive/tooling/source
+context, private Entry/target/attempt seal and process/deadline. Only the same
+trial's exact ordered Control/Data ProducerBinding objects may join, once;
+replacement, expiry, duplicate roles, different Gate/worker or runtime drift
+invalidates the binding. File observations and local B confirmation/reservation
+are explicitly NOT approval. There is no run/resolve/dial/capture/activation API,
+callback or factory. Failure releases the runtime observations; existing Bridge
+finally remains responsible for the trial/secret/worker/socket. No retry permit
+is generated or reservation removed.
+
+Delta tests reuse the existing real synthetic PTY/driver/PreparedChild trial,
+adding real public-file placement and checkout-origin checks before R1, then
+verify role binding, repeated request rejection, runtime expiry, Program/Gate
+drift before any DNS/socket. The existing owned MySQL8.0/8.4 path tests the shared
+unchanged Producer/driver/TLS/Bridge; it does not prove a live dispatcher or the
+whole newly staged Program runtime. No mock/fixture becomes live admission.
+
+**Remaining technical work:** complete Program/native-runtime import bootstrap
+from installed files (not just isolated snapshot module import), plus the
+separately reviewed private B authorization origin and actual single-target
+live executor. The new inert context contract deliberately cannot fill that
+origin with JSON/TTY/marker/bool or call an owned executor from public code.
+Full17 metadata scope is separately unapproved: Phase1 remains fixed Q0/Q1,
+2 TLS, normal15/max42 SQL, query10s/total120s with unchanged caps. Actual schema,
+TRIGGER visibility, migration principal/binlog, restore, shared-DB readiness and
+public release remain separate gates. No signature can substitute for missing
+implementation. This remains A: TECHNICAL_WORK_REMAINING, not B.
