@@ -139,6 +139,14 @@ class RuntimePlacementCandidate:
         os.fsync(fd)
         st = os.fstat(fd)
         if st.st_nlink!=1 or st.st_uid!=os.geteuid() or not stat.S_ISREG(st.st_mode):raise Block()
+        # Retain only a read descriptor after publication; no writable handle
+        # survives into snapshot import or the lease.
+        os.close(fd)
+        self._fds.remove(fd)
+        fd = os.open(parts[-1], os.O_RDONLY|os.O_NOFOLLOW|os.O_CLOEXEC,
+                     dir_fd=self._directories[parent])
+        self._fds.append(fd)
+        if _identity(os.fstat(fd)) != _identity(st):raise Block()
         self._files[name] = (parent,parts[-1],fd,_identity(st))
         self._bytes[name] = raw
 

@@ -41,6 +41,8 @@ class Placement(unittest.TestCase):
         result=candidate.check()
         self.assertFalse(result['execution_allowed'])
         self.assertNotIn(str(self.root),repr(result)+repr(candidate))
+        for _,_,fd,_ in candidate._files.values():
+            with self.assertRaises(OSError):os.write(fd,b'x')
         spec=candidate.spec('e858_phase1.sql_pins')
         module=importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
