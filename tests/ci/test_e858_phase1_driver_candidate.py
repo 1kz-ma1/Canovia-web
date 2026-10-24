@@ -170,6 +170,12 @@ class DriverBinding(unittest.TestCase):
         for name in ('opener_fixture.py','owned_activation_fixture.py','tls_handoff_candidate.py'):
             self.assertNotIn('scripts/ci/e858_phase1/'+name,b1_package.FILES)
 
+    def test_runtime_binding_rejects_injected_types_without_invoking_them(self):
+        class Untrusted:
+            def check(self):raise AssertionError('UNTRUSTED_CALLBACK')
+            def close(self):raise AssertionError('UNTRUSTED_CALLBACK')
+        with self.assertRaises(Block):DispatcherBindingCandidate(Untrusted(),Untrusted(),Untrusted())
+
     def test_runtime_trial_producer_is_one_inert_context_and_cannot_repeat(self):self.trial('DISPATCH_NORMAL')
     def test_runtime_expiry_or_program_drift_blocks_before_dns(self):
         self.trial('DISPATCH_RUNTIME_EXPIRED');self.trial('DISPATCH_PROGRAM_CHANGED')

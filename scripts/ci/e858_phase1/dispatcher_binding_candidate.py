@@ -31,7 +31,9 @@ class DispatcherBindingCandidate:
             # Type-check before taking ownership. Never invoke an injected object's
             # check/close method as a pretend authority or connector callback.
             self.lock,self.placement,self.procedure=runtime_lock,placement,procedure
-            if procedure.state!='PREFLIGHTED' or procedure.entry.secret is not None:raise Block()
+            if (procedure.state!='PREFLIGHTED' or procedure.entry.secret is not None
+                    or getattr(procedure,'_runtime_dispatch_binding',None) is not None):raise Block()
+            procedure._runtime_dispatch_binding=self  # sticky even after failure/close
             self.entry=procedure.entry;self.program=self.entry.review.program
             self.seal=procedure._seal;self.target=self.entry.target
             self.attempt_id=self.entry.review.value['attempt_id']
@@ -46,7 +48,8 @@ class DispatcherBindingCandidate:
             if self.state=='STOPPED' or os.getpid()!=self.pid or time.monotonic()>=self.until:raise Block()
             self.lock.check();self.placement.check();p=self.procedure;p.check()
             value=self.entry.review.check()
-            if (p.entry is not self.entry or p._seal!=self.seal or p.until<self.until
+            if (p.entry is not self.entry or p._runtime_dispatch_binding is not self
+                    or p._seal!=self.seal or p.until<self.until
                     or self.entry.target!=self.target or value['attempt_id']!=self.attempt_id
                     or self.entry.review.program is not self.program or self.lock._program is not self.program
                     or self.program.runtime!=self.runtime or self.program.sha!=self.placement.archive_sha
