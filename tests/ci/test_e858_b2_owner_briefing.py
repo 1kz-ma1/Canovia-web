@@ -54,7 +54,7 @@ class B2OwnerBriefingTest(unittest.TestCase):
         packet['items'][7]['state'] = 'SELF_REPORTED_READ_NOT_VERIFIED'
         result = brief.assess(packet)
         self.assertEqual(result['declined_steps'], ['R1'])
-        self.assertEqual(result['pending_steps'], list(brief.STEPS[2:7]) + ['P1'])
+        self.assertEqual(result['pending_steps'], ['P1'] + list(brief.STEPS[2:7]))
         # The exact PENDING ordering is always P1,R1,...,B2.
         self.assertFalse(result['execution_allowed'])
 
