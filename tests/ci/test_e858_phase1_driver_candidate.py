@@ -44,7 +44,7 @@ class DriverBinding(unittest.TestCase):
                 with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err),patch('socket.getaddrinfo') as dns,patch('socket.socket') as sock:
                     if dispatch_mode:
                         # Finish public writes before sealing private ancestors.
-                        anchor=self.base/'runtime-anchor';anchor.mkdir(mode=0o700)
+                        anchor=self.base/('runtime-anchor-'+mode);anchor.mkdir(mode=0o700)
                         fd=os.open(anchor,os.O_RDONLY|os.O_DIRECTORY|os.O_CLOEXEC)
                         try:placement=RuntimePlacementCandidate(fd,self.archive,self.program.sha,self.pins,time.monotonic()+120)
                         finally:os.close(fd)
