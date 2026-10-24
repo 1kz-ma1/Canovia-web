@@ -12,6 +12,7 @@ FILES=tuple('scripts/ci/'+p for p in ('e858_phase1/b1_operator.py','e858_phase1/
     'e858_phase1/phase1_application.py','e858_phase1/opener_candidate.py',
     'e858_phase1/backend_candidate.py','e858_phase1/launcher_candidate.py',
     'e858_phase1/b_procedural_attempt.py','e858_phase1/b1_attempt_reservation.py',
+    'e858_phase1/phase1_driver_candidate.py','e858_phase1/connection_handoff_candidate.py',
     'e858_phase1/r1_driver.py','e858_tls/bridge.py'))
 KEYS=('engine','identity','grants','ledger','table','column','index','foreign_key','check','trigger',
       'semantic_version','semantic_index','semantic_foreign_key','column_extra')
