@@ -1036,3 +1036,22 @@ CI runs six relevant negative/positive cases plus the public CLI smoke on Linux 
 **Next real prerequisites, not silently promoted:** independently verify a *particular* fixed private target/principal/CA/tooling provenance, supervised owner identity and P1/R1–R6 residual risk decisions, new just-in-time B2 permission on the exact scope/attempt/window, Mac device and remote termination evidence, and deliberate risk acceptance that B's single-shot safeguard is *procedural* rather than rollback-resistant. A person viewing the briefing, clicking a checkbox, or producing a self-report must never be interpreted as a fresh B2 GO. Do not ask the owner to re-run earlier Mac tests or expose any private materials for this source-only slice.
 
 **Status:** `B2_BRIEFING_PREPARED_ONLY / OWNER_AUTHENTICATION_NOT_PROVEN / B2_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
+
+
+## 2026-10-24 Mac確認後のB2レビュー日本語化・リスク/停止条件整理（実行許可なし）
+
+> **OWNER_MAC_PUBLIC_DISPLAY_OBSERVED / EIGHT_ITEM_JAPANESE_BRIEFING_ONLY / OWNER_RISK_APPROVAL_NOT_ATTESTED / B2_FRESH_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD.** この変更は#873/#874で作成した閲覧用の安全なツールの文面・検証スキーマを改善するだけである。本人が実Macから出力した英語レビュー資料の表示成功は、本人認証・リスク承認・実監査ツールの採用・Aiven接続・GOではない。
+
+### 人間が読む資料で何が変わるか
+
+- `b2_owner_briefing.py` の固定 P1・R1〜R6・B2 **8項目を日本語化**。各項目で「確認すること」「起こり得るリスク」「不一致・異常時の対応」をそれぞれ独立表示し、各項目の `確認状況: 未確認` と、末尾の `TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD` を維持する。
+- 内容は固定e858の対象scope（Q0/Q1・Control観測・2TLS・15通常/42最大固定SQL・接続2秒/全体120秒）と、TTY秘密管理、Mac停止後のremote不明、TLS/CA/CID/failover、COM_QUITとKILLの違い、権限・期限・人間の再実行禁止の限界、実DDL/復旧/リリースの別ゲート、そして**接続直前の新しい個別承認が未発行**という境界に限定する。異常時の説明は作業員向けの「停止・引き継ぎ」方針であり、プログラムが自動的に遠隔セッションを停止・確認できる証明ではない。
+- 読取り専用 `template()` 内の説明文字列は固定であり、 `risk` と `stop` の2フィールドを追加する。試験用 `assess()` は順序・8件・全文・入力型の厳密一致を検査し、旧英語表記や第三者に書換えられた停止手順をBLOCKする。バージョン/名称 `E858_B2_HUMAN_REVIEW_BRIEFING_ONLY_V0` はこの**非認可の閲覧用**ローカル契約に留め、承認authority・署名schemaとして使用しない。旧文面/リスク状態の持続ファイルは存在せず、互換migrationもない。
+- `SELF_REPORTED_READ_NOT_VERIFIED` が8件全部に付いても、owner本人性・了承・P1/R1〜R6受入、B2 GO、独立キー、rollback-resistant durable one-shot、実Aiven・productionはいずれもfalse。`authorize()`は引き続き無条件BLOCK。 `PrivateReview` `OWNER_REVIEW_PENDING_NOT_GO`、`LauncherCandidate.run`/ `OpenerCandidate.open`/ `Adapter.prepare`/ `PrivateWire.connect` の既存禁止は変更しない。
+- `python3 -S -B` のpublic CLIは標準Pythonだけで表示でき、対象/CA/パスワード/本人情報を収集しない。CLIには承認フラグも接続機能もない。失敗時に私的引数を反射しない。検証CIは8項目×表示分類の存在、文章改ざん、英語旧表記、偽承認、秘密漏えい、liveゲート遮断をLinux3.9/3.12とmacOS3.12で確認し、既存のMySQL8.0/8.4等の回帰を継続する。
+
+### Mac表示の差分確認（必要時だけ）
+
+#874で作成した固定worktreeを変更せず、GitHubの新しい**レビュー済み開発main SHA**を別worktreeに固定し、`PYTHONPATH=scripts/ci python3 -S -B -m e858_phase1.b2_owner_briefing --print-public-briefing` を**閲覧のみ**で確認する。元の監査用worktreeを `pull`/ `checkout`/ `reset` しない。以前に取得した実Mac証拠を「日本語化後も実機確認済」と流用しない。今回の文字列とテストが通っても実Aiven実行の安全性・本人同意・production GOのゲートは一つも解除されない。
+
+**継続する未達:** 採用済み実tooling/監査対象/CA/最小権限の独立検証、正当なowner/operator認証とR1〜R6/P1の個別受入、開始直前の新B2一回GO、actual TLS session/remote terminationの実証、B方式の手続上再実行禁止の残留リスク受容、独立backup/restore/物理metadata/production release検証。**STATUS:** `B2_JAPANESE_BRIEFING_ONLY / B2_OWNER_GO_NOT_GRANTED / TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
