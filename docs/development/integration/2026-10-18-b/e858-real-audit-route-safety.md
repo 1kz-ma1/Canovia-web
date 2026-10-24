@@ -830,3 +830,41 @@ New offline delta covers real synthetic direct-child stdout flooding, stderr, si
 **Remaining before live adoption:** independently trusted Mac OS/Python/OpenSSL/NSS/process provenance and private operator/target/reviewer custody, platform-specific bounded process lifecycle and incident escalation; separately reviewed **real activation/backend/launcher entry**, currently absent, is the only place a future single-target live connection could be authorized. This change does not supply a real credential reader or a live permit consumer. The owner must separately adopt exact tooling/package hashes, decide and sign P1/eachR1–R6 privately, then issue fresh Phase1-only one-attempt B2 GO. Signatures cannot waive target/TLS/grants/source mismatch or unknown remote termination. Current real grants/UUID/TLS/termination/failover, broader metadata/TRIGGER/migrations/backup/release remain NOT_RUN/UNVERIFIED. Do not ask for an Aiven probe to close an offline test gap.
 
 `DORMANT_BACKEND_LAUNCHER_CANDIDATE_ONLY / LIVE_TOOLING_NOT_ADOPTED / R1_TO_R6_NOT_ACCEPTED / P1_NOT_SIGNED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
+
+### 2026-10-24 current-source reconciliation and post-cleanup deadline rejection
+
+Review baseline: development main `412eb606bb4d57d4f5b11b3d667dd0ef5618568b`, fixed audit source/release still e858. #795/#796/#797 retain their original reviewed HEADs; #803 adopted B's human-supervised one-off protocol. #809 Full94/same-TLS, #812 control/STOP, #813 Phase1 and #815–#838 TTY/private binding/driver/opener/backend evidence supersede the older “only #797 exists” inventory. The affected libraries, tests and CI on this main are byte-identical to the #838 review boundary. Reuse the owner's #838 Mac15+bundle1 PASS and previous isolated MySQL8.0/8.4 evidence; do not assign those owner checks again. Track H Live94 and the later preparation/interest-diagnostic product work remain separate.
+
+**Reproduced technical gap:** `backend_candidate.exchange()` checked its deadline while exchanging pipe data, but could return a successful DNS payload after child reaping/pipe closure without rechecking time. A synthetic direct child and a deterministic post-reap clock change reproduced three failures on the unmodified source: expiry, NaN and clock exception each returned a result instead of BLOCK. This is a local dormant-backend defect, not evidence of an actual Aiven query continuing or an actual DNS incident.
+
+**Minimal correction:** after confirmed local reaping, require the current monotonic clock to remain strictly before the *original* shared deadline before returning any payload. Expiry, NaN or unreadable clock yields fixed `DNS_TIMEOUT`; `dns_reaped=true` means only the owned local child/pipes are finished. Unknown cleanup still takes precedence as `DNS_CHILD_CLEANUP_UNVERIFIED`. No extra time, retry, worker, network endpoint, authority, credential reader or activation is added. The existing cleanup reserve stays inside the same budget. This checkpoint detects late completion; it cannot make OS scheduling a hard real-time guarantee or prove remote MySQL termination.
+
+The new single differential test has three subcases using only an owned synthetic Python child, anonymous pipes and synthetic clock/error data. It checks fixed status, actual child exit, closed pipes and zero stdout/stderr/private-canary disclosure. Existing normal/timeout/flood/signal/PermissionError/unknown-cleanup and public unconditional-BLOCK tests remain. CI reuses the existing B1 Linux3.9/3.12 + macOS3.12 and owned Full94 MySQL8.0/8.4 fixture, because the packaged backend changed. No unrelated database rehearsal or historical owner test is reimplemented. Exact final HEAD, CI counts and changed public bundle hash belong in #488; the previous #838 bundle hash does not attest the new package.
+
+#### Actual-audit gates after this delta
+
+| Gate | Current classification | Evidence / remaining condition |
+| --- | --- | --- |
+| Source integrity | PASS (offline only) | Existing exact-source/tree/seal/Git-byte checks; e858 is not moving main. Not adoption of a new release source. |
+| SQL / Reference integrity | PASS (offline only) | #795 frozen blobs/bundle, reference and strict comparator reused without changes. Phase1 Q0/Q1 and full metadata are different scopes. |
+| Operator authentication | UNVERIFIED | TTY/FD/native observations and historical owner reports do not authenticate the actual person/operator now. |
+| Approval authenticity | BLOCK | No current adopted tooling, signed P1/individual R1–R6 or fresh B2. Self-HMAC, CI, GitHub comment and approved JSON are not a real authority. |
+| Target / TLS session binding | UNVERIFIED (live) | Isolated same-session TLS/identity/grants/Control is tested; no actual target, CA, session or UUID inspected here. |
+| One-shot durability | BLOCK / NOT_IMPLEMENTED | B is procedural no-retry, not atomic durable anti-replay across processes/restarts/rollback. A's independent authority/store remains unimplemented. If durable consumption is a hard acceptance requirement, B cannot satisfy it; do not elevate this gate with a signature or a synthetic nonce. |
+| Minimal grants | UNVERIFIED (current live) | 10/18 minimal-grant acceptance is historical; no current SHOW or privilege expansion. |
+| INDEX / FK names / definitions | UNVERIFIED (current target) | Existing name-only diagnostic and synthetic migration cases remain separate from strict BLOCK and current database-specific review/collision evidence. |
+| TRIGGER visibility | UNVERIFIED | An audit principal lacking TRIGGER cannot prove complete visibility. Existing authorized DBA evidence is separate; no new grant. |
+| Migration principal / binlog | UNVERIFIED | Runtime DDL/binlog and pending20 execution are not established by inspector metadata or offline success. |
+| Actual e858 metadata collection | NOT_RUN | No real connector/credentials/SQL enabled or used. Old94 historical receipt is not this run. |
+
+The source/SQL PASS classifications mean local integrity only; they cannot override the other gates or grant connection authority. The original strict physical-schema BLOCK remains unchanged.
+
+#### Smallest next step and operator STOP
+
+**Next technical step:** independently review the concrete, currently absent single-target live activation/backend/launcher change against the existing Phase1 packet, incident/remote-termination plan and private custody/runtime evidence. Do not create another approval framework, re-run completed synthetic suites without a change, or ask for an Aiven probe to fill this offline gap. Phase1 bootstrap is not permission for full17 physical metadata. If this request makes persistent atomic consumption mandatory, its trusted authority/store and deployment conditions must first be separately selected and reviewed; no generic CLI can safely assume them.
+
+**Owner next operation:** no connection command is issued here. Once the new HEAD/CI/bundle is fixed, only the changed deadline test (three synthetic subcases) plus changed public-bundle verification may need a no-connection managed-Mac delta; reuse accepted old15/11/26/13. Do not read actual CA/target/password. Publicly share only fixed test outcomes, exact public SHA/hash and no-connection status. STOP on failed source/package/runtime/cleanup checks; do not repair by weakening deadlines, adding grants, switching target or retrying a real GO.
+
+Live operation remains a future, separately reviewed and explicitly authorized one-target/scope/UTC-window attempt. Private P1/each R1–R6/tooling adoption and fresh B2 are independent unfulfilled decisions, not approvals supplied by this document. Unknown remote query/connection status requires STOP, private handoff to the already authorized DBA/operator and new approval before any retry; local reaping or Console controls do not prove remote termination. Real grants/TLS/metadata, full schema/TRIGGER, migration execution, independent actual restore and production promotion/publication remain distinct gates. #800 logical restore success is not Aiven Full-backup restoration; Free and Developer Fork unavailability is unchanged.
+
+`TECHNICAL_WORK_REMAINING / LIVE_TOOLING_NOT_ADOPTED / R1_TO_R6_NOT_ACCEPTED / P1_NOT_SIGNED / B2_FRESH_OWNER_GO_NOT_GRANTED / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`
