@@ -81,7 +81,10 @@ class SyntheticP256Interop(unittest.TestCase):
         corrupt = list(valid)
         corrupt[2] = (valid[2][0]+b' ', valid[2][1])
         wrongsig = list(valid)
-        wrongsig[4] = (valid[4][0], valid[4][1][:-1] + b'X')
+        # A fixed replacement byte was a no-op whenever the random signature
+        # already ended in X (1/256). Always change a bit in this negative.
+        wrongsig[4] = (valid[4][0], valid[4][1][:-1] + bytes([valid[4][1][-1] ^ 1]))
+        self.assertNotEqual(wrongsig[4][1],valid[4][1])
         trailer = list(valid)
         trailer[1] = (valid[1][0], valid[1][1]+b'\x00')
         raw = list(valid)
