@@ -80,6 +80,36 @@ class ChildSupervisor(unittest.TestCase):
         self.assertEqual(error.exception.dns_status,'DNS_CHILD_CLEANUP_UNVERIFIED')
         self.assertFalse(error.exception.dns_reaped)
 
+    def test_expired_or_unreadable_clock_after_reaping_cannot_return_dns_success(self):
+        # The OS can resume us beyond the deadline even after a child was
+        # reaped. A successful DNS payload is not proof that time remains.
+        real_clock=time.monotonic
+        real_reap=b.reap
+        for mode in ('EXPIRED','NAN','CLOCK_ERROR'):
+            with self.subTest(mode=mode):
+                process=self.launch("import sys;sys.stdin.buffer.read();sys.stdout.write('{}')")
+                until=real_clock()+2
+                cleaned=False
+                def now():
+                    if not cleaned:return real_clock()
+                    if mode=='CLOCK_ERROR':raise OSError(CANARY)
+                    return until+1 if mode=='EXPIRED' else float('nan')
+                def cleanup(child,deadline):
+                    nonlocal cleaned
+                    result=real_reap(child,deadline)
+                    cleaned=True
+                    return result
+                out,err=io.StringIO(),io.StringIO()
+                with contextlib.redirect_stdout(out),contextlib.redirect_stderr(err), \
+                        patch.object(b.time,'monotonic',side_effect=now),patch.object(b,'reap',side_effect=cleanup):
+                    with self.assertRaises(Block) as error:b.exchange(process,b'{}',until)
+                self.assertTrue(error.exception.dns_reaped)
+                self.assertEqual(error.exception.dns_status,'DNS_TIMEOUT')
+                self.assertIsNotNone(process.poll())
+                self.assertTrue(all(v.closed for v in (process.stdin,process.stdout,process.stderr)))
+                self.assertEqual(out.getvalue()+err.getvalue(),'')
+                self.assertNotIn(CANARY,str(error.exception))
+
     def test_unknown_resource_cannot_leak_raw_cleanup_error(self):
         class Unknown:
             def poll(self):raise PermissionError(CANARY)

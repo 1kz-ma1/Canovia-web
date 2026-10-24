@@ -83,6 +83,13 @@ def exchange(process,request,until):
             except BaseException:result=None
         try:reaped=reap(process,until)
         except BaseException:reaped=False
+    if result is not None and reaped:
+        # Reaping/pipe closure may resume after the shared deadline. Neither
+        # valid output nor local child exit authorizes using an expired result.
+        try:
+            if not time.monotonic()<until:raise Block()
+        except BaseException:
+            result=None;status='DNS_TIMEOUT'
     if result is None or not reaped:
         error=Block();error.dns_reaped=reaped
         error.dns_status=status if reaped else 'DNS_CHILD_CLEANUP_UNVERIFIED'
