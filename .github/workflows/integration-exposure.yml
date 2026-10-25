@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'scripts/ops/platform_release_preflight.py'
+      - 'tests/ci/test_preparation_release_preflight.py'
       - 'app/Models/User.php'
       - 'app/Providers/AppServiceProvider.php'
       - 'app/Services/ReleaseLevelService.php'

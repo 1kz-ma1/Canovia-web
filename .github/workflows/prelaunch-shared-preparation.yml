@@ -17,6 +17,8 @@ on:
       - 'app/Services/FeatureFlagService.php'
       - 'app/Providers/AppServiceProvider.php'
       - 'app/Bus/**'
+      - 'scripts/ops/platform_release_preflight.py'
+      - 'tests/ci/test_preparation_release_preflight.py'
       - 'app/Http/Controllers/PrelaunchInterestController.php'
       - 'app/Services/PrelaunchInterestContextService.php'
       - 'app/Services/PersonalizationContextService.php'
