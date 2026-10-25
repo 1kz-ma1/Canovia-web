@@ -18,8 +18,10 @@ final class PreparationWorkerStopTest extends TestCase
                 putenv('CANOVIA_PREPARATION_ONLY='.$raw);
                 $this->assertTrue(app(ReleaseLevelService::class)->preparationOnly());
             }
-            putenv('CANOVIA_PREPARATION_ONLY=false');
-            $this->assertFalse(app(ReleaseLevelService::class)->preparationOnly());
+            foreach (['false', 'FALSE', '(false)', '(FALSE)'] as $raw) {
+                putenv('CANOVIA_PREPARATION_ONLY='.$raw);
+                $this->assertFalse(app(ReleaseLevelService::class)->preparationOnly());
+            }
             config(['release_levels.preparation_only' => true]);
             $this->assertTrue(app(ReleaseLevelService::class)->preparationOnly(), 'Raw false must not widen restrictive config');
         } finally {
