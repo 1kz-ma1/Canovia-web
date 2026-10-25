@@ -14,7 +14,7 @@ FILES=tuple('scripts/ci/'+p for p in ('e858_phase1/b1_operator.py',
     'e858_phase1/b_procedural_attempt.py','e858_phase1/b1_attempt_reservation.py',
     'e858_phase1/phase1_driver_candidate.py','e858_phase1/runtime_file_lock_candidate.py',
     'e858_phase1/connection_handoff_candidate.py',
-    'e858_phase1/producer_candidate.py','e858_phase1/runtime_placement_candidate.py',
+    'e858_phase1/producer_candidate.py','e858_phase1/runtime_placement_candidate.py','e858_phase1/dispatcher_binding_candidate.py',
     'e858_phase1/bridge_core.py','e858_phase1/wire_core.py',
     'e858_phase1/identity_core.py','e858_phase1/sql_pins.py','e858_tls/compare_core.py','e858_tls/stream_core.py'))
 KEYS=('engine','identity','grants','ledger','table','column','index','foreign_key','check','trigger',

@@ -1200,3 +1200,53 @@ Shared canonical-DB readiness, actual schema/restore/auth/release gates remain
 BLOCKING_SHARED under the preparation-first strategy. This candidate alone does
 not authorize preparation publication or prove an alternative deployment safe.
 `TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD`.
+
+### 2026-10-25 Inert Runtime / B trial / Producer context binding
+
+The dispatcher binding candidate transfers the existing RuntimeFileLock and new
+public placement lease, and borrows the already reviewed BProceduralAttempt.
+It pins the identical Program object, runtime digest, archive/tooling/source
+context, private Entry/target/attempt seal and process/deadline. Only the same
+trial's exact ordered Control/Data ProducerBinding objects may join, once;
+replacement, expiry, duplicate roles, different Gate/worker or runtime drift
+invalidates the binding. File observations and local B confirmation/reservation
+are explicitly NOT approval. There is no run/resolve/dial/capture/activation API,
+callback or factory. Failure releases the runtime observations; existing Bridge
+finally remains responsible for the trial/secret/worker/socket. No retry permit
+is generated or reservation removed.
+
+Delta tests reuse the existing real synthetic PTY/driver/PreparedChild trial,
+adding real public-file placement and checkout-origin checks before R1, then
+verify role binding, repeated request rejection, runtime expiry, Program/Gate
+drift before any DNS/socket. The existing owned MySQL8.0/8.4 path tests the shared
+unchanged Producer/driver/TLS/Bridge; it does not prove a live dispatcher or the
+whole newly staged Program runtime. No mock/fixture becomes live admission.
+
+**Remaining technical work:** complete Program/native-runtime import bootstrap
+from installed files (not just isolated snapshot module import), plus the
+separately reviewed private B authorization origin and actual single-target
+live executor. The new inert context contract deliberately cannot fill that
+origin with JSON/TTY/marker/bool or call an owned executor from public code.
+Full17 metadata scope is separately unapproved: Phase1 remains fixed Q0/Q1,
+2 TLS, normal15/max42 SQL, query10s/total120s with unchanged caps. Actual schema,
+TRIGGER visibility, migration principal/binlog, restore, shared-DB readiness and
+public release remain separate gates. No signature can substitute for missing
+implementation. This remains A: TECHNICAL_WORK_REMAINING, not B.
+
+The first Mac delta run rejected the new normal binding inside the unchanged
+2-second open window. Review also found that a full RuntimeFileLock recheck
+would spawn Git after R1. Full Git/checkout/runtime validation is now strictly
+pre-input. The original full `check()` gate is retained; `check_sources()`
+factors its same loaded-module, sys.path, source bytes/file identities and root
+drift checks without subprocess or native-program callbacks. After R1 the
+binding uses that source-only observation plus the existing B trial/Entry/Program
+runtime checks. No deadline is enlarged or restarted; a true overrun still BLOCKs.
+A regression asserts no Popen at role binding and no checkout/Program callback
+inside source-only observation. Source-only is explicitly not a fresh Git audit,
+operator authorization or live-runtime provenance proof.
+Role binding itself performs only source/FD observations and immutable-object
+context comparisons after R1; it is not a new pre-I/O admission decision. The
+existing Producer/driver/Bridge still perform the full private Entry/Program,
+TLS, SQL and deadline checks before each I/O. Repeating those checks inside the
+inert binding would consume the already running 2-second open window without
+adding execution authority. No existing Producer/driver check is removed.

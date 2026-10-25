@@ -61,6 +61,12 @@ jobs:
           B1_TEST_PARENT="/canovia-b1-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           sudo install -d -m 700 -o "$(id -u)" -g "$(id -g)" "$B1_TEST_PARENT"
           echo "B1_SYNTHETIC_PARENT=$B1_TEST_PARENT" >> "$GITHUB_ENV"
+      - name: Keep synthetic private records outside the verified Mac checkout
+        if: runner.os == 'macOS'
+        run: |
+          B1_TEST_PARENT="$HOME/.canovia-b1-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          mkdir -m 700 "$B1_TEST_PARENT"
+          echo "B1_SYNTHETIC_PARENT=$B1_TEST_PARENT" >> "$GITHUB_ENV"
       - run: |
           # setup-python injects this Linux loader override. Start the test
           # interpreter without it; Program must keep rejecting overrides.
