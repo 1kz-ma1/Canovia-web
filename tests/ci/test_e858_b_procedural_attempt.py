@@ -51,13 +51,15 @@ class Procedure(unittest.TestCase):
                         if mode!='UNBOUND':procedure.bind_engine(p.Adapter(entry,'phase1'))
                         self.assertLessEqual(procedure.until,initial)
                         self.assertEqual(procedure.state,'PREFLIGHTED')
-                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE','TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','TTY_COPY','ROOT_COPY','ENGINE_COPY','OPERATOR_CHANGED','CLEANUP_FAILURE'):
+                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE','TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','TTY_COPY','ROOT_COPY','ENGINE_COPY','OPERATOR_CHANGED','CLEANUP_FAILURE','WORKER_EARLY'):
                             if mode=='BEFORE_CONFIRM':
                                 with self.assertRaises(Block):procedure.reserve_attempt()
                             elif mode=='FAKE_GO':
                                 with self.assertRaises(Block):procedure.confirm_on_tty(approved=True)
                             elif mode=='CANCEL':
                                 procedure.cancel()
+                            elif mode=='WORKER_EARLY':
+                                with self.assertRaises(Block):procedure.bind_workers(())
                             elif mode=='CLEANUP_FAILURE':
                                 original_close=launcher.close
                                 def fail_cleanup():
@@ -111,6 +113,8 @@ class Procedure(unittest.TestCase):
                                 self.assertEqual(procedure.state,'RESERVED_NOT_AUTHORITY')
                                 self.assertEqual(len(list(self.store.iterdir())),1)
                                 if mode=='AFTER_RESERVED_CANCEL':procedure.cancel()
+                                elif mode=='WORKER_FAKE':
+                                    with self.assertRaises(Block):procedure.bind_workers(({'approved':True},object()))
                                 elif mode=='UNBOUND':
                                     with self.assertRaises(Block):procedure.before_input()
                                 else:
@@ -190,6 +194,9 @@ class Procedure(unittest.TestCase):
             with self.subTest(mode=mode):self.trial(mode)
 
     def test_cleanup_failure_is_redacted_terminal_without_retry(self):self.trial('CLEANUP_FAILURE')
+
+    def test_unreserved_or_fake_workers_cannot_reach_r1(self):
+        self.trial('WORKER_EARLY');self.trial('WORKER_FAKE')
 
     def test_confirmation_reuse_expiry_and_backward_clock_stop(self):
         for mode in ('CONFIRM_TWICE','EXPIRED','CLOCK_ROLLBACK'):

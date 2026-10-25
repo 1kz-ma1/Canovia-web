@@ -30,7 +30,7 @@ class ProducerBinding:
             worker.check();self.worker_identity=worker.identity
             self.state='BOUND_NOT_AUTHORIZED';self.check()
         except BaseException:
-            self.close();raise Block() from None
+            self._abort();raise Block() from None
 
     def check(self):
         try:
@@ -46,7 +46,7 @@ class ProducerBinding:
                     or self.worker._producer_binding is not self):raise Block()
             self.plan.remaining()
         except BaseException:
-            self.close();raise Block() from None
+            self._abort();raise Block() from None
 
     def dns_request(self):
         try:
@@ -55,7 +55,7 @@ class ProducerBinding:
             self.worker.check();self.state='DNS_REQUESTED_NOT_AUTHORIZED'
             return canonical(dict(host=self.entry.target.host,port=self.entry.target.port))
         except BaseException:
-            self.close();raise Block() from None
+            self._abort();raise Block() from None
 
     def resolved(self,answers):
         try:
@@ -66,7 +66,7 @@ class ProducerBinding:
             peer=self.plan.resolution(answers);self.state='TCP_PENDING_NOT_AUTHORIZED'
             return peer
         except BaseException:
-            self.close();raise Block() from None
+            self._abort();raise Block() from None
 
     def take_socket(self,raw):
         handoff=None
@@ -80,7 +80,7 @@ class ProducerBinding:
             else:
                 try:raw.close()
                 except BaseException:pass
-            self.close();raise Block() from None
+            self._abort();raise Block() from None
 
     def authenticated(self):
         try:
@@ -92,7 +92,14 @@ class ProducerBinding:
                     or raw.server_hostname!=self.entry.target.host):raise Block()
             self.state='IDENTITY_CHECK_REQUIRED_NOT_AUTHORIZED'
         except BaseException:
-            self.close();raise Block() from None
+            self._abort();raise Block() from None
+
+    def _abort(self):
+        # A failed producer cannot leave its B trial usable for another DNS or
+        # connection attempt. Entry/secret/marker cleanup stays with the trial.
+        procedure=self.procedure
+        self.close()
+        if type(procedure) is BProceduralAttempt:procedure.cancel()
 
     def close(self):
         self.state='STOPPED'

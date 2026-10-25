@@ -4,6 +4,7 @@ No arbitrary endpoint, credential input, CLI backend switch or live authority.
 DNS child is fixed, non-spawning and receives only a synthetic name/mode over
 a pipe. The supervised process may fail closed if child reaping is unknown.
 """
+import copy
 import json
 import os
 from pathlib import Path
@@ -134,6 +135,8 @@ class OwnedWire(Phase1DriverCandidate,old.FixtureWire):
         try:
             if (sock is not None or self.connect_count or self.plan is None
                     or type(self.worker) is not DNSWorker or self.worker.used):raise Block()
+            if self.fault=='TRIAL_PROGRAM_COPY':self.entry.review.program=copy.copy(self.entry.review.program)
+            if self.fault=='TRIAL_TARGET_COPY':self.entry.target=copy.copy(self.entry.target)
             self.check_binding()
             if self.fault=='WORKER_AFTER_INPUT':self.worker.prepared.ready_at=time.monotonic()
             self.producer=ProducerBinding(self,self.procedure,self.worker.prepared)
@@ -209,6 +212,7 @@ class OwnedBoundary(old.FixtureBoundary):
         wire=super().factory(gate,fault)
         wire.bind_entry(self.entry);wire.worker=self.workers[len(self.wires)-1]
         wire.procedure=self.launcher._procedure
+        if wire.fault=='TRIAL_WORKER_ROLE':wire.worker=self.workers[1]
         return wire
     def close(self):
         if self.launcher is not None:self.launcher.close()
@@ -243,7 +247,8 @@ CASES=('NORMAL','DNS_TIMEOUT','DNS_MALFORMED','DNS_OVERSIZE','DNS_UNOWNED','DNS_
        'PEER_CHANGED','SNI_CHANGED','CA_STORE_CHANGED','WRONG_CA','WRONG_HOST','AUTH_FAILURE',
        'GRANTS_MISSING','GRANTS_EXCESS','SERVER_CHANGED','CONTROL_LOST','TIMEOUT','QUIT_FAILURE',
        'DNS_SIGNAL','DNS_STDERR','DNS_FLOOD','INTERRUPT','RECONNECT','REVIEW_REVOKED','DATA_LOST',
-       'TLS_BYPASS','TCP_HANDOFF_EXPIRED','TCP_PEER_CHANGED','WORKER_AFTER_INPUT')
+       'TLS_BYPASS','TCP_HANDOFF_EXPIRED','TCP_PEER_CHANGED','WORKER_AFTER_INPUT',
+       'TRIAL_PROGRAM_COPY','TRIAL_TARGET_COPY','TRIAL_WORKER_ROLE')
 
 
 def child_case(fault,parent):
@@ -255,6 +260,9 @@ def child_case(fault,parent):
         OwnedBoundary.created[0].before_input()
         if len(DNSWorker.created)!=2 or any(w.used or not w.prepared.ready or w.process.poll() is not None for w in DNSWorker.created):raise Block()
         for worker in DNSWorker.created:worker.prepared.check()
+        procedure=OwnedBoundary.created[0].launcher._procedure
+        if (not procedure.reserved or tuple(w.prepared for w in DNSWorker.created)!=procedure._workers
+                or any(w.prepared._b_trial_binding is not procedure for w in DNSWorker.created)):raise Block()
         captures.append(True)
         return capture(entry)
     original_read=old.b.Channel.read
@@ -265,7 +273,7 @@ def child_case(fault,parent):
             patch.object(p.ReviewedEntry,'capture',before_input):
         result=old.child(mapped,parent)
     wires=OwnedWire.created
-    if fault=='WORKER_AFTER_INPUT':
+    if fault in ('WORKER_AFTER_INPUT','TRIAL_PROGRAM_COPY','TRIAL_TARGET_COPY','TRIAL_WORKER_ROLE'):
         if result['sql_count'] or any(w.authenticated or w.worker.process.poll() is None for w in wires):raise Block()
         for wire in wires:wire.dns_reaped=True  # actual boundary cleanup, no DNS request issued
     if fault in CASES[1:9] and (result['sql_count'] or any(w.authenticated for w in wires)):raise Block()
@@ -293,6 +301,7 @@ def child_case(fault,parent):
                 or any(w.authentication_packets for w in wires)):raise Block()
     if any(v.launcher.state!='STOPPED' or v.launcher.entry is not None for v in OwnedBoundary.created):raise Block()
     result.update(launcher_stopped=True,tls_verified_before_auth=(fault=='NORMAL' and all(w.tls_verified for w in wires)),
+        reserved_worker_trial_binding_verified=True,
         dns_workers_started_before_input=True,dns_children_reaped=True,dns_status=[w.dns_status for w in wires],
         dns_workers_ready_before_input=True,tcp_ownership_handoff_enforced=True,preauth_packet_boundary_enforced=True,
         authentication_packets=sum(w.authentication_packets for w in wires),
