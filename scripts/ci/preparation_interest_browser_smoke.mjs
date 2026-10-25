@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
-import { chromium } from 'playwright';
+import { chromium, webkit } from 'playwright';
 const base = process.env.CANOVIA_PREPARATION_INTEREST_BASE_URL;
 assert.equal(base, 'http://127.0.0.1:18805');
 for (const [key, value] of Object.entries({ CANOVIA_PREPARATION_INTEREST_FIXTURE: '1',
     CANOVIA_PREPARATION_ONLY: 'true', DB_CONNECTION: 'sqlite', APP_ENV: 'local', CANOVIA_PUBLIC_RELEASE_LEVEL: '0' })) assert.equal(process.env[key], value);
-const browser = await chromium.launch({ headless: true,
+const engine = process.env.CANOVIA_INTEREST_ENGINE ?? 'chromium';
+assert(['chromium', 'webkit'].includes(engine));
+const browser = await ({ chromium, webkit })[engine].launch({ headless: true,
     ...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH ? { executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH } : {}) });
 const errors = [];
 async function context() {
@@ -154,6 +156,6 @@ try {
     if (process.env.CANOVIA_INTEREST_SCREENSHOT) await page.screenshot({ path: process.env.CANOVIA_INTEREST_SCREENSHOT, fullPage: true });
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ result: 'passed', journey: 'optional_interest_to_same_owner_plan',
-        owner_level: 0, questions: 30, database: 'disposable_sqlite', real_device_verified: false }));
+        owner_level: 0, engine, questions: 30, database: 'disposable_sqlite', real_device_verified: false }));
     await a.close();
 } finally { await browser.close(); }
