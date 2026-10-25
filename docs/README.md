@@ -1,5 +1,9 @@
 # Canovia documentation index (2026-10-13)
 
+## 2026-10-25 Cutover / Recovery / Candidate preparation
+
+- [既存先行公開戦略 §15](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md): owned同一DB/Sessionの切替リハーサル、失敗時STOP、未採用候補/全差分inventory、後日のOwner操作票。製品UI制限は許容済みだが、実writer/Session/DB安全性や公開GOではない。Recoveryは同節から既存正本を参照。**実環境未受入・HOLD継続。**
+
 ## 2026-10-24 Follow-up: indirect 30-question diagnostic
 
 - [D-2026-10-24-02](development/decisions/2026-10-24_INDIRECT_INTEREST_30_ITEM_DIAGNOSTIC_DECISION.md): **直接カテゴリを聞く診断を後続判断で置換**。何気ない日常の30問・「わからない」を含む計5択→本人の関心プロフィールのグラフ→Canovia Future→任意Plan。

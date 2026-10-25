@@ -124,6 +124,7 @@ def serve(profile, sha, *, processes=None, keep_failed=False):
     check_checkout(ROOT, sha)
     port = PORTS[profile]
     with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         try:
             probe.bind(('127.0.0.1', port))
         except OSError:

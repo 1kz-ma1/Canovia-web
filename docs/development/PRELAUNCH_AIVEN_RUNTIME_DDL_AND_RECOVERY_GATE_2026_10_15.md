@@ -62,3 +62,59 @@ python3 scripts/ci/release488_runtime_ddl_restore_gate.py --input /private/path/
 Track in [Issue #488](https://github.com/1kz-ma1/Canovia-web/issues/488): independently review real Aiven 94→113 ledger/physical schema (metadata audit not yet run), actual runtime principal DDL/trigger policy, independent restore with RTO/data protection, real device/user acceptance and explicit production owner GO. Static-only intro deployment may be approved separately without triggering a Laravel migration, but its real URL, routing and communication still need their own acceptance.
 
 **The old `#513` 2-migration review, the pinned 19-migration review and future `main` SHA are separate candidates. Never merge into `production` or deploy based on a checklist passing alone.**
+
+## 2026-10-25 Cutover recovery addendum (114-source; no real operations)
+
+This supplements this existing recovery authority and the Shared DB Strategy §15;
+older 113-count/pinned-source entries above remain dated evidence. Current source
+has 94 preserved baseline migrations and 20 additions/114 total, not a measurement
+of today's real ledger. Exact reviewed SHA/tree/CI and all-path inventory are
+recorded in #488. No moving-main adoption or real backup/DDL/restore is authorized.
+
+- **Before writes stop:** identify every Web/worker/cron/queue/webhook/auto-restart
+  path, freeze the reviewed source and image/config/key/IdP/private-file origin,
+  assign owner incident responsibility/contact and private evidence custody.
+- **Before any DDL:** stop old new-write admission and all consumers/restart paths;
+  independently observe in-flight/remote completion or remain HOLD. Inventory
+  pending jobs without purge/replay. Take the separately approved fresh consistent
+  backup AFTER this fence, record snapshot UTC/last-write point and restore window.
+  Metadata-audit SELECT rights do not grant permission for a real dump or trigger
+  visibility. Do not widen the existing narrow audit principal to pass checks.
+- **Independent restore:** use a separately approved isolated destination with
+  compatible MySQL/version/collation/engine/capacity/DEFINER/trigger/binlog policy.
+  Encrypt dump/manifest/transport, keep key separate, define access/retention/
+  verified deletion; preserve APP_KEY/private files and IdP settings privately.
+  Compare schema and meaningful rows/IDs/Account→Plan→Task/history/Context,
+  ownership/auth failures/FK/UNIQUE/trigger behavior. A row count alone is not
+  parity. Record actual start/end/verification times, not synthetic CI RTO as real.
+- **RPO/RTO:** owner must bound data between last consistent backup and write fence
+  (RPO), and time to verified isolated restore+safe application recovery (RTO).
+  No measured real time or accepted bound exists in this task. Aiven Free Full
+  records are existence evidence only; Free/Developer Fork unavailability remains.
+  Synthetic mysqldump→independent restore is NOT restoration of Aiven Full itself.
+- **Partial DDL:** MySQL commits may precede a disconnect/failure. Keep all writers
+  stopped; preserve observed ledger/schema and private errors for operator review.
+  Do not retry because the process exited or a migration name is missing. Existing
+  strict comparisons, M08 old-name/definition checks, collision/partial-prefix and
+  M04→M05 trigger prerequisites remain. Reproduce the observed prefix in an owned
+  DB and review a new exact-SHA forward repair; validate parity before resuming.
+  No ledger edits, migrate:fresh, blanket rollback/down, destructive auto-repair or
+  speculative constraint drops belong in the production runbook.
+- **After reopening any writer:** do NOT simply restore the earlier snapshot.
+  Account deletions, consent/grant revocations, Session invalidations and new
+  Account/Plan writes since snapshot must not be resurrected/lost. Without a
+  trusted reconciliation path/evidence, recovery is BLOCKING. A signature alone
+  does not implement reconciliation. The no-post-snapshot-write window is usable
+  only with an independently proven continuous fence and a fresh accepted backup.
+- **Safe restart:** require actual writer absence, completed physical/ledger and
+  data verification, recovery/incident acceptance, fixed repaired source/runtime/
+  config/cache and a fresh scoped owner decision. Default startup is check-only;
+  the approved one-off apply runs once while Web/consumers remain stopped. Do not
+  use app image rollback as proof that the 114 schema accepts an old writer.
+  Reopened remote/in-flight uncertainty, drift or a supervisor restart means STOP.
+
+The current owned cutover rehearsal verifies local process order/SQLite data and
+HTTP Session continuity; it does not execute the 15ab binary or real MySQL upgrade.
+Existing MySQL8.0/8.4 upgrade/partial-DDL/data-retention/logical-restore proofs are
+reused. Real backup/restore/reconciliation/principal/binlog and actual deployment
+remain LIVE_VERIFICATION_REQUIRED / PRODUCTION_NO_GO_HOLD.

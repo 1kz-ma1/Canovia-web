@@ -87,8 +87,7 @@ def snapshot(database, original=None):
     with sqlite3.connect(database) as db:
         db.row_factory = sqlite3.Row
         for table in ('users', 'plans', 'tasks', 'study_practice_attempts', 'work_sessions', 'jobs'):
-            columns = 'id,name,email,password,release_level_override' if table == 'users' else '*'
-            rows = [dict(r) for r in db.execute(f'SELECT {columns} FROM {table} ORDER BY id')]
+            rows = [dict(r) for r in db.execute(f'SELECT * FROM {table} ORDER BY id')]
             if original is not None:
                 ids = set(original[table]['ids'])
                 rows = [r for r in rows if r['id'] in ids]
@@ -134,19 +133,20 @@ def rehearse(source, artifacts, executable=None):
             browser('preparation_cutover_session_smoke.mjs', 'before')
             with sqlite3.connect(database) as db:
                 db.execute("INSERT INTO jobs(queue,payload,attempts,reserved_at,available_at,created_at) VALUES ('synthetic-quarantined','{}',0,NULL,0,0)")
+            with sqlite3.connect(database) as db:
+                require(db.execute('SELECT COUNT(*) FROM migrations').fetchone()[0] == 114, 'CUTOVER_SCHEMA_FIXTURE_MISMATCH')
             preserved = snapshot(database)
-            actors = []
             def quiescent():
                 require(old_web.poll() is not None, 'CUTOVER_OLD_WEB_REMAINS')
                 require(all(p.poll() is not None for p in processes), 'CUTOVER_OLD_CONSUMER_REMAINS')
                 require(lock_free(database), 'CUTOVER_INFLIGHT_OR_UNKNOWN')
             blocked('old_web_still_writable', quiescent)
-            worker = actor(database, 'idle', processes); actors.append(worker)
+            worker = actor(database, 'idle', processes)
             stop_server(old_web)
             blocked('new_web_only_with_old_worker', quiescent)
             blocked('old_worker_version_remains', quiescent)
             finish(worker)
-            restarted = actor(database, 'idle', processes); actors.append(restarted)
+            restarted = actor(database, 'idle', processes)
             blocked('supervisor_restart', quiescent)
             finish(restarted)
             busy = actor(database, 'inflight', processes)
@@ -160,7 +160,7 @@ def rehearse(source, artifacts, executable=None):
             quiescent()
             # Pending rows are retained/quarantined: no consumer, no replay, no purge.
             require(snapshot(database, preserved) == preserved, 'CUTOVER_PRESERVED_ROWS_CHANGED')
-            appearing = actor(database, 'idle', processes); actors.append(appearing)
+            appearing = actor(database, 'idle', processes)
             blocked('writer_appears_during_migration_stage', quiescent)
             finish(appearing)
             candidate = {**env, 'CANOVIA_PREPARATION_ONLY': 'true'}
@@ -193,7 +193,9 @@ def rehearse(source, artifacts, executable=None):
             trace.append('SAFE_SHUTDOWN')
             require(cutover_order(trace)['state'] == 'VERIFIED_SOURCE', 'CUTOVER_ORDER_INVALID')
             require(all(p.poll() is not None for p in processes), 'CUTOVER_CLEANUP_UNVERIFIED')
-            report = dict(result='VERIFIED_ISOLATED', source_sha=source, plan_order=cutover_order(trace),
+            report = dict(result='VERIFIED_ISOLATED', source_sha=source,
+                          source_tree=subprocess.check_output(['git', 'rev-parse', source + '^{tree}'], cwd=ROOT, text=True).strip(),
+                          sqlite_ledger_count=114, plan_order=cutover_order(trace),
                           negative_cases=cases, negative_case_count=len(cases), legacy_rows_preserved=True,
                           pending_jobs_retained_without_attempt=True, old_synthetic_session_continues=True,
                           csrf_and_specialist_denial=True, controlled_original_to_preparation=True,
@@ -216,7 +218,7 @@ if __name__ == '__main__':
     try:
         result = rehearse(args.source_sha, args.artifacts, args.browser_executable)
         print(json.dumps({k: result[k] for k in ('result', 'source_sha', 'negative_case_count', 'cleanup_verified', 'release_authorized')}))
-    except (SafetyError, OSError, ValueError, sqlite3.Error, subprocess.SubprocessError) as error:
+    except (Exception, KeyboardInterrupt) as error:
         code = str(error) if isinstance(error, SafetyError) and re.fullmatch(r'(CUTOVER|LAB)_[A-Z_]{1,64}', str(error)) else 'CUTOVER_EXECUTION_UNVERIFIED'
         print(json.dumps(dict(result='BLOCKING', code=code, scope='OWNED_REHEARSAL_ONLY', release_authorized=False)))
         raise SystemExit(2)

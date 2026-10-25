@@ -513,3 +513,49 @@ JobProcessing/Queue::beforeの例外だけでは、既に予約されたdelivery
 起動調査で、build contextがhost生成のbootstrap cacheを含め得ることと、古いconfig cacheを残したままschema確認が先行することを確認。合成fixtureで、schema client起動時にも旧cacheが残る失敗、未許可cache override/symlinkを拒否しない失敗を再現した。`.dockerignore`で生成PHP cacheを除外し、起動policyはPHPを呼ぶ前に固定のowned `bootstrap/cache/config.php`だけを無効化する。未知のAPP_CONFIG_CACHE、symlink/非通常ファイル、cleanup失敗はPHP/DB処理前にSTOP。内容は読まず、削除失敗の生エラーも出さない。通常のcheck-only/承認SHA付き一回apply/部分DDL STOPは維持する。
 
 この処理は再生成可能なcacheのhygieneで、旧process停止やDB identity監査の代わりではない。startup directoryは信頼済みsource/単独writer/所有権の一致が前提で、敵対的な同時filesystem変更への一般的な防御とはしない。実画像・設定・APP_KEY/cookie/session/target一致は未受入。未知cache pathを黙って掃除/参照しない。実Render/Aiven/Worker操作なし。関連PHP35件/385 assertions成功、固定e858/SQL/Reference/4公開BLOCKとmigrationは不変。
+### 15.2 Cutover Rehearsalの範囲・停止条件
+
+既存 `preparation_mac_lab` のport/所有プロセス/専用SQLite/合成Account/秘密なし環境/HTTP routerを再利用する。新しい本番connectorや承認frameworkはない。現行SourceのOriginal profileからPreparation-onlyへ**同じDB/APP_KEY/cookie/session storage**で限定再起動し、旧合成Account/Plan/Task/採点履歴/未処理Jobが維持されることを比較する。旧合成Sessionは継続して本人Planを読めるが、以前の専門URL/POSTは404、CSRF不一致は419。既存30問→Future→任意Plan→保存/再ログイン再訪のjourneyも再利用する。
+
+これは歴史的production **15abの全バイナリを実行する試験ではない**。現行114のSQLite fixtureを使ったcoordination/HTTP/data continuityの検証であり、旧94→114のMySQL移行・制約・部分DDL・独立論理復元は既存CI証跡を参照する。実MySQLや実installed Service Workerの受入にはしない。旧画面のsaved URLを再利用してserver-side拒否を確認し、offline旧HTML表示まで消えたとは認定しない。
+
+順序: Source/config固定→データ保全/復旧前提→旧Web停止→consumer/再起動停止→in-flight drain→writer不在→schema前提→一回migration→全runtime整合→限定Web起動→受入→異常時安全停止。既存Preflightの純粋な `cutover_order` はこの**計画の順序だけ**を検査し、実停止・個人認証・承認を証明しない。STOP後の継続/段階skip/二重MIGRATIONはBLOCKING。実行機能やGOを返す入口ではない。
+
+拒否ケースは、旧Web残存、新Webだけ更新/旧consumer残存、consumer再生成、in-flight SQLite transaction、観測不能、未処理Job未整理、migration境界でのwriter出現、runtime/APP_KEY/DB/URL/level差替え、Preparation flag false、古いcache、部分DDL後の無承認retry順序。実プロセス/lockで確認するケースをVERIFIED_ISOLATED、注入されたunknown/config/order条件をVERIFIED_SOURCEとして区別する。各負例は独立した合成trialで、同じ本番GOの再利用ではない。15ケースのBLOCKを観測し、その後の別正常caseでsafe shutdown/旧行保持/子process回収を確認する。
+
+pending Jobは合成queueへ固定payloadで1件を残し、consumer不在とdigest不変/attempt=0を検査する。purge/replayをしない。実Redis/SQS/外部webhookや別machineの不在をこの試験で証明しない。新Worker guardが旧コードを遠隔停止できるという主張もしない。in-flight rollbackはowned SQLiteでの観測であり、クライアント終了だけをMySQL remote終了確認にしない。
+
+lab再起動ではTIME_WAITと現存listenerを区別する。SO_REUSEADDRのprobeでもlive listenerへの重複bind/借用を拒否し、停止済みowned PHPのみを再起動する。全owned web/actorを登録して回収し、未知cleanupではprivate evidenceを残してSTOP。失敗時のraw log/browser storageは0700のprivate fixture内だけに保持し、Artifactへ入れない。正常時はprivate DB/session/stateを削除した後にsanitized reportを発行する。
+
+CI: Shared DB Preparation Safetyの既存jobに `Isolated cutover rehearsal (synthetic only)` を追加し、`preparation-cutover-rehearsal` Artifactへreport/合成画面/既存toolで作成した全未出荷source manifestだけを7日保持する。製品UI/独立lab/暗号署名authorityを増やさない。既存Mac本人受入を再要求しない。
+
+### 15.3 Recovery / Candidate報告と判定
+
+Recoveryの正本は [既存DDL/復旧gate](PRELAUNCH_AIVEN_RUNTIME_DDL_AND_RECOVERY_GATE_2026_10_15.md) の2026-10-25追記を参照。MySQL8.0/8.4の旧94→114/部分DDL/trigger/FK/既存行/独立logical restoreと、#897のstartup変更に必要な既存upgrade CIを再利用する。Migration blob・SQL・Reference・strict比較を緩和しない。Aiven Fullの記録とmysqldump独立復元を区別する。
+
+候補案は本実装の最終mainの**不変40桁SHA/tree**とするが、本番採用・正式tooling採用・新release ref固定はしていない。現在production ref/歴史的Source15abとの差分を `integration_freeze_manifest.py` で全件列挙し、各pathのchange/両blob/risk queueをArtifactへ保存する。機械分類はowner割当/安全審査ではなくSOURCE_ONLY/FUTURE_NOT_IMPLEMENTATION/REVIEW_REQUIREDを保持する。Source inventoryの完全性を全機能の実装/公開/本番互換性へ昇格しない。fixed SHA/tree/CI Run ID/manifest要約は#488へ固定する。
+
+既存Preflightの `checks` は互換性を維持し、`readiness` で VERIFIED_SOURCE / VERIFIED_ISOLATED / LIVE_VERIFICATION_REQUIRED / OWNER_ACCEPTANCE_REQUIRED / UNKNOWN / BLOCKING に分類する。製品の一時UI制限のowner記録はSourceに存在することだけを検査し、Session失効・writer不在・本番GOへ変換しない。`preparation_effect_on_existing_ap_use` の残受入は製品判断の再要求ではなく実運用cutoverの受入を指す。
+
+緑のjobだけではskipされたrehearsalを認定しない。GitHub GETで同じHEAD/repo/workflowの所有job/実step成功まで照合する。missing/skip/別HEADはUNKNOWN、失敗はBLOCKING。CLIにoperator receiptや自己申告承認を投入して実gateをPASSにする機能はない。e858真正B起点/Live executorの未実装はBLOCKINGの別Trackで、4公開BLOCKは不変。新Sourceを自動で監査候補e858に置換しない。
+
+実schema/ledger/TRIGGER/DDL/binlog、実backup/復元、post-snapshot削除/同意取消/Session失効の保持、全writer/再起動制御、実runtime/IdP/session/cookie/cache、prod rules、実機、fresh owner GOが未成立のため候補は**案・未採用**。現時点はBLOCKING_SHARED_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD。
+
+### 15.4 後日のOwner Action Packet（実行許可ではない）
+
+**共通:** `RC` は#488最終記録の固定40桁SHA/tree/検証HEAD/CI、`E858` は `e858b9c855970fbe73f37a2d60c9db6525b132d6`。全工程はowner/operator本人が別途対象・scope・時間窓・副作用を明示承認した後だけ実行する。実値・署名・Password/CA/host/DB/private記録は本人のprivate custodyに置き、GitHub/ChatGPTへ提出しない。共有証拠は固定SHA/判定/件数/時刻/cleanup状態のみ#488、raw/evidence原本は本人private保管。未知/不整合/中断はSTOP/HOLD、同じ許可で再試行せず再審査。過去のCA/grants/Mac受入は歴史的証拠として再利用し、現在のLive受入へ昇格しない。
+
+| 工程・担当・対象 | 前提/必要権限 | 副作用 | 成功条件 | STOP/異常時 | 証拠/残ゲート |
+| --- | --- | --- | --- | --- | --- |
+| 1 Mac Safari UI / owner / RC | Mac利用再開、別clean checkout/既存lab、local権限 | 合成DB/session/Planのみ作成・終了時破棄 | 30問/Unknown/保存/訂正/Future/任意Plan/再訪/390px | UI/保存/所有権不良は中止、実Accountを使わない | 合成画像/差分判定。今は操作不要 |
+| 2 iPhone Safari/WKWebView / owner / RC+iOS build SHA | 別途承認した隔離HTTPS環境またはdevice transport、iOS実機/Xcode条件 | 合成アカウント操作のみ | 表示/keyboard/safe-area/back/保存/復帰 | endpoint/source不一致はSTOP | device/build/固定判定。127.0.0.1 labを勝手にLAN/tunnel公開しない |
+| 3 現schema/ledger / 承認済operator / E858+RC migration一致 | e858 admission/Live executor未実装を先に審査・解消、tooling採用/fresh scope GO、既存metadata-only権限 | 実接続・metadata読取、remote処理 | source/SQL/ref/TLS/session/ledgerの固定照合 | 権限不足/過剰・unknown remoteはSTOP、新GOなしretry禁止 | 固定code/countのみ共有。現時点実行不能 |
+| 4 Aiven物理構造/DDL principal / 既存認可DBA / E858+RC | 実新設名衝突/M08/INDEX-FK/完全TRIGGER/DDL-binlog条件をprivate独立審査 | 許可されたread-only観測のみ | 厳密BLOCKと意味差診断を別評価、全前提一致 | 観測不能を不存在にしない。監査user拡権で通さない | private原本と固定判定。DDL/GRANTは含まない |
+| 5 old Web/consumer/in-flight / owner運用担当 / old15ab+RC | 実service/cron/webhook/queue/auto-restart全一覧と停止窓を別承認 | 実停止・新規write拒否 | 独立観測で不在、in-flight/remote既知、pending隔離/非再送 | 生存/再生成/unknownでDDLへ進まない | private roster/時刻・固定件数。案内済みだけで満たさない |
+| 6 backup/独立restore / owner+DBA / RC前のquiesced DB | 別承認したexport権限・暗号化/鍵/保管/削除・独立先容量・全writer停止 | 実dump/転送/隔離先DDL/DML（別承認） | schema/row/owner/Plan/FK/trigger/復元所要時間/失効保持 | real Full復元とlogical復元を混同しない。未確認なら公開拒否 | private RPO/RTO/比較。現時点NOT_RUN |
+| 7 一回migration→runtime統一 / owner+DBA / RC | 3–6完了、fixed source/20順序、承認済one-off CLI、Web/worker停止 | 実DDL/DML/cache無効化・再生成は別承認 | 114台帳+物理構造/保持確認、全image/config/cache一致、prep check-only | 部分DDL/未知構造/旧writerでSTOP。retry/down禁止、forward審査 | private差分/段階記録。CLI移行中にWebや専門workerを開始しない |
+| 8 Auth/session/cookie/SW / owner / RC | IdP/APP_KEY/private file/Session方針のprivate確認、合成環境から先に受入 | 実Session変更は別承認、通常login/write smokeは明示対象のみ | owner/他人拒否/CSRF/再訪/旧URL拒否/実cache挙動 | key/IdP/session不整合で公開停止。既存Session失効は未証明 | 秘密なし固定判定。旧cookieをChatGPTへ渡さない |
+| 9 RC/prod rules照合 / owner GitHub管理者 / RC | 全code/CI/real/device gate完了、rules/required CI/merge ancestry、独立審査 | この照合はGETのみ。promotionは別GO | candidate SHA/treeが受入対象と一致、policy有効 | moving main/別tree/未受入ならSTOP | GitHub不変URL/CI IDs。新release固定/production mergeは未実施 |
+| 10 First manual deploy/limited smoke / owner Render担当 / RC | 別の明示deploy GO、Auto Deploy OFF確認、6–9/復旧・緊急停止担当確定 | 本番配備/限定本人操作は別承認 | 限定範囲でauth/Plan/隔離・実機smoke、監視/停止可能 | 旧writer/不整合/unknownでwrite閉鎖・HOLD、独断rollback不可 | fixed Live SHAと受入記録。一般公開/Auto Deployはさらに別判断 |
+
+実環境未受入の技術的不一致は、本人署名だけで許容したことにしない。Macが使えない今は本人操作を要求しない。正式P1/R1〜R6/B2/独立審査はこのpacketで代行しない。

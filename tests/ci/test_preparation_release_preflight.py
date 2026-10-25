@@ -169,6 +169,38 @@ class PreparationPreflightTests(unittest.TestCase):
         self.assertEqual(json.loads(result.stdout)['checks']['exact_head_ci'], 'PASS')
         self.assertEqual(list(tool.rglob('__pycache__')), [])
 
+    def test_readiness_distinguishes_source_isolation_and_real_acceptance(self):
+        report = self.report(True)
+        self.assertEqual(report['readiness']['migration_inventory_source_only'], 'VERIFIED_SOURCE')
+        self.assertEqual(report['readiness']['synthetic_browser_ci'], 'VERIFIED_ISOLATED')
+        self.assertEqual(report['readiness']['worker_cutover'], 'LIVE_VERIFICATION_REQUIRED')
+        self.assertEqual(report['readiness']['e858_genuine_admission_and_live_executor'], 'BLOCKING')
+        self.assertFalse(report['release_authorized'])
+
+    def test_product_scope_record_does_not_prove_session_revocation_or_writer_stop(self):
+        path = self.root / 'docs/development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md'
+        path.parent.mkdir(parents=True)
+        path.write_text('Source-record fixture: OWNER_ACCEPTED_PRODUCT_RESTRICTION_ONLY_2026_10_25')
+        self.commit()
+        self.head = self.git('rev-parse', 'HEAD')
+        self.git('update-ref', 'refs/remotes/origin/main', self.head)
+        report = self.report()
+        self.assertEqual(report['readiness']['product_restriction_record'], 'VERIFIED_SOURCE')
+        self.assertEqual(report['readiness']['current_session_policy'], 'LIVE_VERIFICATION_REQUIRED')
+        self.assertEqual(report['readiness']['worker_cutover'], 'LIVE_VERIFICATION_REQUIRED')
+        self.assertFalse(report['release_authorized'])
+
+    def test_cutover_step_skip_or_wrong_head_does_not_pass_with_green_job(self):
+        step = dict(name='Isolated cutover rehearsal (synthetic only)', status='completed', conclusion='success')
+        job = dict(name='ownership-and-persistence', run_id=1, head_sha=self.head, steps=[step])
+        self.pages['actions/runs/1/jobs?per_page=100'] = {'total_count': 1, 'jobs': [job]}
+        self.assertEqual(self.report(True)['readiness']['cutover_rehearsal_ci'], 'VERIFIED_ISOLATED')
+        step['conclusion'] = 'skipped'
+        self.assertEqual(self.report(True)['readiness']['cutover_rehearsal_ci'], 'UNKNOWN')
+        step['conclusion'] = 'success'
+        job['head_sha'] = self.old
+        self.assertEqual(self.report(True)['readiness']['cutover_rehearsal_ci'], 'UNKNOWN')
+
     def test_api_exception_is_sanitized_and_never_replaced_by_claims(self):
         def unavailable(path):
             raise RuntimeError('SYNTHETIC_PRIVATE_ERROR_DO_NOT_PRINT')
