@@ -1308,3 +1308,9 @@ DNS/auth/SQL. Existing component-only tests without worker assembly remain inert
 and cannot activate a live connection. No supervisor/SQL/TLS code is duplicated.
 Public receipt flags stay false; remote uncertainty and local rollback limits
 remain explicit. Final exact HEAD/CI/MySQL evidence is recorded in #488.
+A Producer failure now cancels the borrowed existing B trial before returning
+BLOCK, including handoff cleanup failure. It cannot leave an otherwise usable
+trial for a corrected DNS/connection retry. Successful close remains ordinary
+resource release; existing Bridge owns final remote/secret cleanup. New owned
+negative cases change only equal-value Program/Target references or swap the
+bound worker role; each must refuse before DNS/auth/SQL and reap the two children.

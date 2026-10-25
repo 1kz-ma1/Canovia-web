@@ -76,10 +76,11 @@ class ProducerBinding:
             handoff=ConnectedPeer(self.plan,raw);value=handoff.take()
             self.state='SOCKET_TAKEN_NOT_AUTHORIZED';return value
         except BaseException:
-            if handoff is not None:handoff.close()
-            else:
-                try:raw.close()
-                except BaseException:pass
+            try:
+                if handoff is not None:handoff.close()
+                else:raw.close()
+            except BaseException:
+                pass  # always BLOCK below; cleanup failure never preserves a trial
             self._abort();raise Block() from None
 
     def authenticated(self):
