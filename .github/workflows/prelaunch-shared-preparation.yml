@@ -14,6 +14,12 @@ on:
       - 'app/Services/ReleaseLevelService.php'
       - 'app/Services/FeatureFlagService.php'
       - 'app/Providers/AppServiceProvider.php'
+      - 'app/Bus/**'
+      - 'app/Http/Controllers/PrelaunchInterestController.php'
+      - 'app/Services/PrelaunchInterestContextService.php'
+      - 'app/Services/PersonalizationContextService.php'
+      - 'tests/Feature/PrelaunchInterestContextTest.php'
+      - 'routes/web.php'
       - 'app/Jobs/**'
       - 'bootstrap/app.php'
       - 'config/release_levels.php'
@@ -59,7 +65,8 @@ jobs:
           tests/Feature/PlanActionFirstCreationV5866Test.php
           tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           tests/Feature/PersonalizationBootstrapV5825Test.php
-          tests/Feature/P0DatabaseSessionLoginRegressionTest.php --colors=never
+          tests/Feature/P0DatabaseSessionLoginRegressionTest.php
+          tests/Feature/PrelaunchInterestContextTest.php tests/Unit/PrelaunchInterestScoringServiceTest.php --colors=never
       - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: test -x /usr/bin/google-chrome
       - run: git diff --exit-code -- package.json package-lock.json

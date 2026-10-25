@@ -23,11 +23,15 @@ final class EnsurePreparationSurface
         'personalization.result', 'personalization.seed.accept',
         'plans.create.manual', 'plans.store', 'plans.show', 'plans.edit', 'plans.update',
         'feedback.store',
+        'preparation.interests.show', 'preparation.interests.result', 'preparation.interests.store',
+        'preparation.interests.review', 'preparation.interests.destroy',
     ];
 
     public function handle(Request $request, Closure $next): Response
     {
         if (! app(ReleaseLevelService::class)->preparationOnly()) {
+            abort_if($request->routeIs('preparation.interests.*'), 404);
+
             return $next($request);
         }
 

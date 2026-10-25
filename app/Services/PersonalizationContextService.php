@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Models\User;
 use App\Models\UserPersonalizationContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 final class PersonalizationContextService
 {
     public const SESSION_KEY = 'canovia.personalization.context';
+
     public const VERSION = 1;
 
     public function __construct(
@@ -26,6 +29,7 @@ final class PersonalizationContextService
     {
         $session = $request->session()->get(self::SESSION_KEY, []);
         $session = is_array($session) ? $session : [];
+        data_forget($session, 'context_sources.self_reported.'.PrelaunchInterestContextService::KEY);
 
         $user = $request->user();
         $stored = $user
@@ -41,6 +45,8 @@ final class PersonalizationContextService
         $selfReported = is_array($stored->self_reported_context)
             ? $stored->self_reported_context
             : [];
+        // Personal diagnostic answers are never added to legacy AI/profile inputs.
+        unset($selfReported[PrelaunchInterestContextService::KEY]);
 
         $current = $this->normalize([
             'domains' => (array) data_get(
@@ -62,8 +68,7 @@ final class PersonalizationContextService
             'recommended_surfaces' => $stored->recommended_surfaces,
             'feature_readiness' => $stored->feature_readiness,
             'context_revision' => $stored->context_revision,
-            'last_evaluated_at' =>
-                $stored->last_evaluated_at?->toIso8601String(),
+            'last_evaluated_at' => $stored->last_evaluated_at?->toIso8601String(),
             'context_sources' => [
                 'self_reported' => $selfReported,
                 'observed' => is_array($stored->observed_context)
@@ -89,7 +94,7 @@ final class PersonalizationContextService
      * Save user-answered context. This is deliberately source-specific:
      * future observed/inferred updates must use a different path.
      *
-     * @param array<string,mixed> $context
+     * @param  array<string,mixed>  $context
      * @return array<string,mixed>
      */
     public function saveSelfReported(
@@ -107,41 +112,45 @@ final class PersonalizationContextService
         $normalized['context_sources']['self_reported'] =
             $this->selfReportedPayload($normalized);
 
-        $request->session()->put(self::SESSION_KEY, $normalized);
-
         $user = $request->user();
         if ($user) {
-            $existing = UserPersonalizationContext::query()
-                ->where('user_id', $user->id)
-                ->first();
+            DB::transaction(function () use ($user, &$normalized, $completed): void {
+                User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                $existing = UserPersonalizationContext::query()
+                    ->where('user_id', $user->id)
+                    ->lockForUpdate()->first();
 
-            UserPersonalizationContext::query()->updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'version' => self::VERSION,
-                    'context_revision' => max(
-                        1,
-                        (int) ($existing?->context_revision ?? 0) + 1,
-                    ),
-                    'self_reported_context' =>
-                        $this->selfReportedPayload($normalized),
-                    'observed_context' =>
-                        $existing?->observed_context ?? [],
-                    'inferred_context' =>
-                        $existing?->inferred_context ?? [],
-                    'guidance_level' => $normalized['guidance_level'],
-                    'recommended_surfaces' =>
-                        $normalized['recommended_surfaces'],
-                    'feature_readiness' =>
-                        $normalized['feature_readiness'],
-                    'last_evaluated_at' => now(),
-                    'completed_at' => $completed
-                        ? now()
-                        : $existing?->completed_at,
-                    'skipped_at' => null,
-                ],
-            );
+                $payload = $this->selfReportedPayload($normalized);
+                // This writer never accepts or resurrects a stale diagnostic snapshot.
+                $stored = $existing?->self_reported_context ?? [];
+                if (array_key_exists(PrelaunchInterestContextService::KEY, $stored)) {
+                    $payload[PrelaunchInterestContextService::KEY] = $stored[PrelaunchInterestContextService::KEY];
+                }
+                UserPersonalizationContext::query()->updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'version' => self::VERSION,
+                        'context_revision' => max(
+                            1,
+                            (int) ($existing?->context_revision ?? 0) + 1,
+                        ),
+                        'self_reported_context' => $payload,
+                        'observed_context' => $existing?->observed_context ?? [],
+                        'inferred_context' => $existing?->inferred_context ?? [],
+                        'guidance_level' => $normalized['guidance_level'],
+                        'recommended_surfaces' => $normalized['recommended_surfaces'],
+                        'feature_readiness' => $normalized['feature_readiness'],
+                        'last_evaluated_at' => now(),
+                        'completed_at' => $completed
+                            ? now()
+                            : $existing?->completed_at,
+                        'skipped_at' => null,
+                    ],
+                );
+            });
         }
+
+        $request->session()->put(self::SESSION_KEY, $normalized);
 
         return $normalized;
     }
@@ -150,7 +159,7 @@ final class PersonalizationContextService
      * Phase 1 convenience for user-confirmed capability preference.
      * This remains self-reported context, not observed/inferred behavior.
      *
-     * @param array<string,mixed> $context
+     * @param  array<string,mixed>  $context
      * @return array<string,mixed>
      */
     public function saveSelfReportedPreference(
@@ -172,41 +181,37 @@ final class PersonalizationContextService
         $context = $this->current($request);
         $context['skipped_at'] = now()->toIso8601String();
 
-        $request->session()->put(self::SESSION_KEY, $context);
-
         $user = $request->user();
         if ($user) {
-            $existing = UserPersonalizationContext::query()
-                ->where('user_id', $user->id)
-                ->first();
+            DB::transaction(function () use ($user): void {
+                User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+                $existing = UserPersonalizationContext::query()
+                    ->where('user_id', $user->id)
+                    ->lockForUpdate()->first();
 
-            UserPersonalizationContext::query()->updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'version' => self::VERSION,
-                    'context_revision' => max(
-                        1,
-                        (int) ($existing?->context_revision ?? 0) + 1,
-                    ),
-                    'self_reported_context' =>
-                        $existing?->self_reported_context ?? [],
-                    'observed_context' =>
-                        $existing?->observed_context ?? [],
-                    'inferred_context' =>
-                        $existing?->inferred_context ?? [],
-                    'guidance_level' =>
-                        $existing?->guidance_level ?? 'standard',
-                    'recommended_surfaces' =>
-                        $existing?->recommended_surfaces ?? [],
-                    'feature_readiness' =>
-                        $existing?->feature_readiness ?? [],
-                    'last_evaluated_at' =>
-                        $existing?->last_evaluated_at,
-                    'completed_at' => $existing?->completed_at,
-                    'skipped_at' => now(),
-                ],
-            );
+                UserPersonalizationContext::query()->updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'version' => self::VERSION,
+                        'context_revision' => max(
+                            1,
+                            (int) ($existing?->context_revision ?? 0) + 1,
+                        ),
+                        'self_reported_context' => $existing?->self_reported_context ?? [],
+                        'observed_context' => $existing?->observed_context ?? [],
+                        'inferred_context' => $existing?->inferred_context ?? [],
+                        'guidance_level' => $existing?->guidance_level ?? 'standard',
+                        'recommended_surfaces' => $existing?->recommended_surfaces ?? [],
+                        'feature_readiness' => $existing?->feature_readiness ?? [],
+                        'last_evaluated_at' => $existing?->last_evaluated_at,
+                        'completed_at' => $existing?->completed_at,
+                        'skipped_at' => now(),
+                    ],
+                );
+            });
         }
+
+        $request->session()->put(self::SESSION_KEY, $context);
 
         return $context;
     }
@@ -215,7 +220,7 @@ final class PersonalizationContextService
      * Persist derived recommendation / activation state without rewriting
      * self-reported answers. Phase 2 capability lifecycle uses this path.
      *
-     * @param array<string,mixed> $featureReadiness
+     * @param  array<string,mixed>  $featureReadiness
      */
     public function saveFeatureReadinessState(
         Request $request,
@@ -268,7 +273,7 @@ final class PersonalizationContextService
             ->where('guidance_level', $expected)
             ->update([
                 'guidance_level' => $target,
-                'context_revision' => \Illuminate\Support\Facades\DB::raw('context_revision + 1'),
+                'context_revision' => DB::raw('context_revision + 1'),
                 'last_evaluated_at' => now(),
             ]);
 
@@ -289,9 +294,9 @@ final class PersonalizationContextService
      * Persist Living Profile derived state without mutating self-reported or
      * observed source facts.
      *
-     * @param array<string,mixed> $inferredContext
-     * @param array<int,string>|null $recommendedSurfaces
-     * @param array<string,mixed>|null $featureReadiness
+     * @param  array<string,mixed>  $inferredContext
+     * @param  array<int,string>|null  $recommendedSurfaces
+     * @param  array<string,mixed>|null  $featureReadiness
      */
     public function saveLivingProfileState(
         Request $request,
@@ -341,7 +346,7 @@ final class PersonalizationContextService
      * Persist actual observed facts. Interpretation / inference belongs to the
      * Living Profile service and must not overwrite self-reported answers.
      *
-     * @param array<string,mixed> $observed
+     * @param  array<string,mixed>  $observed
      */
     public function storeObservedCandidate(
         Request $request,
@@ -375,7 +380,7 @@ final class PersonalizationContextService
     }
 
     /**
-     * @param array<string,mixed> $context
+     * @param  array<string,mixed>  $context
      * @return array<string,mixed>
      */
     private function normalize(array $context): array
@@ -429,7 +434,7 @@ final class PersonalizationContextService
     }
 
     /**
-     * @param array<string,mixed> $context
+     * @param  array<string,mixed>  $context
      * @return array<string,mixed>
      */
     private function selfReportedPayload(array $context): array
