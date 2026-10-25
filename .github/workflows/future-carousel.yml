@@ -18,6 +18,11 @@ on:
       - 'public/images/future/**'
       - 'scripts/ci/future_carousel*'
       - 'scripts/ci/integration_browser_regression.py'
+      - 'scripts/ci/preparation_interest_browser_smoke.mjs'
+      - 'resources/views/preparation/**'
+      - 'resources/js/preparation.mjs'
+      - 'app/Http/Controllers/PrelaunchInterestController.php'
+      - 'app/Services/PrelaunchInterestContextService.php'
       - 'tests/Feature/CanoviaFuture*'
   workflow_dispatch:
 
@@ -62,6 +67,10 @@ jobs:
           sha256sum --check "$RUNNER_TEMP/future-app-dependencies.sha256"
       - name: L0 local-only disposable browser journey
         run: python3 scripts/ci/integration_browser_regression.py --journey future --browser-engine ${{ matrix.engine }} --artifacts "$RUNNER_TEMP/future-artifacts"
+      - name: Preparation interest to canonical Plan (synthetic Chromium/WebKit, not real Safari)
+        run: >-
+          python3 scripts/ci/integration_browser_regression.py --journey preparation_interest
+          --browser-engine ${{ matrix.engine }} --artifacts "$RUNNER_TEMP/future-artifacts/interest"
       - uses: actions/upload-artifact@v4
         if: always()
         with:

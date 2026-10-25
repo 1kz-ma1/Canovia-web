@@ -405,10 +405,9 @@ and no removed old migration; actual production ledger/schema remain unknown.
 
 ### 13.1 Interest experience and current authority
 
-The30-item config and pure scoring Service from #863 exist; the preparation
-screen still uses the older Study/Development form. Thirty-question namespace,
-progress persistence/result/revisit and opt-in Plan bridge are implementation
-work, not completed evidence. Use the existing bank and scorer; answers remain
+At the start of this audit, the30-item config and pure scoring Service from #863
+existed while the preparation screen still used the older Study/Development form. That original gap is now addressed by §13.3–13.4 below; deployment remains
+unverified. Use the existing bank and scorer; answers remain
 four agreement levels plus unknown (five choices total), per §12. Do not add a
 sixth choice or call Unknown zero without a later product decision. Existing
 legacy context and all Plan/Task/history must survive any new namespaced save.
@@ -448,3 +447,21 @@ safe Track R implementation. All results/immutable SHAs go to existing #488.
 既存 `user_personalization_contexts.self_reported_context.interest_diagnostic` に版付きの回答・採点snapshot・明示的な関心修正・支援希望を分離保存する。migrationなし、本人sessionのみ、L0のPreparation-only限定route。個人保存への同意を必須とし、市場分析への同意や外部AI送信を兼ねない。既存の純粋採点Serviceから結果を再計算し、未知版は上書きしない。
 
 User→Contextの同一順序lock、namespace単位revision、同一送信の冪等性により旧タブ・応答消失・legacy自己申告更新を扱う。旧自己申告・推定・観測・Plan/Task/履歴は維持し、legacy AI contextへ新namespaceを渡さない。準備profile OFFでは新routeを404にする。UI・ブラウザ受入は別sliceであり、この保存実装だけで利用体験完成や本番受入とはしない。
+
+### 13.4 30問→Future→本人Planの開発受入（2026-10-25）
+
+§13.1の入口未実装を解消。既存バンク・採点を再利用し、任意の30問を5問×6ページ、4段階+Unknown、明示的な本人保存同意、途中保存/復帰、横棒+%/未判定、本人の関心修正/別枠の支援希望、開発成熟度を保った公開Future紹介、任意のCanonical Plan入力へ接続する。既存Study/Devフォームは明示L1に維持し、全員L1にしない。診断なしのPlan作成も残す。
+
+新しいJSはPreparation-only専用で、通信失敗時は入力を残し成功を表示しない。旧タブ競合は上書きせず、最新記録への導線を出す。同じ回答の応答消失再送は§13.3の冪等性を利用する。削除後の同一時刻・同一回答での再作成は別の記録寿命IDとし、削除前の旧タブrevisionを復活させない（固定時刻で修正前の失敗/修正後の拒否を確認）。本人が明示的に関心を空にした場合も未確認の推定へ戻さず、後の回答編集でも維持する。JSなしでも標準フォームで保存可能。本人の確認済み関心（未指定なら採点上位）から、既存公開projectionの全般/対応分野だけを紹介し、非掲載分野の機能やSupport数を創作しない。分析・外部送信・自動Plan作成なし。
+
+差分受入: PHP75件/770 assertionsと、既存runnerの新 `preparation_interest` journey。127.0.0.1:18805/使い捨てSQLite/合成Accountのみ、L0で登録→回答→保存/再読み込み→修正→Future→任意Plan→編集→logout/login→同一ID再訪を確認する。旧タブ、通信失敗、同一送信、CSRF、別Accountの閲覧/編集拒否、認証失効、専門URL拒否、390px/desktopを含む。既存Preparation false/true×L0/L1×匿名/本人/adminの12ケース、旧AP/Development/履歴保持、Guest/Planの旧ブラウザ検証を同じCIで回帰する。CI番号・最終HEAD・統合SHAはIssue #488に固定する。既存Futureのpinned Playwrightコンテナ/Chromium・WebKit matrixで新journeyも検証する。Linux WebKit/Chromiumの合成検証をSafari/iPhone実機PASSとはしない。
+
+本人の新しい実機差分はこの30問UIと再訪導線のみ。旧94件・CA/grants・e858 Macテストを再要求しない。既存Mac labを、採用した固定mainの別clean checkout（.env/privateデータなし、専用vendor、build済み）で再利用する:
+
+```sh
+python3 scripts/ci/preparation_mac_lab.py --source-sha "$(git rev-parse HEAD)"
+```
+
+表示されたloopbackだけをSafariで開き、合成 `normal@example.test` (L0) または新規合成登録、公開FAKE password `Synthetic-Preparation-Only-2026` を使う。30問/Unknown/中断保存/結果/訂正/Future/任意Plan/再ログイン/狭幅を確認し、Ctrl-C後 `LAB_STOPPED_DISPOSABLE_DATA_DELETED` を確認する。以前のAP学習・元DB・本番Accountには触れない。単独labがそのportを占有していればSTOPし、別serviceを止めない。
+
+現在地は `BLOCKING_SHARED_REMAINING`。コード上の体験完成と、実DB物理監査・復元・writer停止/起動順・runtime/Release Level実設定・実認証/session・既存installed SW・Render保護・実機/本番公開の受入は別。Preparation-onlyの採用は既存AP実行/履歴UIも閉じるため、ownerの影響受入なしに本番有効化しない。12月1日は安全ゲートを省略できる期限ではない。

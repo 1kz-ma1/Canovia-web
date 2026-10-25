@@ -1322,3 +1322,20 @@ invokes close/discard on a rejected unknown object. Unknown secret ownership or
 cleanup failure remains BLOCK. New foreign-reference tests assert no injected
 check/close/discard callback executes. This does not defend against hostile
 same-process method monkey-patching or replace B's managed-runtime trust.
+
+### 2026-10-25 Track E admission review / prelaunch separation
+
+The #887 exact-HEAD CI/MySQL59-per-version and prior Mac/#806 observations are
+historical evidence reused, not rerun or promoted to Aiven acceptance. No audit
+code, fixed source/SQL/reference/caps, private review or four public BLOCK methods
+change in this prelaunch work. The concrete admission/launcher/opener/adapter/wire
+review order, required independent reviewer, managed-Mac delta, private B/P1/R1–R6/
+fresh-B2 and real-environment gates are consolidated in the existing shared-DB
+release strategy §13.2 and Issue #488. `PrivateReview.check`'s genuine private B
+origin and the live executor remain NOT_IMPLEMENTED, so the verdict stays
+A: TECHNICAL_WORK_REMAINING. Human supervision is not software authentication;
+self-review, CI or a local marker never substitute for independent review/GO.
+Track R's canonical diagnostic/Plan UI does not activate this audit path. The
+next audit implementation requires separate review/authorization for admission
+and live linkage; no fresh approval-shaped fixture or duplicate tool is added.
+REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD.

@@ -15,7 +15,8 @@ class CanoviaFutureController extends Controller
         if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
             // Public development copy is distinct from the DB Support model.
             // Preparation does not read votes, infer counts or enable voting.
-            return view('preparation.future', ['publicRoadmapSections' => $publicRoadmap->build()]);
+            return view('preparation.future', ['publicRoadmapSections' => $publicRoadmap->build(),
+                'interestReturn' => $request->user() !== null && $request->query('from') === 'interest-diagnostic']);
         }
 
         $voterKey = $this->voterKey($request, $identity);

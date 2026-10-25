@@ -3,6 +3,10 @@
 <section class="space-y-4">
     <h1 class="text-2xl font-bold">Canovia Future</h1>
     <p>開発や検証の現在地をお知らせします。掲載情報は一般公開や提供時期の保証ではありません。</p>
+    @if($interestReturn ?? false)
+        <p>関心を行動につなぐための開発近況です。全般の計画・記録づくりを中心に紹介しています。未提供の分野は推測せず、公開されている情報だけを掲載します。</p>
+        <a class="underline" href="{{ route('preparation.interests.result') }}">関心のふりかえりへ戻る</a>
+    @endif
     @php($cards = collect($publicRoadmapSections)->flatMap(fn ($section) => $section['items'])->values())
     @if($cards->isNotEmpty())
         <x-future-carousel id="preparation-future" label="開発ロードマップ" :count="$cards->count()">

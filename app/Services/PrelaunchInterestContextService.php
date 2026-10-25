@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\UserPersonalizationContext;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /** Owner-only namespace. Never feeds legacy inference, Plan generation or analytics. */
@@ -42,12 +43,14 @@ final class PrelaunchInterestContextService
         $intent = ['action' => 'answers', 'answers' => $answers, 'step' => $step, 'result' => $result];
 
         return $this->write($user, $revision, $intent, function (?array $old) use ($answers, $step, $result, $scores, $bank): array {
-            return ['kind' => self::KIND, 'item_bank_version' => $bank['item_bank_version'],
+            return ['kind' => self::KIND, 'instance_id' => $old['instance_id'] ?? (string) Str::uuid(),
+                'item_bank_version' => $bank['item_bank_version'],
                 'category_version' => $bank['category_version'], 'scoring_version' => $bank['scoring_version'],
                 'answers' => $answers, 'result' => $scores, 'step' => $step,
                 'state' => $result ? 'result' : 'draft',
                 'confirmed_categories' => $old['confirmed_categories'] ?? [],
                 'requested_support' => $old['requested_support'] ?? [],
+                'reviewed_at' => $old['reviewed_at'] ?? null,
                 'personal_storage_consent_at' => $old['personal_storage_consent_at'] ?? now()->toIso8601String(),
                 'updated_at' => now()->toIso8601String()];
         });
@@ -66,7 +69,7 @@ final class PrelaunchInterestContextService
 
                 // Explicit self-correction / service interest are separate from inferred scores.
                 return [...$record, 'confirmed_categories' => $confirmed, 'requested_support' => $support,
-                    'updated_at' => now()->toIso8601String()];
+                    'reviewed_at' => now()->toIso8601String(), 'updated_at' => now()->toIso8601String()];
             });
     }
 

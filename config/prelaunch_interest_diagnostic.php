@@ -3,8 +3,8 @@
 /**
  * Original, unvalidated 30-item Canovia interest-discovery draft (v0).
  *
- * NOT a clinical or psychometric assessment. This configuration is not
- * connected to routes or persisted user data until separately accepted.
+ * NOT a clinical or psychometric assessment. Used only by the optional,
+ * owner-persisted preparation profile; deployment/publication remain separate.
  * Keep stable item IDs and versions when editing copy or mapping.
  *
  * Mapping reviewed in docs/development/PRELAUNCH_INTEREST_DIAGNOSTIC_ITEM_BANK_V0_2026_10_24.md.
