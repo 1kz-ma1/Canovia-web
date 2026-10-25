@@ -38,6 +38,7 @@ on:
       - 'tests/Feature/PrelaunchInterestSurfaceTest.php'
       - 'resources/views/layouts/**'
       - 'tests/Feature/PreparationOnlyBoundaryTest.php'
+      - 'tests/Feature/PasswordResetMailPrivacyTest.php'
       - 'tests/Feature/PreparationCompatibilityMatrixTest.php'
       - 'scripts/ci/preparation_mac*'
       - 'scripts/ci/preparation_cutover*'
@@ -79,7 +80,7 @@ jobs:
       - run: cp .env.example .env
       - name: Owner replay and existing preparation/session contracts
         run: >-
-          php artisan test tests/Feature/PreparationCompatibilityMatrixTest.php tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PreparationWorkerStopTest.php tests/Feature/RenderStartupMigrationRetryV569Test.php tests/Feature/PlanCreationReplayOwnershipTest.php
+          php artisan test tests/Feature/PasswordResetMailPrivacyTest.php tests/Feature/PreparationCompatibilityMatrixTest.php tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PreparationWorkerStopTest.php tests/Feature/RenderStartupMigrationRetryV569Test.php tests/Feature/PlanCreationReplayOwnershipTest.php
           tests/Feature/PlanActionFirstCreationV5866Test.php
           tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           tests/Feature/PersonalizationBootstrapV5825Test.php

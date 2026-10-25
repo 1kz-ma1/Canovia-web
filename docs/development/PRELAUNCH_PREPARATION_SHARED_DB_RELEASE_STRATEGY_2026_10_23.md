@@ -637,3 +637,15 @@ Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHisto
 今はMac操作なし。後日ownerが行う最小単位は (1) GitHub上で候補案/監査方式/独立レビュー担当と停止・復旧責任を決める（秘密の提出なし） (2) Mac復帰後に今回UI差分だけを合成labで短時間受入、並行して正式tooling/private target/runtime/P1/R1–R6をprivateに受入 (3) fresh Phase1 GOの限定観測（実行入口の別実装/審査完了後だけ） (4) 別full metadata/DBA証拠受入 (5) 別write fence/backup/restore/一回migration/限定runtime切替の各承認 (6) 別本番昇格/manual deploy/限定smoke/公開判断。Phase1/full17/DDL/deployを一つのGOにまとめない。各単位はscope/固定SHA/時間窓を限定し、失敗/unknownはSTOP、同じGOで再実行しない。rawログ/個人データ/実target/CA/password/署名は本人private保管、GitHubはSHA/固定判定/時刻/件数/cleanupと不足だけ。
 
 Critical Pathは「独立審査とlive admission実装の別承認→現在のDB/権限/物理観測→fresh restoreとwriter fence→実runtime/session/device→正式候補採用・配備・公開判断」。Macの利用再開日と実環境条件に依存し、12/1を無条件には保証しない。現在 **BLOCKING_SHARED_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD**。
+
+### 16.5 Reset mailの非ログ配送境界（追加の具体的欠陥）
+
+§16.1後の最終内容確認で、Laravelの既定 `mail.default=log` と `failover→smtp/log` も確認した。許可済みforgot-passwordは、Nginxを秘匿してもResetPassword通知のbearer linkをLaravel LogTransportが記録し得る。合成User/NullHandlerのMessageLogged観測で修正前のreset link混入を再現した。実メールや実ログの観測ではない。
+
+local/testing以外ではbroker呼出し前に既存メール設定を検査し、log/array/不明/legacy-global driver、空/循環/過大なcomposite、URL/queryでlogへ差替わる設定を固定の一般向け送信不能メッセージで拒否する。tokenを生成せず通知せず、設定値/parse errorは出力しない。SMTP/sendmail/既存既知providerの構成形だけを許し、これは実配送・送信者/宛先・TLS/Providerログ・実秘密保管の受入ではない。Mailer overrideの解析はLaravelと同じConfigurationUrlParserを再利用し、新しいcredential loaderは作らない。既存login/register/Plan/Sessionとlocal/testingの開発通知は変更しない。本番メール設定の変更や実送信は実施しない。
+
+同じrequest/brokerの修正前後試験、nested failover、URL override、cycle/unknown/empty、既知SMTPのNotification fake、開発環境の互換性を検証する。アカウント存在の有無によらず配送設定不明なら同じ拒否とし、public responseへ設定詳細を出さない。実メール配送の最終受入は別のowner/live gateで、log fallbackを本番で有効にして通さない。
+
+この修正は共有AuthのSource変更なので、A–E分類のB根拠も新Sourceで再審査する。4専門controller・routes/bootstrap/config/resources/依存lockは不変で、共有Authの差分はこの通知前拒否だけ。追加した既存Preparation境界/本人Session回帰が成功した同じapp treeを新しい `review_basis` に束縛し直す。旧Mac/旧94/CA監査や既存UI本人受入を再要求せず、以前の#898全app tree一致を無条件に継続主張しない。
+
+Source上で解消した既知の公開必須ログ欠陥は§16.1と本節の2件。Render edge/FPM/Laravelの他の実効ログ、過去ログ保持、実メールProvider/TLS、current Session/remember-token policyは引き続き独立受入が必要。実運用を変更しない限りPRODUCTION_NO_GO_HOLD。

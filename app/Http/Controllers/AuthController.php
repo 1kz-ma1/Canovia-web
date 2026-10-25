@@ -146,6 +146,13 @@ class AuthController extends Controller
             'email' => ['required', 'email'],
         ]);
 
+        // A reset link is a bearer credential. Development log/array mailers
+        // must never mint or print one in a deployed/unknown environment.
+        if (! in_array(config('app.env'), ['local', 'testing'], true)
+            && ! $this->passwordResetDeliveryConfigured()) {
+            return back()->withErrors(['email' => '現在、再設定メールを送信できません。しばらくしてから、もう一度お試しください。']);
+        }
+
         $status = Password::sendResetLink($request->only('email'));
 
         // Do not reveal whether an address is registered.
@@ -154,6 +161,47 @@ class AuthController extends Controller
         }
 
         return back()->withErrors(['email' => 'しばらく待ってから、もう一度お試しください。']);
+    }
+
+    private function passwordResetDeliveryConfigured(): bool
+    {
+        $visited = 0;
+        $check = function ($name, array $ancestors = []) use (&$check, &$visited): bool {
+            if (! is_string($name) || $name === '' || strlen($name) > 80
+                || ++$visited > 32 || count($ancestors) >= 8 || in_array($name, $ancestors, true)) {
+                return false;
+            }
+            $mailer = config('mail.mailers.'.$name);
+            if (! is_array($mailer)) {
+                return false;
+            }
+            // Match Laravel MailManager's URL override semantics, including
+            // ?driver=log; never print parse errors or any configured values.
+            if (isset($mailer['url'])) {
+                $mailer = array_merge($mailer, (new \Illuminate\Support\ConfigurationUrlParser)->parseConfiguration($mailer));
+                $mailer['transport'] = $mailer['driver'] ?? null;
+            }
+            if (in_array($mailer['transport'] ?? null, ['failover', 'roundrobin'], true)) {
+                $children = $mailer['mailers'] ?? null;
+                if (! is_array($children) || ! array_is_list($children) || $children === [] || count($children) > 8) {
+                    return false;
+                }
+                foreach ($children as $child) {
+                    if (! $check($child, [...$ancestors, $name])) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return in_array($mailer['transport'] ?? null,
+                ['smtp', 'sendmail', 'ses', 'ses-v2', 'mailgun', 'postmark', 'resend'], true);
+        };
+        try {
+            // Legacy/custom global drivers need an explicit separate review.
+            return config('mail.driver') === null && $check(config('mail.default'));
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function showResetPassword(Request $request, string $token)
