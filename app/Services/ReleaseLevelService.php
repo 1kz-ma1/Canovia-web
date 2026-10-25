@@ -16,7 +16,10 @@ final class ReleaseLevelService
     {
         // Only the explicit boolean false disables this restrictive profile.
         // Malformed cached configuration must not widen the surface.
-        return config('release_levels.preparation_only', false) !== false;
+        $runtime = getenv('CANOVIA_PREPARATION_ONLY');
+
+        return config('release_levels.preparation_only', false) !== false
+            || ($runtime !== false && ! in_array($runtime, ['false', '(false)'], true));
     }
 
     public function __construct(

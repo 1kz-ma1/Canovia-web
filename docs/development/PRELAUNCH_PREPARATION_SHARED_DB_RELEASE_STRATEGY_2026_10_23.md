@@ -465,3 +465,13 @@ python3 scripts/ci/preparation_mac_lab.py --source-sha "$(git rev-parse HEAD)"
 表示されたloopbackだけをSafariで開き、合成 `normal@example.test` (L0) または新規合成登録、公開FAKE password `Synthetic-Preparation-Only-2026` を使う。30問/Unknown/中断保存/結果/訂正/Future/任意Plan/再ログイン/狭幅を確認し、Ctrl-C後 `LAB_STOPPED_DISPOSABLE_DATA_DELETED` を確認する。以前のAP学習・元DB・本番Accountには触れない。単独labがそのportを占有していればSTOPし、別serviceを止めない。
 
 現在地は `BLOCKING_SHARED_REMAINING`。コード上の体験完成と、実DB物理監査・復元・writer停止/起動順・runtime/Release Level実設定・実認証/session・既存installed SW・Render保護・実機/本番公開の受入は別。Preparation-onlyの採用は既存AP実行/履歴UIも閉じるため、ownerの影響受入なしに本番有効化しない。12月1日は安全ゲートを省略できる期限ではない。
+
+## 14. 2026-10-25 P0 runtime / preflight / CI画像（Mac操作不要）
+
+### 14.1 Cached false / STOP後再開の修正
+
+#888の既存Bus/Queue/Console/直接Job境界を再利用。修正前の合成3テストで、(1) runtimeの `CANOVIA_PREPARATION_ONLY=true` がcached falseに隠れること、(2) 同じapplicationが一度拒否した後にfalseへ変更するとhandlerを再開することを再現した。現在はraw runtime指定を制限の追加にだけ用い（falseでrestrictive configを解除しない）、一度STOPを観測したapplicationの実行guardを終端状態にする。Bus/Queue/Console/既存2 Jobが同一guardを使い、新しいapplication/processの正常な起動とは区別する。
+
+独立した合成PHPプロセスのメモリ内handlerだけで false→true→false の実行/拒否/拒否と回収を確認する。実queue daemon・scheduler・workerへの停止/再起動操作なし。関連PHP50件/404 assertions成功。missing Vite manifestはlocal build準備で解消し、テスト条件は緩和していない。
+
+**限界:** 新コードを持たず、false環境で既に稼働している旧Workerへ、この修正から通知/強制停止する機能はない。Webだけtrue・旧Workerがfalseで残存する構成は依然 **BLOCK**。guardは任意のコードを停止する機能や全writer列挙の証明ではない。cutoverは旧Web/worker/scheduler/queue consumer/自動再起動の停止とin-flight完了/remote不明HOLD→旧writer不在の独立確認→固定新source/config/cacheの全runtime照合→新Webの限定起動、の順序が必要。Preparation profileでは専門worker/schedulerを再開しない。残存・観測不明・新旧混在・古い設定/配布物・復旧後の無承認再開はSTOP。旧Job/予約/failed-jobを削除・再送しない。実プロセス不在はLIVE_VERIFICATION_REQUIREDであり、ローカル証跡やJSON自己申告ではPASSにしない。

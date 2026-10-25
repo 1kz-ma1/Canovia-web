@@ -12,6 +12,8 @@ on:
       - 'app/Http/Middleware/EnsurePreparationSurface.php'
       - 'app/Http/Middleware/EnsureFirstRunStarted.php'
       - 'app/Services/ReleaseLevelService.php'
+      - 'app/Services/PreparationExecutionGuard.php'
+      - 'tests/Feature/PreparationWorkerStopTest.php'
       - 'app/Services/FeatureFlagService.php'
       - 'app/Providers/AppServiceProvider.php'
       - 'app/Bus/**'
@@ -66,7 +68,7 @@ jobs:
       - run: cp .env.example .env
       - name: Owner replay and existing preparation/session contracts
         run: >-
-          php artisan test tests/Feature/PreparationCompatibilityMatrixTest.php tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PlanCreationReplayOwnershipTest.php
+          php artisan test tests/Feature/PreparationCompatibilityMatrixTest.php tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PreparationWorkerStopTest.php tests/Feature/PlanCreationReplayOwnershipTest.php
           tests/Feature/PlanActionFirstCreationV5866Test.php
           tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           tests/Feature/PersonalizationBootstrapV5825Test.php
