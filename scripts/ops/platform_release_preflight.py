@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Offline, read-only Git topology preflight for a pinned Canovia release.
 
-No network, GitHub, Render, Aiven or credential access. An output of
-REVIEW_REQUIRED is never production release authorization.
+Default mode has no network or credential access. Preparation mode optionally
+reads bounded GitHub GET metadata; never Render/Aiven or deployment. Neither
+REVIEW_REQUIRED nor any PASS field authorizes production.
 """
 from __future__ import annotations
 
@@ -98,14 +99,155 @@ def evaluate(repo: Path, release_sha: str, live_sha: str, release_branch: str) -
         return verdict("BLOCK", checks)
 
 
+# Preparation is a code-readiness report, not a second release authority.
+PREPARATION_CI = {
+    "ownership-and-persistence": ".github/workflows/prelaunch-shared-preparation.yml",
+    "publication-and-session": ".github/workflows/integration-exposure.yml",
+    "migration-recovery": ".github/workflows/v56-8-migration-recovery.yml",
+    "future-browser (chromium)": ".github/workflows/future-carousel.yml",
+    "future-browser (webkit)": ".github/workflows/future-carousel.yml",
+    "Platform release preflight offline tests": ".github/workflows/platform-release-preflight.yml",
+}
+PREPARATION_LIVE = (
+    "all_old_writers_stopped_and_no_supervisor_restart", "all_runtime_source_config_cache_match",
+    "aiven_current_schema_ledger_trigger_and_ddl_principal", "actual_backup_restore_and_account_plan_integrity",
+    "actual_auth_cookie_csrf_and_installed_service_worker", "render_live_branch_and_auto_deploy",
+)
+
+
+def preparation_github(sha: str, get) -> dict:
+    """GET metadata only. No logs, artifacts, credentials, providers or deployment."""
+    checks = {}
+    prefix = "repos/1kz-ma1/Canovia-web/"
+    try:
+        page = get(prefix + "commits/" + sha + "/check-runs?per_page=100")
+        rows = page.get("check_runs")
+        if (not isinstance(rows, list) or not rows or len(rows) > 100
+                or page.get("total_count") != len(rows) or any(not isinstance(r, dict) for r in rows)):
+            raise EvidenceUnavailable()
+        seen, runs = {}, {}
+        all_status = "PASS"
+        for row in rows:
+            if row.get("head_sha") != sha or row.get("app", {}).get("slug") != "github-actions":
+                raise EvidenceUnavailable()
+            if row.get("status") != "completed" or row.get("conclusion") != "success":
+                all_status = "FAIL" if row.get("conclusion") in ("failure", "timed_out", "cancelled", "action_required") else (all_status if all_status == "FAIL" else "UNKNOWN")
+            name = row.get("name")
+            if name not in PREPARATION_CI:
+                continue
+            if name in seen:
+                raise EvidenceUnavailable()
+            match = re.fullmatch(r"https://github.com/1kz-ma1/Canovia-web/actions/runs/([1-9][0-9]*)/job/[1-9][0-9]*", row.get("details_url", ""))
+            if not match:
+                raise EvidenceUnavailable()
+            rid = match[1]
+            if rid not in runs:
+                runs[rid] = get(prefix + "actions/runs/" + rid)
+            run = runs[rid]
+            if (run.get("head_sha") != sha or run.get("repository", {}).get("full_name") != "1kz-ma1/Canovia-web"
+                    or run.get("path") != PREPARATION_CI[name]):
+                raise EvidenceUnavailable()
+            state = "PASS" if row.get("status") == "completed" and row.get("conclusion") == "success" and run.get("status") == "completed" and run.get("conclusion") == "success" else "UNKNOWN"
+            if row.get("conclusion") in ("failure", "timed_out", "cancelled", "action_required") or run.get("conclusion") in ("failure", "timed_out", "cancelled", "action_required"):
+                state = "FAIL"
+                all_status = "FAIL"
+            seen[name] = state
+        checks["exact_head_ci"] = ("FAIL" if all_status == "FAIL" else
+                                   "PASS" if set(seen) == set(PREPARATION_CI) and all(v == "PASS" for v in seen.values()) and all_status == "PASS" else "UNKNOWN")
+        checks["preparation_route_job_account_plan_ci"] = seen.get("ownership-and-persistence", "UNKNOWN")
+        checks["selected_recovery_ci"] = seen.get("migration-recovery", "UNKNOWN")
+        checks["synthetic_browser_ci"] = ("FAIL" if any(seen.get(n) == "FAIL" for n in ["future-browser (chromium)", "future-browser (webkit)"]) else "PASS" if all(seen.get(n) == "PASS" for n in ["future-browser (chromium)", "future-browser (webkit)"]) else "UNKNOWN")
+        # Inventory is observable. Its adequacy/owner acceptance is a separate gate.
+        for branch in ("main", "production"):
+            rules = get(prefix + "rules/branches/" + branch)
+            if not isinstance(rules, list) or len(rules) > 100:
+                raise EvidenceUnavailable()
+            checks[branch + "_rules_read"] = "PASS"
+        return {"checks": checks, "ci_check_count": len(rows), "evidence_origin": "GITHUB_GET_METADATA"}
+    except Exception:
+        # API/JSON/subprocess errors can contain URLs or private data. Never echo.
+        return {"checks": {"github_evidence": "UNKNOWN"}, "ci_check_count": 0, "evidence_origin": "UNAVAILABLE"}
+
+
+def preparation_evaluate(repo: Path, sha: str, baseline_sha: str, get=None, ci_sha=None) -> dict:
+    checks = {name: "LIVE_VERIFICATION_REQUIRED" for name in PREPARATION_LIVE}
+    checks.update({"real_device_acceptance": "OWNER_ACCEPTANCE_REQUIRED",
+                   "production_branch_rules_acceptance": "OWNER_ACCEPTANCE_REQUIRED",
+                   "preparation_effect_on_existing_ap_use": "OWNER_ACCEPTANCE_REQUIRED",
+                   "exact_head_ci": "UNKNOWN", "old_new_writer_coexistence": "UNKNOWN",
+                   "recovery_readiness": "LIVE_VERIFICATION_REQUIRED", "worker_cutover": "LIVE_VERIFICATION_REQUIRED"})
+    out = {"result": "BLOCKING_SHARED_REMAINING", "checks": checks,
+           "release_authorized": False, "production_modified": False, "source_adopted": False,
+           "scope": "PINNED_SOURCE_AND_OPTIONAL_GITHUB_ONLY", "ci_check_count": 0}
+    if not SHA.fullmatch(sha) or not SHA.fullmatch(baseline_sha):
+        checks["source_integrity"] = "FAIL"
+        out["result"] = "FAIL"
+        return out
+    out.update(source_sha=sha, historical_baseline_sha=baseline_sha)
+    ci_sha = sha if ci_sha is None else ci_sha
+    try:
+        main = git(repo, "rev-parse", "--verify", "refs/remotes/origin/main^{commit}")
+        git(repo, "cat-file", "-e", sha + "^{commit}")
+        checks["source_integrity"] = "PASS" if ancestor(repo, sha, main) and ancestor(repo, baseline_sha, sha) else "FAIL"
+        def inventory(ref):
+            rows = git(repo, "ls-tree", "-r", ref, "--", "database/migrations").splitlines()
+            result = {}
+            for row in rows:
+                meta, path = row.split("\t", 1)
+                mode, kind, blob = meta.split()
+                if mode != "100644" or kind != "blob" or not SHA.fullmatch(blob) or not path.endswith(".php"):
+                    raise EvidenceUnavailable()
+                result[path] = blob
+            return result
+        old, new = inventory(baseline_sha), inventory(sha)
+        preserved = all(new.get(p) == blob for p, blob in old.items())
+        out["migration_inventory"] = {"historical_count": len(old), "candidate_count": len(new),
+                                      "added_count": len(new.keys() - old.keys()), "old_blobs_preserved": preserved}
+        checks["migration_inventory_source_only"] = "PASS" if len(old) == 94 and len(new) == 114 and preserved else "FAIL"
+        out["changed_path_count"] = len(git(repo, "diff", "--name-only", "--no-renames", baseline_sha, sha, "--").splitlines())
+        checks["historical_live_not_current_attestation"] = "LIVE_VERIFICATION_REQUIRED"
+        # No dynamic verification is inferred from finding source files.
+        shared = git(repo, "show", sha + ":.github/workflows/prelaunch-shared-preparation.yml")
+        checks["worker_stop_regression_in_ci_source"] = "PASS" if "PreparationWorkerStopTest.php" in shared else "UNKNOWN"
+        if not SHA.fullmatch(ci_sha):
+            raise EvidenceUnavailable()
+        tree_match = git(repo, "rev-parse", sha + "^{tree}") == git(repo, "rev-parse", ci_sha + "^{tree}")
+        checks["ci_tree_binding"] = "PASS" if tree_match else "FAIL"
+        out["ci_head_sha"] = ci_sha
+        if get is not None and tree_match:
+            evidence = preparation_github(ci_sha, get)
+            checks.update(evidence["checks"])
+            out["ci_check_count"] = evidence["ci_check_count"]
+            out["evidence_origin"] = evidence["evidence_origin"]
+    except (EvidenceUnavailable, ValueError, TypeError):
+        checks["source_evidence"] = "FAIL"
+    if "FAIL" in checks.values():
+        out["result"] = "FAIL"
+    return out
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path("."), help="Local full-history checkout with origin refs")
     parser.add_argument("--release-sha", required=True, help="40-character immutable release commit")
     parser.add_argument("--live-sha", required=True, help="Operator-observed Render Live SHA (not independently verified)")
-    parser.add_argument("--release-branch", required=True, help="release/* branch without refs/remotes/origin prefix")
+    parser.add_argument("--preparation", action="store_true", help="Pinned-source preparation report; never release GO")
+    parser.add_argument("--ci-head", help="Preparation only: tested commit with exactly the candidate tree (e.g. squash PR HEAD)")
+    parser.add_argument("--github-readonly", action="store_true", help="Preparation only: bounded GitHub GET metadata through existing gh login")
+    parser.add_argument("--release-branch", help="release/* branch without refs/remotes/origin prefix")
     args = parser.parse_args()
-    result = evaluate(args.repo, args.release_sha, args.live_sha, args.release_branch)
+    if (args.github_readonly or args.ci_head) and not args.preparation:
+        parser.error("GitHub metadata is available only for the preparation report")
+    if args.preparation:
+        get = None
+        if args.github_readonly:
+            from platform_ci_runtime_report import api
+            get = api
+        result = preparation_evaluate(args.repo, args.release_sha, args.live_sha, get, args.ci_head)
+    else:
+        if not args.release_branch:
+            parser.error("--release-branch is required for the original release topology check")
+        result = evaluate(args.repo, args.release_sha, args.live_sha, args.release_branch)
     print(json.dumps(result, ensure_ascii=True, sort_keys=True))
     return 0 if result["result"] == "REVIEW_REQUIRED" else 2
 

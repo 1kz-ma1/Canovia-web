@@ -475,3 +475,19 @@ python3 scripts/ci/preparation_mac_lab.py --source-sha "$(git rev-parse HEAD)"
 独立した合成PHPプロセスのメモリ内handlerだけで false→true→false の実行/拒否/拒否と回収を確認する。実queue daemon・scheduler・workerへの停止/再起動操作なし。関連PHP50件/404 assertions成功。missing Vite manifestはlocal build準備で解消し、テスト条件は緩和していない。
 
 **限界:** 新コードを持たず、false環境で既に稼働している旧Workerへ、この修正から通知/強制停止する機能はない。Webだけtrue・旧Workerがfalseで残存する構成は依然 **BLOCK**。guardは任意のコードを停止する機能や全writer列挙の証明ではない。cutoverは旧Web/worker/scheduler/queue consumer/自動再起動の停止とin-flight完了/remote不明HOLD→旧writer不在の独立確認→固定新source/config/cacheの全runtime照合→新Webの限定起動、の順序が必要。Preparation profileでは専門worker/schedulerを再開しない。残存・観測不明・新旧混在・古い設定/配布物・復旧後の無承認再開はSTOP。旧Job/予約/failed-jobを削除・再送しない。実プロセス不在はLIVE_VERIFICATION_REQUIREDであり、ローカル証跡やJSON自己申告ではPASSにしない。
+
+### 14.2 既存Preflightの準備版レポート
+
+`platform_release_preflight.py --preparation` は既存のGit topology処理と固定sourceを再利用し、旧94のblob保持・新114/追加20のinventory・変更件数・worker回帰のCI登録を検査する。実migrationや旧writer動作をstatic PASSへ変換しない。既存release-refの厳密照合modeは変更しない。
+
+追加の `--github-readonly` は既存bounded GET helper/gh認証を使い、単一repoのexact HEAD check/runsとmain/production rule inventoryだけを読む。ログ・artifact・資格情報・本番サービスには触れない。必須scopeのjob名だけでなくrunのrepo/HEAD/workflow pathを照合し、失敗はFAIL、欠損/未完了/skip/改変/取得不能はUNKNOWN。Squash後のmainと検証PR HEADを `--ci-head` で対応させる場合、Git tree全体の完全一致を必須にする。別treeの成功CIを流用しない。
+
+出力はPASS（明記したGit/CI観測範囲のみ）/FAIL/UNKNOWN/OWNER_ACCEPTANCE_REQUIRED/LIVE_VERIFICATION_REQUIRED。branch ruleの取得成功は保護内容や公開承認の受入ではない。旧worker不在・全runtime設定一致・現Aiven schema/ledger/TRIGGER/DDL・実backup/restore・本番auth/cookie/SW/Render・AP利用影響と実機は未受入のまま。外部JSONの自己申告でこれらをPASSにする入力は設けない。結果が全CI成功でもexit2/BLOCKING_SHARED_REMAINING、`release_authorized=false / source_adopted=false` を維持する。実操作の許可スイッチなし。
+
+```sh
+python3 scripts/ops/platform_release_preflight.py --repo . --preparation \
+  --release-sha <固定候補40桁> --ci-head <同じtreeの検証HEAD40桁> \
+  --live-sha 15abdc9de6f24b5250fb255c579d1aa55facaf1a --github-readonly
+```
+
+ここでlive-shaは歴史的Git比較対象で、現在Render Liveの証明ではない。proposal sourceをレポートするだけで新候補へ自動採用しない。Mac操作は不要。
