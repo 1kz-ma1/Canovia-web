@@ -29,9 +29,7 @@ final class BootstrapGitHubDevelopmentActivity implements ShouldQueue
     public function handle(
         GitHubDevelopmentObservationService $observations,
     ): void {
-        if (app(\App\Services\ReleaseLevelService::class)->preparationOnly()) {
-            throw new \RuntimeException('PREPARATION_EXECUTION_CLOSED');
-        }
+        app(\App\Services\PreparationExecutionGuard::class)->assertCanExecute();
 
         $artifact = PlanArtifact::query()
             ->with('plan.user')

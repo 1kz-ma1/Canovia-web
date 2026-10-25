@@ -2,20 +2,17 @@
 
 namespace App\Bus\Middleware;
 
-use App\Services\ReleaseLevelService;
+use App\Services\PreparationExecutionGuard;
 use Closure;
-use RuntimeException;
 
 /** Covers direct/synchronous bus handlers that never raise Queue::before. */
 final class EnsurePreparationExecution
 {
-    public function __construct(private readonly ReleaseLevelService $release) {}
+    public function __construct(private readonly PreparationExecutionGuard $guard) {}
 
     public function handle(mixed $command, Closure $next): mixed
     {
-        if ($this->release->preparationOnly()) {
-            throw new RuntimeException('PREPARATION_EXECUTION_CLOSED');
-        }
+        $this->guard->assertCanExecute();
 
         return $next($command);
     }

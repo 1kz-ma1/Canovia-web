@@ -32,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->singleton(\App\Services\PreparationExecutionGuard::class);
         $this->app->singleton(FreeEntitlementResolver::class);
         $this->app->singleton(ProductGrantEntitlementResolver::class);
         $this->app->singleton(GiftProductGrantEntitlementResolver::class);
@@ -88,14 +89,14 @@ class AppServiceProvider extends ServiceProvider
         // old deliveries). Queue reservation/failure bookkeeping is not a
         // proof of zero DB writes or a substitute for a stopped writer window.
         \Illuminate\Support\Facades\Queue::before(function (): void {
-            if (app(ReleaseLevelService::class)->preparationOnly()) {
+            if (app(\App\Services\PreparationExecutionGuard::class)->stopped()) {
                 throw new \RuntimeException('PREPARATION_QUEUE_CLOSED');
             }
         });
         \Illuminate\Support\Facades\Event::listen(
             \Illuminate\Console\Events\CommandStarting::class,
             function ($event): void {
-                if (app(ReleaseLevelService::class)->preparationOnly()
+                if (app(\App\Services\PreparationExecutionGuard::class)->stopped()
                     && ! in_array($event->command, [
                         'list', 'help', 'about', 'serve', 'up', 'down',
                         'config:cache', 'config:clear', 'route:cache', 'route:clear',
