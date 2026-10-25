@@ -646,6 +646,6 @@ local/testing以外ではbroker呼出し前に既存メール設定を検査し�
 
 同じrequest/brokerの修正前後試験、nested failover、URL override、cycle/unknown/empty、既知SMTPのNotification fake、開発環境の互換性を検証する。アカウント存在の有無によらず配送設定不明なら同じ拒否とし、public responseへ設定詳細を出さない。実メール配送の最終受入は別のowner/live gateで、log fallbackを本番で有効にして通さない。
 
-この修正は共有AuthのSource変更なので、A–E分類のB根拠も新Sourceで再審査する。4専門controller・routes/bootstrap/config/resources/依存lockは不変で、共有Authの差分はこの通知前拒否だけ。追加した既存Preparation境界/本人Session回帰が成功した同じapp treeを新しい `review_basis` に束縛し直す。旧Mac/旧94/CA監査や既存UI本人受入を再要求せず、以前の#898全app tree一致を無条件に継続主張しない。
+この修正は共有AuthのSource変更なので、A–E分類のB根拠も新Sourceで再審査する。4専門controller・routes/bootstrap/config/resources/依存lockは不変で、共有Authの差分はこの通知前拒否だけ。追加した既存Preparation境界/本人Session回帰が成功した同じapp treeを新しい `review_basis` と公開Git object sealへ束縛し直す。比較はcandidate自身のobjectだけで行い、Squash後に到達不能になり得るPR中間commitの取得へ依存しない。sealは承認tokenや実環境証拠ではない。旧Mac/旧94/CA監査や既存UI本人受入を再要求せず、以前の#898全app tree一致を無条件に継続主張しない。
 
 Source上で解消した既知の公開必須ログ欠陥は§16.1と本節の2件。Render edge/FPM/Laravelの他の実効ログ、過去ログ保持、実メールProvider/TLS、current Session/remember-token policyは引き続き独立受入が必要。実運用を変更しない限りPRODUCTION_NO_GO_HOLD。
