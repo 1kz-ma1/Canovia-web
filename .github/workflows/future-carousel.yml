@@ -78,3 +78,5 @@ jobs:
         with:
           name: future-${{ matrix.engine }}
           path: ${{ runner.temp }}/future-artifacts
+          if-no-files-found: error
+          retention-days: 7

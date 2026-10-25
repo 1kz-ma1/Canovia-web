@@ -491,3 +491,9 @@ python3 scripts/ops/platform_release_preflight.py --repo . --preparation \
 ```
 
 ここでlive-shaは歴史的Git比較対象で、現在Render Liveの証明ではない。proposal sourceをレポートするだけで新候補へ自動採用しない。Mac操作は不要。
+
+### 14.3 Macなしの390px画像確認
+
+#890の同じ `preparation_interest` journeyを再利用し、新しい機能/別labを作らず、390×844で (1)30問の入力 (2)関心グラフ (3)Future (4)Plan保存 (5)再ログイン後の同一Plan再訪を撮影する。既存のChromium/WebKit jobの `future-chromium / future-webkit` Artifact内 `interest/interest-mobile/` に5 PNGとmanifest、既存desktop結果も保存する。生成件数5・viewport幅390・横はみ出しを検査し、既存uploadを再利用（7日保持）。localhostの使い捨てSQLiteとソース固定の合成Accountだけを使用し、実利用者/認証情報の取得なし。manifestは合成由来を示すだけで、本人受入や実環境の証明にはならない。
+
+オーナーは現在Macを利用できないため、**今回のMac Safari/iPhone本人操作は不要・後日**。画像とLinux WebKit/Chromium CIで操作/表示を確認しても実機受入はOWNER_ACCEPTANCE_REQUIREDのまま。旧e858/CA/grants/94件/Mac検証を再要求しない。実環境へのGOやPreparation-only有効化も含まない。

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { chromium, webkit } from 'playwright';
 const base = process.env.CANOVIA_PREPARATION_INTEREST_BASE_URL;
 assert.equal(base, 'http://127.0.0.1:18805');
@@ -10,6 +12,17 @@ assert(['chromium', 'webkit'].includes(engine));
 const browser = await ({ chromium, webkit })[engine].launch({ headless: true,
     ...(process.env.CANOVIA_BROWSER_EXECUTABLE_PATH ? { executablePath: process.env.CANOVIA_BROWSER_EXECUTABLE_PATH } : {}) });
 const errors = [];
+const mobileCaptures = [];
+const captureDirectory = process.env.CANOVIA_INTEREST_SCREENSHOT_DIR;
+async function captureMobile(page, name) {
+    if (!captureDirectory) return;
+    assert.equal(page.viewportSize().width, 390);
+    await fits(page);
+    await page.waitForLoadState('networkidle');
+    await mkdir(captureDirectory, { recursive: true });
+    await page.screenshot({ path: join(captureDirectory, name + '.png'), fullPage: true });
+    mobileCaptures.push(name);
+}
 async function context() {
     const ctx = await browser.newContext({ serviceWorkers: 'block' });
     await ctx.route('**/*', route => new URL(route.request().url()).origin === base ? route.continue() : route.abort());
@@ -47,6 +60,7 @@ try {
     await page.setViewportSize({ width: 390, height: 844 });
     await fits(page);
     assert.equal(await page.locator('[data-interest-page]:visible').count(), 1);
+    await captureMobile(page, '01-diagnosis-390');
     await page.locator('[name="save_consent"]').check();
     await page.locator('[name="answers[Q01]"][value="3"]').check();
     await page.locator('[name="answers[Q02]"][value="3"]').check();
@@ -87,6 +101,7 @@ try {
     await page.getByRole('button', { name: '今の回答で結果を見る', exact: true }).click();
     await page.waitForURL(base + '/preparation/interests/result');
     await page.locator('[data-interest-result]').waitFor();
+    await captureMobile(page, '02-interest-graph-390');
     assert.equal(await page.locator('[data-interest-category]').count(), 8);
     const scores = (await stored(a)).record.result;
     assert.equal(scores.unknown_count, 1);
@@ -111,6 +126,7 @@ try {
     assert.equal((await one.json()).revision, (await two.json()).revision);
     await page.getByRole('link', { name: '関連するCanovia Futureを見る', exact: true }).click();
     await page.getByRole('heading', { name: 'Canovia Future', exact: true }).waitFor();
+    await captureMobile(page, '03-future-390');
     await page.getByRole('link', { name: '関心のふりかえりへ戻る' }).click();
     await page.getByRole('link', { name: '自分で目標・Planを作る', exact: true }).click();
     await page.locator('[name="title"]').fill('関心から自分で選んだ合成目標');
@@ -118,6 +134,7 @@ try {
     await page.getByRole('button', { name: 'Planを保存する', exact: true }).click();
     await page.locator('[data-preparation-plan]').waitFor();
     const plan = new URL(page.url()).pathname;
+    await captureMobile(page, '04-plan-saved-390');
     await page.reload();
     await page.getByRole('link', { name: '目標・計画を編集する', exact: true }).click();
     await page.locator('[name="description"]').fill('再訪して更新した合成メモ');
@@ -144,6 +161,7 @@ try {
     await page.getByRole('link', { name: '関心から自分で選んだ合成目標', exact: true }).click();
     assert.equal(new URL(page.url()).pathname, plan);
     await page.getByText('再訪して更新した合成メモ', { exact: true }).waitFor();
+    await captureMobile(page, '05-plan-revisit-390');
     assert.deepEqual((await stored(a)).record.confirmed_categories, ['CT']);
     await fits(page);
     // Diagnostic skip does not create data or block a manual Plan.
@@ -155,7 +173,15 @@ try {
     await fits(page);
     if (process.env.CANOVIA_INTEREST_SCREENSHOT) await page.screenshot({ path: process.env.CANOVIA_INTEREST_SCREENSHOT, fullPage: true });
     assert.deepEqual(errors, []);
+    if (captureDirectory) {
+        assert.equal(mobileCaptures.length, 5);
+        await writeFile(join(captureDirectory, 'manifest.json'), JSON.stringify({
+            kind: 'SYNTHETIC_PREPARATION_MOBILE_EVIDENCE', engine, viewport: { width: 390, height: 844 },
+            captures: mobileCaptures, source: 'OWNED_LOOPBACK_DISPOSABLE_SQLITE', real_device_verified: false,
+            production_verified: false, secrets_or_real_user_data_used: false,
+        }, null, 2));
+    }
     console.log(JSON.stringify({ result: 'passed', journey: 'optional_interest_to_same_owner_plan',
-        owner_level: 0, engine, questions: 30, database: 'disposable_sqlite', real_device_verified: false }));
+        owner_level: 0, engine, questions: 30, mobile_capture_count: mobileCaptures.length, database: 'disposable_sqlite', real_device_verified: false }));
     await a.close();
 } finally { await browser.close(); }
