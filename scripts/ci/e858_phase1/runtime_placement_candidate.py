@@ -10,6 +10,7 @@ import importlib.abc
 import importlib.util
 import io
 import os
+from pathlib import Path
 import stat
 import time
 import zipfile
@@ -38,6 +39,7 @@ class _SnapshotLoader(importlib.abc.Loader):
     def __init__(self, placement, name, relative, is_package):
         self.placement = placement
         self.name, self.relative, self.package = name, relative, is_package
+        self.origin = str(placement._origin / relative) if placement._origin is not None else relative
 
     def create_module(self, spec):
         return None
@@ -47,10 +49,10 @@ class _SnapshotLoader(importlib.abc.Loader):
         # methods remain BLOCK. Import environment remains managed-runtime trust.
         try:
             if (module.__spec__.name != self.name or module.__spec__.loader is not self
-                    or module.__spec__.origin != self.relative):
+                    or module.__spec__.origin != self.origin):
                 raise Block()
             raw = self.placement.source(self.relative)
-            code = compile(raw, self.relative, 'exec', dont_inherit=True)
+            code = compile(raw, self.origin, 'exec', dont_inherit=True)
             self.placement.check()
             exec(code, module.__dict__)
             self.placement.check()
@@ -68,6 +70,7 @@ class RuntimePlacementCandidate:
     """
     def __init__(self, anchor_fd, archive, archive_sha, pins, until):
         self.closed = True
+        self._origin = None
         self._fds, self._directories, self._files, self._bytes = [], {}, {}, {}
         try:
             if (type(anchor_fd) is not int or anchor_fd <= 2
@@ -156,6 +159,9 @@ class RuntimePlacementCandidate:
                 raise Block()
             _directory(self._anchor)
             if _identity(os.fstat(self._anchor))[:6]!=self._anchor_id:raise Block()
+            if self._origin is not None:
+                if (self._origin.resolve(strict=True)!=self._origin
+                        or _identity(os.lstat(self._origin))!=self._dir_ids['']):raise Block()
             root_stat = os.stat(BASENAME, dir_fd=self._anchor, follow_symlinks=False)
             if _identity(root_stat)!=self._dir_ids['']:raise Block()
             for name, fd in self._directories.items():
@@ -180,6 +186,18 @@ class RuntimePlacementCandidate:
             self.close()
             raise Block() from None
 
+    def bind_public_origin(self, root):
+        """Name the same held PUBLIC root once, never an endpoint/private input."""
+        try:
+            self.check()
+            if (self._origin is not None or type(root) is not str
+                    or not Path(root).is_absolute() or Path(root).resolve(strict=True)!=Path(root)
+                    or _identity(os.lstat(root))!=self._dir_ids['']):raise Block()
+            self._origin=Path(root)
+            self.check()
+        except BaseException:
+            self.close();raise Block() from None
+
     def source(self, relative):
         self.check()
         if relative not in self._bytes or not relative.endswith('.py'):
@@ -196,7 +214,11 @@ class RuntimePlacementCandidate:
             if len(matches)!=1:raise Block()
             relative=matches[0];self.source(relative)
             loader=_SnapshotLoader(self,name,relative,relative.endswith('/__init__.py'))
-            return importlib.util.spec_from_loader(name,loader,origin=relative,is_package=loader.package)
+            spec=importlib.util.spec_from_loader(name,loader,origin=loader.origin,is_package=loader.package)
+            if self._origin is not None:
+                spec.has_location=True
+                if loader.package:spec.submodule_search_locations=[str((self._origin/relative).parent)]
+            return spec
         except BaseException:
             self.close();raise Block() from None
 

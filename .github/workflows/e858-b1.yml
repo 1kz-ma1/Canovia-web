@@ -22,6 +22,7 @@ on:
       - 'tests/ci/test_e858_b1_*.py'
       - 'tests/ci/test_e858_runtime_file_lock_candidate.py'
       - 'tests/ci/test_e858_runtime_placement_candidate.py'
+      - 'tests/ci/test_e858_installed_program_bootstrap.py'
       - '.github/workflows/e858-b1.yml'
       - 'docs/development/integration/2026-10-18-b/e858-real-audit-route-safety.md'
   workflow_dispatch:
@@ -84,6 +85,7 @@ jobs:
           python3 -B -m unittest discover -s tests/ci -p test_e858_executable_candidate.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_runtime_file_lock_candidate.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_runtime_placement_candidate.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_e858_installed_program_bootstrap.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_owned_activation.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_tls_handoff.py -v
           python3 -B -m unittest discover -s tests/ci -p test_e858_b2_signature_fixture.py -v

@@ -1250,3 +1250,30 @@ existing Producer/driver/Bridge still perform the full private Entry/Program,
 TLS, SQL and deadline checks before each I/O. Repeating those checks inside the
 inert binding would consume the already running 2-second open window without
 adding execution authority. No existing Producer/driver check is removed.
+
+### 2026-10-25 Installed public Program bootstrap differential
+
+The public snapshot loader can now bind an absolute public source origin exactly
+once, only if that path names the already held no-follow candidate directory.
+Origin/path replacement is checked during the lease; code still compiles the
+held verified bytes, not a later pathname read. RuntimeFileLock retains its
+original full public Git checkout verification, and may separately observe the
+staged source root for exact loaded module origins/file identities. Default
+existing-checkout behavior is unchanged. This remains observation, not an OS
+immutable installation or an execution permit.
+
+A fresh **offline-only test interpreter** uses the existing candidate loader to
+import the full public closure, pinned PyMySQL tree/metadata and actual Program
+from staged sources with site-packages disabled. Program.check and the existing
+RuntimeFileLock then verify actual source/wheel origins, native/runtime identity,
+frozen archive and original Git provenance. Same-byte file replacement and
+loaded-origin drift are refused. No production bootstrap/CLI/credential reader
+or general launcher is shipped; the fresh-interpreter test seed is excluded
+from every distribution. Four public connection BLOCKs remain unchanged.
+
+This resolves the isolated full staged Program/wheel import proof, not a formal
+managed-Mac installation/adoption or live activation. Existing B procedure and
+inert dispatcher context still lack the separately reviewed authentic private
+operational authorization-to-live-executor origin. That code is NOT_IMPLEMENTED,
+not merely awaiting a signature. Classification remains A, and shared-DB
+release/restore/schema/owner/device gates remain independent and on HOLD.
