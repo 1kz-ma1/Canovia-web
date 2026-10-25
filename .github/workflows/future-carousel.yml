@@ -8,6 +8,7 @@ on:
       - 'app/Http/Controllers/CanoviaFutureController.php'
       - 'app/Services/PublicRoadmapProjectionService.php'
       - 'app/Services/ReleaseLevelService.php'
+      - 'app/Providers/AppServiceProvider.php'
       - 'config/canovia*roadmap*'
       - 'config/canovia_future_media.php'
       - 'resources/views/feedback/**'

@@ -75,6 +75,25 @@ final class PreparationWorkerStopTest extends TestCase
         }
     }
 
+    public function test_managed_daemon_exits_before_resolving_broker_or_reserving_old_job(): void
+    {
+        $manager = $this->createMock(\Illuminate\Queue\QueueManager::class);
+        $manager->expects($this->never())->method('connection');
+        $worker = new PreparationSyntheticWorker($manager, $this->app['events'],
+            $this->app[\Illuminate\Contracts\Debug\ExceptionHandler::class], fn () => false);
+        $worker->setCache($this->app['cache']->store('array'));
+        $this->app->instance('queue.worker', $worker);
+        config(['release_levels.preparation_only' => false]);
+        $this->assertNull($this->app['events']->until(new \Illuminate\Queue\Events\Looping('synthetic', 'default')));
+        $this->assertFalse($worker->shouldQuit);
+        config(['release_levels.preparation_only' => true]);
+        $this->assertSame(0, $worker->daemon('synthetic', 'default', new \Illuminate\Queue\WorkerOptions(stopWhenEmpty: true)));
+        $this->assertTrue($worker->shouldQuit);
+        config(['release_levels.preparation_only' => false]);
+        $this->assertFalse($this->app['events']->until(new \Illuminate\Queue\Events\Looping('synthetic', 'default')));
+        $this->assertTrue($worker->shouldQuit);
+    }
+
     public function test_independent_synthetic_process_models_stale_cache_stop_and_no_restart(): void
     {
         // No queue daemon, DB, external service or production process is started.
@@ -105,4 +124,16 @@ PHP;
         $this->assertSame(['HANDLER_RAN', 'PREPARATION_EXECUTION_CLOSED', 'PREPARATION_EXECUTION_CLOSED'],
             json_decode($process->getOutput(), true, 8, JSON_THROW_ON_ERROR));
     }
+}
+
+// The framework daemon algorithm is unchanged. Only OS signals/sleep are removed
+// from this owned in-memory fixture; any broker resolution fails the test.
+final class PreparationSyntheticWorker extends \Illuminate\Queue\Worker
+{
+    protected function supportsAsyncSignals()
+    {
+        return false;
+    }
+
+    public function sleep($seconds) {}
 }

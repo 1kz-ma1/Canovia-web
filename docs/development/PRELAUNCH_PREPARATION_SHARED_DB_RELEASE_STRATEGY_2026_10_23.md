@@ -497,3 +497,9 @@ python3 scripts/ops/platform_release_preflight.py --repo . --preparation \
 #890の同じ `preparation_interest` journeyを再利用し、新しい機能/別labを作らず、390×844で (1)30問の入力 (2)関心グラフ (3)Future (4)Plan保存 (5)再ログイン後の同一Plan再訪を撮影する。既存のChromium/WebKit jobの `future-chromium / future-webkit` Artifact内 `interest/interest-mobile/` に5 PNGとmanifest、既存desktop結果も保存する。生成件数5・viewport幅390・横はみ出しを検査し、既存uploadを再利用（7日保持）。localhostの使い捨てSQLiteとソース固定の合成Accountだけを使用し、実利用者/認証情報の取得なし。manifestは合成由来を示すだけで、本人受入や実環境の証明にはならない。
 
 オーナーは現在Macを利用できないため、**今回のMac Safari/iPhone本人操作は不要・後日**。画像とLinux WebKit/Chromium CIで操作/表示を確認しても実機受入はOWNER_ACCEPTANCE_REQUIREDのまま。旧e858/CA/grants/94件/Mac検証を再要求しない。実環境へのGOやPreparation-only有効化も含まない。
+
+### 14.4 予約前のmanaged Queue loop終了
+
+JobProcessing/Queue::beforeの例外だけでは、既に予約されたdeliveryのattempt/release/failed記録が動き得る。既存guardをLoopingにも適用し、STOP時はmanaged `queue.worker` のshouldQuitを立ててfalseを返し、Laravelの通常daemon終了処理へ入る。正常時はnullで他のLooping listenerを妨げない。既存Queue::before/Bus/Console/直接Jobはbackstopとして維持。
+
+ブローカー接続を一度でも呼ぶと失敗するmock managerと、OS signal/sleepだけを除いた合成Workerで、修正前の接続要求を再現、修正後の予約前終了・接続0・設定をfalseへ戻しても再開しないことを検証。関連PHP51件/414 assertions成功。実Worker/Job/queueには触れない。これは既に走っているhandlerの中断や、別binary/false環境/外部supervisorの停止ではない。境界確認後〜pop間の変化や予約済みdeliveryのbookkeepingまでゼロと認定しない。標準managed daemon以外も含む全writer停止と再起動禁止は依然実環境ゲート。

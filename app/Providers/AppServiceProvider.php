@@ -88,6 +88,17 @@ class AppServiceProvider extends ServiceProvider
         // Recheck in the running process, before any queued handler (including
         // old deliveries). Queue reservation/failure bookkeeping is not a
         // proof of zero DB writes or a substitute for a stopped writer window.
+        // A JobProcessing exception can still update attempts/release a delivery.
+        // The managed daemon must stop BEFORE resolving a broker or popping again.
+        \Illuminate\Support\Facades\Queue::looping(function (): ?bool {
+            if (app(\App\Services\PreparationExecutionGuard::class)->stopped()) {
+                app('queue.worker')->shouldQuit = true;
+
+                return false;
+            }
+
+            return null;
+        });
         \Illuminate\Support\Facades\Queue::before(function (): void {
             if (app(\App\Services\PreparationExecutionGuard::class)->stopped()) {
                 throw new \RuntimeException('PREPARATION_QUEUE_CLOSED');
