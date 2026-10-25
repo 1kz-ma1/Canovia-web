@@ -128,7 +128,7 @@ def preparation_github(sha: str, get) -> dict:
         if (not isinstance(rows, list) or not rows or len(rows) > 100
                 or page.get("total_count") != len(rows) or any(not isinstance(r, dict) for r in rows)):
             raise EvidenceUnavailable()
-        seen, runs = {}, {}
+        seen, runs, owner_run = {}, {}, None
         all_status = "PASS"
         for row in rows:
             if row.get("head_sha") != sha or row.get("app", {}).get("slug") != "github-actions":
@@ -155,11 +155,31 @@ def preparation_github(sha: str, get) -> dict:
                 state = "FAIL"
                 all_status = "FAIL"
             seen[name] = state
+            if name == "ownership-and-persistence":
+                owner_run = rid
         checks["exact_head_ci"] = ("FAIL" if all_status == "FAIL" else
                                    "PASS" if set(seen) == set(PREPARATION_CI) and all(v == "PASS" for v in seen.values()) and all_status == "PASS" else "UNKNOWN")
         checks["preparation_route_job_account_plan_ci"] = seen.get("ownership-and-persistence", "UNKNOWN")
         checks["selected_recovery_ci"] = seen.get("migration-recovery", "UNKNOWN")
         checks["synthetic_browser_ci"] = ("FAIL" if any(seen.get(n) == "FAIL" for n in ["future-browser (chromium)", "future-browser (webkit)"]) else "PASS" if all(seen.get(n) == "PASS" for n in ["future-browser (chromium)", "future-browser (webkit)"]) else "UNKNOWN")
+        # An overall green job cannot turn a skipped rehearsal step into proof.
+        checks["cutover_rehearsal_ci"] = "UNKNOWN"
+        if owner_run is not None and seen.get("ownership-and-persistence") == "PASS":
+            try:
+                jobs = get(prefix + "actions/runs/" + owner_run + "/jobs?per_page=100")
+                rows_jobs = jobs.get("jobs", [])
+                if len(rows_jobs) <= 100 and jobs.get("total_count") == len(rows_jobs):
+                    matches = [j for j in rows_jobs if j.get("name") == "ownership-and-persistence"
+                               and j.get("run_id") == int(owner_run) and j.get("head_sha") == sha]
+                    if len(matches) == 1:
+                        steps = [x for x in matches[0].get("steps", [])
+                                 if x.get("name") == "Isolated cutover rehearsal (synthetic only)"]
+                        if len(steps) == 1:
+                            step = steps[0]
+                            checks["cutover_rehearsal_ci"] = ("PASS" if step.get("status") == "completed" and step.get("conclusion") == "success"
+                                                              else "FAIL" if step.get("conclusion") in ("failure", "timed_out", "cancelled") else "UNKNOWN")
+            except Exception:
+                pass
         # Inventory is observable. Its adequacy/owner acceptance is a separate gate.
         for branch in ("main", "production"):
             rules = get(prefix + "rules/branches/" + branch)
@@ -177,14 +197,18 @@ def preparation_evaluate(repo: Path, sha: str, baseline_sha: str, get=None, ci_s
     checks.update({"real_device_acceptance": "OWNER_ACCEPTANCE_REQUIRED",
                    "production_branch_rules_acceptance": "OWNER_ACCEPTANCE_REQUIRED",
                    "preparation_effect_on_existing_ap_use": "OWNER_ACCEPTANCE_REQUIRED",
-                   "exact_head_ci": "UNKNOWN", "old_new_writer_coexistence": "UNKNOWN",
-                   "recovery_readiness": "LIVE_VERIFICATION_REQUIRED", "worker_cutover": "LIVE_VERIFICATION_REQUIRED"})
+                   "exact_head_ci": "UNKNOWN", "cutover_rehearsal_ci": "UNKNOWN", "old_new_writer_coexistence": "UNKNOWN",
+                   "recovery_readiness": "LIVE_VERIFICATION_REQUIRED", "worker_cutover": "LIVE_VERIFICATION_REQUIRED",
+                   "current_session_policy": "LIVE_VERIFICATION_REQUIRED",
+                   "post_snapshot_revocation_and_deletion_preservation": "LIVE_VERIFICATION_REQUIRED",
+                   "e858_genuine_admission_and_live_executor": "BLOCKING"})
     out = {"result": "BLOCKING_SHARED_REMAINING", "checks": checks,
            "release_authorized": False, "production_modified": False, "source_adopted": False,
            "scope": "PINNED_SOURCE_AND_OPTIONAL_GITHUB_ONLY", "ci_check_count": 0}
     if not SHA.fullmatch(sha) or not SHA.fullmatch(baseline_sha):
         checks["source_integrity"] = "FAIL"
         out["result"] = "FAIL"
+        out["readiness"] = preparation_states(checks)
         return out
     out.update(source_sha=sha, historical_baseline_sha=baseline_sha)
     ci_sha = sha if ci_sha is None else ci_sha
@@ -212,6 +236,15 @@ def preparation_evaluate(repo: Path, sha: str, baseline_sha: str, get=None, ci_s
         # No dynamic verification is inferred from finding source files.
         shared = git(repo, "show", sha + ":.github/workflows/prelaunch-shared-preparation.yml")
         checks["worker_stop_regression_in_ci_source"] = "PASS" if "PreparationWorkerStopTest.php" in shared else "UNKNOWN"
+        # This is a source record of the owner's UI-scope decision, NOT authority.
+        checks["product_restriction_record"] = "UNKNOWN"
+        try:
+            decision = git(repo, "show", sha + ":docs/development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md")
+            if "OWNER_ACCEPTED_PRODUCT_RESTRICTION_ONLY_2026_10_25" in decision:
+                checks["product_restriction_record"] = "PASS"
+                out["product_scope"] = "RECORDED_UI_RESTRICTION_ONLY_NOT_USER_SESSION_WRITER_OR_RELEASE_PROOF"
+        except EvidenceUnavailable:
+            pass
         if not SHA.fullmatch(ci_sha):
             raise EvidenceUnavailable()
         tree_match = git(repo, "rev-parse", sha + "^{tree}") == git(repo, "rev-parse", ci_sha + "^{tree}")
@@ -226,7 +259,42 @@ def preparation_evaluate(repo: Path, sha: str, baseline_sha: str, get=None, ci_s
         checks["source_evidence"] = "FAIL"
     if "FAIL" in checks.values():
         out["result"] = "FAIL"
+    out["readiness"] = preparation_states(checks)
+    out["scope_notes"] = {"preparation_effect_on_existing_ap_use": "OPERATIONAL_CUTOVER_ACCEPTANCE_REMAINS_SEPARATE_FROM_ACCEPTED_UI_RESTRICTION",
+                          "product_restriction_record": "RECORD_ONLY_NOT_AUTHENTICATION_OR_EXECUTION_PERMISSION",
+                          "cutover_rehearsal_ci": "OWNED_COORDINATION_ONLY_NOT_REAL_MYSQL_MIGRATION_OR_OLD_BINARY_PROOF"}
     return out
+
+
+def preparation_states(checks):
+    source = {"source_integrity", "ci_tree_binding", "migration_inventory_source_only", "worker_stop_regression_in_ci_source",
+              "main_rules_read", "production_rules_read", "product_restriction_record"}
+    return {key: "VERIFIED_SOURCE" if state == "PASS" and key in source else
+            "VERIFIED_ISOLATED" if state == "PASS" else "BLOCKING" if state == "FAIL" else state
+            for key, state in checks.items()}
+
+
+CUTOVER_ORDER = (
+    "SOURCE_AND_CONFIG", "RECOVERY_PRECONDITIONS", "OLD_WEB_STOPPED", "CONSUMERS_STOPPED",
+    "IN_FLIGHT_DRAINED", "WRITERS_ABSENT", "SCHEMA_PRECONDITIONS", "MIGRATION_ONCE",
+    "RUNTIMES_ALIGNED", "LIMITED_WEB_STARTED", "ACCEPTANCE", "SAFE_SHUTDOWN",
+)
+
+
+def cutover_order(events):
+    """Pure plan-order check, NEVER verification of facts or execution permission."""
+    position, stopped = 0, False
+    if not isinstance(events, (list, tuple)) or len(events) > 32:
+        return {"state": "BLOCKING", "release_authorized": False}
+    for event in events:
+        if event == "STOP" and not stopped:
+            stopped = True
+            continue
+        if stopped or position >= len(CUTOVER_ORDER) or event != CUTOVER_ORDER[position]:
+            return {"state": "BLOCKING", "release_authorized": False}
+        position += 1
+    return {"state": "BLOCKING" if stopped else "VERIFIED_SOURCE" if position == len(CUTOVER_ORDER) else "UNKNOWN",
+            "scope": "PLAN_ORDER_ONLY_NOT_OBSERVATION_OR_APPROVAL", "release_authorized": False}
 
 
 def main() -> int:

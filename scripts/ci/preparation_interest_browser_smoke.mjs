@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromium, webkit } from 'playwright';
 const base = process.env.CANOVIA_PREPARATION_INTEREST_BASE_URL;
-assert.equal(base, 'http://127.0.0.1:18805');
+assert.equal(base, process.env.CANOVIA_CUTOVER_FIXTURE === '1' ? 'http://127.0.0.1:18804' : 'http://127.0.0.1:18805');
 for (const [key, value] of Object.entries({ CANOVIA_PREPARATION_INTEREST_FIXTURE: '1',
     CANOVIA_PREPARATION_ONLY: 'true', DB_CONNECTION: 'sqlite', APP_ENV: 'local', CANOVIA_PUBLIC_RELEASE_LEVEL: '0' })) assert.equal(process.env[key], value);
 const engine = process.env.CANOVIA_INTEREST_ENGINE ?? 'chromium';

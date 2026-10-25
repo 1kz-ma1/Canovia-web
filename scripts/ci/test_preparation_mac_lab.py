@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import patch, Mock
 
-from preparation_mac_lab import check_checkout, lab_env, stop_server, serve, main, SafetyError
+from preparation_mac_lab import check_checkout, lab_env, stop_server, start_owned_server, serve, main, SafetyError
 
 
 class MacLabTest(unittest.TestCase):
@@ -85,6 +85,20 @@ class MacLabTest(unittest.TestCase):
             if process.poll() is None:
                 process.kill()
                 process.wait(timeout=5)
+
+    def test_reuseaddr_probe_still_refuses_a_live_listener_before_spawn(self):
+        with tempfile.TemporaryDirectory(prefix='canovia-preparation-mac-') as directory:
+            private = Path(directory)
+            (private / 'synthetic.sqlite').touch()
+            env = lab_env(private, 'original')
+            with socket.socket() as listener:
+                listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                listener.bind(('127.0.0.1', 18804))
+                listener.listen()
+                with patch('preparation_mac_lab.subprocess.Popen') as spawn:
+                    with self.assertRaises(OSError):
+                        start_owned_server(env, None, [])
+                    spawn.assert_not_called()
 
     def test_occupied_port_refuses_without_touching_other_process(self):
         with socket.socket() as existing:

@@ -30,6 +30,8 @@ on:
       - 'scripts/ops/platform_workflow_yaml_check.rb'
       - 'tests/ci/test_platform_release_preflight.py'
       - 'tests/ci/test_preparation_release_preflight.py'
+      - 'tests/ci/test_preparation_cutover_rehearsal.py'
+      - 'scripts/ci/preparation_cutover_rehearsal.py'
       - 'tests/ci/test_platform_render_binding_phase_gate.py'
       - 'tests/ci/test_g3_provider_evidence_inventory.py'
       - 'tests/ci/test_g3_provider_collection_plan.py'
@@ -98,7 +100,8 @@ jobs:
       - name: Validate pinned candidate and fail-closed manual gates
         run: |
           python3 -m unittest discover -s tests/ci -p 'test_platform_release_preflight.py' -v
-          python3 -m unittest discover -s tests/ci -p 'test_preparation_release_preflight.py' -v
+          python3 -B -m unittest discover -s tests/ci -p 'test_preparation_release_preflight.py' -v
+          python3 -B -m unittest discover -s tests/ci -p 'test_preparation_cutover_rehearsal.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_platform_render_binding_phase_gate.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_g3_provider_evidence_inventory.py' -v
           python3 -m unittest discover -s tests/ci -p 'test_g3_provider_collection_plan.py' -v
