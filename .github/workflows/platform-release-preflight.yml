@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'scripts/ops/platform_release_preflight.py'
+      - 'docker/nginx.conf'
+      - 'tests/ci/test_nginx_request_privacy.py'
       - 'scripts/ops/platform_render_binding_phase_gate.py'
       - 'scripts/ops/g3_provider_evidence_inventory.py'
       - 'scripts/ops/g3_provider_collection_plan.py'
@@ -97,6 +99,10 @@ jobs:
           python3 scripts/ops/g3_exit_decision_audit.py --repo . --sha "$(git rev-parse HEAD)" > "$RUNNER_TEMP/g3-r31-audit.json" || outcome=$?
           test "$outcome" -eq 2
           python3 -c 'import json,os,pathlib; d=json.loads((pathlib.Path(os.environ["RUNNER_TEMP"])/"g3-r31-audit.json").read_text()); assert d["result"] == "HOLD_EXTERNAL_PROOF_REQUIRED", d["result"]; assert all(s == "SOURCE_PRESENT_UNATTESTED" for s in d["local_contracts"].values()); assert d["g3_exit_accepted"] is False and d["production_release_authorized"] is False'
+      - name: Synthetic request privacy on owned network-none Nginx
+        run: |
+          docker pull nginx:1.28-bookworm
+          python3 -B -m unittest discover -s tests/ci -p test_nginx_request_privacy.py -v
       - name: Validate pinned candidate and fail-closed manual gates
         run: |
           python3 -m unittest discover -s tests/ci -p 'test_platform_release_preflight.py' -v
