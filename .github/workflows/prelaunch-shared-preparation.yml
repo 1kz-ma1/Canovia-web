@@ -17,6 +17,9 @@ on:
       - 'app/Services/FeatureFlagService.php'
       - 'app/Providers/AppServiceProvider.php'
       - 'app/Bus/**'
+      - '.dockerignore'
+      - 'docker/startup-migration-policy.sh'
+      - 'tests/Feature/RenderStartupMigrationRetryV569Test.php'
       - 'scripts/ops/platform_release_preflight.py'
       - 'tests/ci/test_preparation_release_preflight.py'
       - 'app/Http/Controllers/PrelaunchInterestController.php'
@@ -70,7 +73,7 @@ jobs:
       - run: cp .env.example .env
       - name: Owner replay and existing preparation/session contracts
         run: >-
-          php artisan test tests/Feature/PreparationCompatibilityMatrixTest.php tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PreparationWorkerStopTest.php tests/Feature/PlanCreationReplayOwnershipTest.php
+          php artisan test tests/Feature/PreparationCompatibilityMatrixTest.php tests/Feature/PreparationOnlyBoundaryTest.php tests/Feature/PreparationWorkerStopTest.php tests/Feature/RenderStartupMigrationRetryV569Test.php tests/Feature/PlanCreationReplayOwnershipTest.php
           tests/Feature/PlanActionFirstCreationV5866Test.php
           tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           tests/Feature/PersonalizationBootstrapV5825Test.php

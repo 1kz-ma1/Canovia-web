@@ -1,6 +1,23 @@
 #!/usr/bin/env sh
 # Source this only after entering the application root. Never print DB errors.
 canovia_prepare_startup_schema() {
+    # A generated cache may contain an old DB target / APP_KEY / feature profile.
+    # Clear only the fixed, owned cache before booting ANY PHP application code.
+    startup_config='bootstrap/cache/config.php'
+    case "${APP_CONFIG_CACHE:-}" in
+        ''|"$startup_config"|"$(pwd -P)/$startup_config") ;;
+        *) echo 'Startup blocked: unsupported config cache location' >&2; return 1 ;;
+    esac
+    if [ -L bootstrap ] || [ -L bootstrap/cache ] || [ -L "$startup_config" ] \
+        || { [ -e "$startup_config" ] && [ ! -f "$startup_config" ]; }; then
+        echo 'Startup blocked: unsafe generated config cache' >&2
+        return 1
+    fi
+    if ! rm -f -- "$startup_config" >/dev/null 2>&1; then
+        echo 'Startup blocked: generated config cache cleanup failed' >&2
+        return 1
+    fi
+
     # Preserve the existing closed, synthetic staging workflow. It is not a
     # production migration policy or permission to enable that environment.
     if [ "${APP_ENV:-}" = staging ] \

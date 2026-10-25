@@ -503,3 +503,13 @@ python3 scripts/ops/platform_release_preflight.py --repo . --preparation \
 JobProcessing/Queue::beforeの例外だけでは、既に予約されたdeliveryのattempt/release/failed記録が動き得る。既存guardをLoopingにも適用し、STOP時はmanaged `queue.worker` のshouldQuitを立ててfalseを返し、Laravelの通常daemon終了処理へ入る。正常時はnullで他のLooping listenerを妨げない。既存Queue::before/Bus/Console/直接Jobはbackstopとして維持。
 
 ブローカー接続を一度でも呼ぶと失敗するmock managerと、OS signal/sleepだけを除いた合成Workerで、修正前の接続要求を再現、修正後の予約前終了・接続0・設定をfalseへ戻しても再開しないことを検証。関連PHP51件/414 assertions成功。実Worker/Job/queueには触れない。これは既に走っているhandlerの中断や、別binary/false環境/外部supervisorの停止ではない。境界確認後〜pop間の変化や予約済みdeliveryのbookkeepingまでゼロと認定しない。標準managed daemon以外も含む全writer停止と再起動禁止は依然実環境ゲート。
+
+## 15. 2026-10-25 Cutover / Recovery / Candidate preparation
+
+### 15.1 更新された製品判断とstartup cache
+
+オーナーはCanovia外でAP学習中で、他の既存利用者へも利用停止を案内済み。先行公開時のPreparation-only適用によりStudy/Development実行・履歴画面を一時的に閉じることを許容した。**OWNER_ACCEPTED_PRODUCT_RESTRICTION_ONLY_2026_10_25**。Account/Plan/Task/履歴は保持し正式版で再利用する。この判断は全利用者の停止・Session失効・旧writer/worker停止・DB/IdP安全性・本番GOを証明しない。§13–14の「AP利用影響受入待ち」はこの製品制限の範囲だけ後続決定で更新され、実運用の切替受入は残る。
+
+起動調査で、build contextがhost生成のbootstrap cacheを含め得ることと、古いconfig cacheを残したままschema確認が先行することを確認。合成fixtureで、schema client起動時にも旧cacheが残る失敗、未許可cache override/symlinkを拒否しない失敗を再現した。`.dockerignore`で生成PHP cacheを除外し、起動policyはPHPを呼ぶ前に固定のowned `bootstrap/cache/config.php`だけを無効化する。未知のAPP_CONFIG_CACHE、symlink/非通常ファイル、cleanup失敗はPHP/DB処理前にSTOP。内容は読まず、削除失敗の生エラーも出さない。通常のcheck-only/承認SHA付き一回apply/部分DDL STOPは維持する。
+
+この処理は再生成可能なcacheのhygieneで、旧process停止やDB identity監査の代わりではない。startup directoryは信頼済みsource/単独writer/所有権の一致が前提で、敵対的な同時filesystem変更への一般的な防御とはしない。実画像・設定・APP_KEY/cookie/session/target一致は未受入。未知cache pathを黙って掃除/参照しない。実Render/Aiven/Worker操作なし。関連PHP35件/385 assertions成功、固定e858/SQL/Reference/4公開BLOCKとmigrationは不変。

@@ -8,6 +8,9 @@
 vendor
 node_modules
 
+# Never bake host-generated Laravel config/routes/provider caches into an image.
+bootstrap/cache/*.php
+
 storage/logs/*
 storage/framework/cache/*
 storage/framework/sessions/*
