@@ -649,3 +649,19 @@ local/testing以外ではbroker呼出し前に既存メール設定を検査し�
 この修正は共有AuthのSource変更なので、A–E分類のB根拠も新Sourceで再審査する。4専門controller・routes/bootstrap/config/resources/依存lockは不変で、共有Authの差分はこの通知前拒否だけ。追加した既存Preparation境界/本人Session回帰が成功した同じapp treeを新しい `review_basis` と公開Git object sealへ束縛し直す。比較はcandidate自身のobjectだけで行い、Squash後に到達不能になり得るPR中間commitの取得へ依存しない。sealは承認tokenや実環境証拠ではない。旧Mac/旧94/CA監査や既存UI本人受入を再要求せず、以前の#898全app tree一致を無条件に継続主張しない。
 
 Source上で解消した既知の公開必須ログ欠陥は§16.1と本節の2件。Render edge/FPM/Laravelの他の実効ログ、過去ログ保持、実メールProvider/TLS、current Session/remember-token policyは引き続き独立受入が必要。実運用を変更しない限りPRODUCTION_NO_GO_HOLD。
+
+## 17. 2026-10-26 Preparation-only UI素材差分
+
+Owner提供 `Canovia_UI_Assets_Codex_20261026.zip` の `CODEX_REQUEST.md` を、本人の「進めて」で今回のUI実装指示として採用。参考画像の数値・架空の機能・ロゴ置換は採用しない。§13の4段階+Unknown、5問×6ページ、同意・本人Context・revision/CSRF・Canonical Planの契約を維持する。
+
+- 質問はnative radioのカードとチェック表示・focus輪郭・390px一列。Unknownも同じ操作面積。進捗は**選択数（Unknownを含む）**であり得点ではない。自動進行・回答の必須化はしない。
+- 結果は既存Serviceの割合/未判定のみ。8分野のラベル・割合・棒・装飾画像を組み合わせ、能力/性格/精度の断定なし。
+- 関心の訂正と準備希望を別fieldsetに維持。前者は画像カード、後者は任意details内の文字カード。保存済み希望があれば展開する。両方の解除・未指定・旧入力を維持し、Support投票や推定点数へ変換しない。
+- 新規Planだけ、静的な3例（調べる/作品/働き方）を任意表示。本人の明示clickで空のtitle/description/categoryへ入力するだけ。入力済み/編集Planを上書きせず、通信・自動保存・AI接続・診断からの自動選択なし。通常の確認・保存が別途必要。JSなしでも既存フォームを使用可能。
+- Futureの公開対象・文言・成熟度は既存projectionの3件を維持し、機能カード/票数を追加しない。`first-use-choices` のロゴplaceholderを構想イラストへ置換。`progress-and-records`/`external-activity-sync` は既存素材を再利用。実提供・一般公開へ昇格しない。
+
+素材はZIPの02〜09を各320×320 WebP（計227,816 bytes、透明度維持）として `public/images/preparation/{st,dv,cr,wk,wb,fn,ct,lf}.webp` へ配置。02をFuture向け640×640 WebP（88,852 bytes、contain表示）として再利用。画像は固定寸法/遅延読込/async decode、文字ラベルとnative入力が操作の正本。01宇宙背景・10生成emblemは性能/公式ブランド維持のため未採用。背景はCSS。コンセプトと現行参考PNG・大容量原本はpublicへ含めない。新規生成・構図加工なし、縮小/形式変換のみ。追加アニメーションなし。
+
+差分検証は既存 `PrelaunchInterestSurfaceTest` と `preparation_interest_browser_smoke.mjs` を拡張し、keyboard/native radio、44px以上のtouch面、選択数、任意2群の全解除・点数不変、例文の明示入力/自動保存なし/上書き拒否、JSなしのUnknown保存を確認する。既存の途中保存・復帰・通信失敗・revision競合・再送・CSRF・他者Plan拒否・専門機能404・再ログイン同一IDを継続。既存Chromium/WebKit Artifactに390pxの5画面とdesktop質問/結果/Future/Planフォームを保存する。CIは実Safari/iPhone受入や本番GOではない。
+
+本人Mac差分は新しい固定Sourceの別clean checkout/既存§10ラボで、回答カードのtap/矢印focus、Unknown/進捗、結果と任意2群の解除、例文を使わない/選択/編集、Futureの絵と状態、390px相当を確認する。過去のCA/grants/旧94件/e858 Mac検査は再要求しない。正式なSafari受入報告は未取得として維持（ZIPの所感を完全な受入やcleanup証拠へ昇格しない）。実DB・Render・production/release・e8584公開BLOCK・固定SQL/Reference・PHP最低8.4.27・全安全HOLDは不変。

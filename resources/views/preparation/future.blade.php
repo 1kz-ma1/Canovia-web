@@ -1,5 +1,6 @@
 @extends('layouts.app')
 @section('content')
+<x-preparation-journey :current="3" />
 <section class="space-y-4">
     <h1 class="text-2xl font-bold">Canovia Future</h1>
     <p>開発や検証の現在地をお知らせします。掲載情報は一般公開や提供時期の保証ではありません。</p>
@@ -25,6 +26,11 @@
     @else
         <p>現在掲載している開発近況はありません。</p>
     @endif
+    <div class="preparation-intro space-y-3 p-6">
+        <h2 class="text-xl font-bold">小さな一歩は、自分のPlanから</h2>
+        <p>開発中の機能を待たずに、今の目標を自分の言葉で残せます。次の画面で例文を選ぶことも、空から書くこともできます。</p>
+        <a class="btn-primary inline-flex" href="{{ route('plans.create.manual') }}">自分で目標・Planを作る</a>
+    </div>
     <p>ご意見やお問い合わせはサポートへお寄せください。</p>
 </section>
 @endsection

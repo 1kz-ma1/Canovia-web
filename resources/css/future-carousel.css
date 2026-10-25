@@ -6,6 +6,7 @@
 .future-carousel.is-enhanced .future-carousel-card[data-active="true"], .future-carousel.is-enhanced .future-carousel-card:focus-within { transform: scale(1); border-color: #b4c9ff; box-shadow: 0 0 0 1px #9ec4ff50, 0 0 28px #6478ef40; }
 .future-card-media { margin: 0; background: #101b35; }
 .future-card-media > img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.future-card-media > img.future-card-art-contain { object-fit: contain; }
 .future-card-media figcaption { padding: .4rem .8rem; color: #bdcbe1; font-size: .625rem; line-height: 1.5; }
 .future-card-placeholder { display: grid; place-content: center; justify-items: center; gap: .6rem; aspect-ratio: 16 / 9; padding: 1rem; background: radial-gradient(ellipse at 50% 40%, #39447b, #0c172f 75%); color: #d4e5ff; font-size: .75rem; }
 .future-card-placeholder img { width: 4rem; height: 4rem; }

@@ -1,7 +1,8 @@
 @extends('layouts.app')
 @section('title', '関心のふりかえり | Canovia')
 @section('content')
-<section class="page-card space-y-4 p-6">
+<x-preparation-journey :current="2" />
+<section class="preparation-intro space-y-4 p-6">
     <h1 class="text-2xl font-bold">関心のふりかえり</h1>
     <p>今の回答からみた相対的な傾向です。能力・達成度や適性の判定ではありません。結果に合わせる必要はなく、自分の言葉で修正できます。</p>
     <a href="{{ route('preparation.interests.show') }}" class="underline">回答を見直す</a>
@@ -12,14 +13,16 @@
     @php($result = $record['result'])
     <section class="page-card space-y-4 p-6" aria-labelledby="interest-chart-title" data-interest-result>
         <h2 id="interest-chart-title" class="text-xl font-bold">関心のバランス</h2>
-        <p>回答 {{ $result['answered_count'] }}問・わからない {{ $result['unknown_count'] }}問・未回答 {{ $result['unanswered_count'] }}問</p>
+        <p class="preparation-chart-counts"><span>回答 {{ $result['answered_count'] }}問</span><span>わからない {{ $result['unknown_count'] }}問</span><span>未回答 {{ $result['unanswered_count'] }}問</span></p>
+        <p class="text-sm text-slate-300">割合は、回答できた分野の間での関心のバランスです。低い値は苦手という意味ではありません。</p>
         @if($result['status'] === 'insufficient_evidence')<p>まだ回答が少ないため、割合を表示できません。各分野の基本3問のうち2問以上の回答が必要です。</p>
         @elseif($result['status'] === 'no_relative_signal')<p>今の回答からは、相対的な関心の割合を求められません。低い能力や関心の欠如を意味しません。</p>@endif
         <ul class="space-y-4">
         @foreach($result['categories'] as $key => $category)
-            <li data-interest-category="{{ $key }}" class="space-y-2">
-                <div class="flex flex-wrap justify-between gap-2"><span>{{ $category['label'] }}</span><span>{{ $category['share_percent'] === null ? '判断材料が足りません' : $category['share_percent'].'%' }}</span></div>
-                @if($category['share_percent'] !== null)<div role="img" aria-label="{{ $category['label'] }} {{ $category['share_percent'] }}%" class="h-3 overflow-hidden rounded-full bg-slate-800"><div class="h-full rounded-full bg-cyan-400" style="width: {{ (int) $category['share_percent'] }}%"></div></div>@endif
+            <li data-interest-category="{{ $key }}" class="preparation-chart-row">
+                <span class="preparation-chart-label"><img src="{{ asset('images/preparation/'.strtolower($key).'.webp') }}" width="320" height="320" loading="lazy" decoding="async" alt=""><span>{{ $category['label'] }}</span></span>
+                <span class="preparation-chart-value">{{ $category['share_percent'] === null ? '判断材料が足りません' : $category['share_percent'].'%' }}</span>
+                @if($category['share_percent'] !== null)<div role="img" aria-label="{{ $category['label'] }} {{ $category['share_percent'] }}%" class="preparation-chart-bar"><div style="width: {{ (int) $category['share_percent'] }}%"></div></div>@endif
             </li>
         @endforeach
         </ul>
@@ -27,11 +30,16 @@
     </section>
     <form method="POST" action="{{ route('preparation.interests.review') }}" class="page-card space-y-5 p-6">
         @csrf<input type="hidden" name="review_present" value="1"><input type="hidden" name="revision" value="{{ old('revision', $revision) }}">
-        <fieldset class="space-y-3"><legend class="text-xl font-bold">自分で選ぶ、今の関心</legend><p>結果と違っていても大丈夫です。選んだ内容を別に保存し、グラフの点数は書き換えません。</p>
-        @foreach($bank['categories'] as $key => $label)<label class="flex items-center gap-3"><input type="checkbox" name="confirmed_categories[]" value="{{ $key }}" @checked(in_array($key, (session()->hasOldInput('review_present') ? (array) old('confirmed_categories', []) : $record['confirmed_categories']), true))>{{ $label }}</label>@endforeach
+        <fieldset class="space-y-3"><legend class="text-xl font-bold">自分で選ぶ、今の関心（任意）</legend><p>結果と違っていても大丈夫です。選んだ内容を別に保存し、グラフの点数は書き換えません。未選択のままでも、すべて解除しても保存できます。</p>
+        <div class="preparation-choice-grid">
+        @foreach($bank['categories'] as $key => $label)<x-preparation-interest-choice name="confirmed_categories" :category="$key" :label="$label" :art="true" :checked="in_array($key, (session()->hasOldInput('review_present') ? (array) old('confirmed_categories', []) : $record['confirmed_categories']), true)" />@endforeach
+        </div>
         </fieldset>
-        <fieldset class="space-y-3"><legend class="font-bold">Canoviaで準備したいこと（任意）</legend><p>関心とは別の希望です。機能提供やSupport投票を意味しません。</p>
-        @foreach($bank['categories'] as $key => $label)<label class="flex items-center gap-3"><input type="checkbox" name="requested_support[]" value="{{ $key }}" @checked(in_array($key, (session()->hasOldInput('review_present') ? (array) old('requested_support', []) : $record['requested_support']), true))>{{ $label }}</label>@endforeach
+        <fieldset class="space-y-3"><legend class="text-xl font-bold">Canoviaで準備したいこと（任意）</legend><p>関心とは別の希望です。機能提供やSupport投票を意味しません。</p>
+        <details class="preparation-optional" @if(count($record['requested_support']) || session()->hasOldInput('review_present')) open @endif><summary>準備の希望を選ぶ・見直す（複数選択・解除できます）</summary>
+        <div class="preparation-choice-grid mt-4">
+        @foreach($bank['categories'] as $key => $label)<x-preparation-interest-choice name="requested_support" :category="$key" :label="$label" :checked="in_array($key, (session()->hasOldInput('review_present') ? (array) old('requested_support', []) : $record['requested_support']), true)" />@endforeach
+        </div></details>
         </fieldset>
         <button class="btn-secondary" type="submit">自分の関心・希望を保存する</button>
     </form>

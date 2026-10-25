@@ -1,7 +1,8 @@
 @extends('layouts.app')
 @section('title', '30問で関心を見つける | Canovia')
 @section('content')
-<section class="page-card space-y-4 p-6">
+<x-preparation-journey :current="1" />
+<section class="preparation-intro space-y-4 p-6">
     <p class="text-sm text-cyan-300">自分に合った準備のために</p>
     <h1 class="text-2xl font-bold">30問で関心を見つける</h1>
     <p>日常の選び方から、今の関心を整理します。能力・達成度・性格を判定する検査ではなく、心理学的な妥当性は未検証です。</p>
@@ -16,17 +17,21 @@
         @csrf
         <input type="hidden" name="revision" value="{{ old('revision', $revision) }}">
         <input type="hidden" name="step" value="{{ old('step', $record['step'] ?? 1) }}">
-        <p aria-live="polite" data-interest-progress class="text-cyan-300"></p>
+        <div class="preparation-progress">
+            <p aria-live="polite" data-interest-progress class="text-cyan-300"></p>
+            <p data-interest-answered class="text-sm"></p>
+            <progress data-interest-meter max="30" value="0" aria-label="選択済みの質問数（わからないを含む）" hidden></progress>
+        </div>
         @foreach(array_chunk($bank['items'], 5, true) as $page => $items)
             <section class="page-card space-y-6 p-6" data-interest-page="{{ $page + 1 }}" aria-label="質問 {{ $page * 5 + 1 }}〜{{ $page * 5 + 5 }}">
                 @foreach($items as $id => $item)
-                    <fieldset class="min-w-0 space-y-3" data-interest-question="{{ $id }}">
+                    <fieldset class="preparation-question min-w-0 space-y-3" data-interest-question="{{ $id }}">
                         <legend class="font-semibold">{{ substr($id, 1) }}. {{ $item['text'] }}</legend>
-                        <div class="grid gap-2 sm:grid-cols-2">
+                        <div class="preparation-answers">
                         @foreach(['0' => 'あてはまらない', '1' => 'あまりあてはまらない', '2' => 'ややあてはまる', '3' => 'あてはまる', 'unknown' => 'わからない'] as $value => $label)
-                            <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-600 p-3 focus-within:ring-2 focus-within:ring-cyan-300">
+                            <label class="preparation-answer {{ $value === 'unknown' ? 'preparation-answer-unknown' : '' }}">
                                 <input type="radio" name="answers[{{ $id }}]" value="{{ $value }}" @checked(isset($answers[$id]) && (string) $answers[$id] === (string) $value)>
-                                <span>{{ $label }}</span>
+                                <span class="preparation-answer-body"><span>{{ $label }}</span>@if($value === 'unknown')<span class="preparation-answer-hint">判断できない</span>@endif<span class="preparation-answer-tick" aria-hidden="true">✓</span></span>
                             </label>
                         @endforeach
                         </div>
