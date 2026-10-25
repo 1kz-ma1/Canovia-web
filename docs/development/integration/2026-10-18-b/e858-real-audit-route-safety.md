@@ -1339,3 +1339,21 @@ Track R's canonical diagnostic/Plan UI does not activate this audit path. The
 next audit implementation requires separate review/authorization for admission
 and live linkage; no fresh approval-shaped fixture or duplicate tool is added.
 REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD.
+
+
+### 2026-10-25 RC security review / alternative-route comparison
+
+The existing shared-DB release strategy §16.2–16.4 now records the source-level
+reachability review, conservative all-path A–E allocation, Track H versus e858
+versus a separately reviewed existing DBA platform, and Source/Isolated/Live/Owner
+gates. No presently adopted alternative meets the complete current physical
+audit requirements. Track H's old seven-SQL/94-only CI executor is not a Full17
+replacement. The next step is independent review of B operational trust and a
+closed activation change proposal, not permission to run any collector.
+
+Genuine private admission and the live launcher/opener/adapter/wire linkage remain
+NOT_IMPLEMENTED. The four public unconditional BLOCKs are unchanged. No new
+authority, approval-shaped fixture, production connector, private input or source
+pin change is introduced. Existing Mac, Full94, MySQL and remote-observer evidence
+remains historical/isolated. A: TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN /
+PRODUCTION_NO_GO_HOLD.

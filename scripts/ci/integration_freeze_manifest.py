@@ -56,7 +56,89 @@ def risk_areas(path: str) -> list[str]:
     return matches or ['shared_manual_review']
 
 
-def manifest(root: Path, base: str, candidate: str) -> dict:
+# Work allocation, not approval. Narrow B claims are tied to the application
+# trees actually reviewed at #898; any change requires another reachability review.
+PREPARATION_REVIEW_BASIS = '369e738bf75fa92a9109a3a87344053b030be442'
+ISOLATION_TREES = ('app', 'bootstrap', 'config', 'routes', 'resources', 'composer.json', 'composer.lock')
+ISOLATED_HANDLERS = {
+    'app/Http/Controllers/StudyPracticeReviewController.php',
+    'app/Http/Controllers/StudyPracticeRetryController.php',
+    'app/Http/Controllers/AdaptiveLearningHistoryController.php',
+    'app/Http/Controllers/AdaptiveLearningNextActionController.php',
+}
+REQUIRED_SHARED = {
+    'AGENTS.md', '.dockerignore', 'Dockerfile', 'composer.json', 'composer.lock',
+    'bootstrap/app.php', 'app/Providers/AppServiceProvider.php',
+    'routes/web.php', 'routes/console.php', 'config/canovia.php', 'config/release_levels.php',
+    'config/prelaunch_interest_diagnostic.php', 'config/canovia_public_roadmap.php',
+    'config/canovia_future_media.php', 'vite.config.js',
+    'app/Http/Controllers/AuthController.php', 'app/Http/Controllers/HomeController.php',
+    'app/Http/Controllers/PlanController.php', 'app/Http/Controllers/PrelaunchInterestController.php',
+    'app/Http/Controllers/PersonalizationController.php', 'app/Http/Controllers/CanoviaFutureController.php',
+    'app/Http/Middleware/EnsurePreparationSurface.php',
+    'app/Bus/Middleware/EnsurePreparationExecution.php',
+    'app/Services/ReleaseLevelService.php', 'app/Services/FeatureAccessService.php',
+    'app/Services/FeatureFlagService.php', 'app/Services/PreparationExecutionGuard.php',
+    'app/Services/PersonalizationContextService.php', 'app/Services/PrelaunchInterestContextService.php',
+    'app/Services/PrelaunchInterestScoringService.php', 'app/Services/GuestPlanClaimService.php',
+    'app/Services/AccountDeletionService.php', 'app/Models/Plan.php', 'app/Models/User.php',
+    'app/Console/Commands/CheckReleaseSchemaLedger.php',
+    'app/Support/Release20PendingSchemaGuard.php', 'app/Support/Release20IdentityMigrationGuard.php',
+    'resources/release20_pending_schema_contract.json', 'resources/js/preparation.mjs',
+    'resources/views/layouts/app.blade.php', 'resources/views/layouts/preparation.blade.php',
+    'docs/CANOVIA_DEVELOPMENT_WORKFLOW.md',
+    'docs/development/CANOVIA_INTEGRATION_FREEZE_RELEASE_MASTER_2026_10_16.md',
+    'docs/development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md',
+    'docs/development/PRELAUNCH_AIVEN_RUNTIME_DDL_AND_RECOVERY_GATE_2026_10_15.md',
+    'scripts/ci/integration_freeze_manifest.py', 'scripts/ops/platform_release_preflight.py',
+    'scripts/ci/preparation_cutover_rehearsal.py', 'scripts/ci/integration_mysql_upgrade.py',
+    'scripts/ci/integration_disposable_restore.py',
+}
+PREPARATION_CLASSES = ('PRELAUNCH_REQUIRED', 'DEFERRABLE_ISOLATED',
+                       'SECURITY_REVIEW_REQUIRED', 'FUTURE_ONLY', 'UNKNOWN')
+
+
+def preparation_classification(path: str, isolation_sealed: bool) -> dict:
+    """Conservative path allocation. No automated claim of content review/GO."""
+    if path in REQUIRED_SHARED or path.startswith(('database/migrations/', 'resources/views/preparation/', 'public/images/future/')):
+        category, reason = 'PRELAUNCH_REQUIRED', 'SHARED_OR_SELECTED_PREPARATION_CONTRACT'
+    elif path in ISOLATED_HANDLERS:
+        category, reason = (('DEFERRABLE_ISOLATED', 'REVIEWED_ROUTE_HANDLERS_ONLY_NOT_SCHEMA_OR_DEPENDENCIES')
+                            if isolation_sealed else ('SECURITY_REVIEW_REQUIRED', 'ISOLATION_BASIS_CHANGED_OR_UNAVAILABLE'))
+    elif path.startswith(('app/', 'bootstrap/', 'config/', 'routes/', 'resources/', 'public/',
+                          'docker/', '.github/', 'static-welcome/')) or path.startswith('Dockerfile'):
+        category, reason = 'SECURITY_REVIEW_REQUIRED', 'RUNTIME_DEPENDENCY_OR_EXTERNAL_IO_REVIEW'
+    elif path.startswith('scripts/ci/test_'):
+        category, reason = 'FUTURE_ONLY', 'TEST_ASSET_NOT_PRODUCTION_ENTRY'
+    elif path.startswith('scripts/'):
+        category, reason = 'SECURITY_REVIEW_REQUIRED', 'EXECUTABLE_OR_AUDIT_ASSET_NOT_LIVE_ADOPTED'
+    elif path.startswith(('docs/', 'tests/', 'local-preview/')) or path == 'phpunit.xml':
+        category, reason = 'FUTURE_ONLY', 'DOCUMENT_OR_DEV_ASSET_NOT_PRODUCTION_ENTRY'
+    else:
+        category, reason = 'UNKNOWN', 'NO_REVIEWED_ALLOCATION_RULE'
+    return dict(category=category, reason=reason, automatic_classification=True,
+                content_review_certified=False, live_isolation_certified=False,
+                scope='SOURCE_WORK_ALLOCATION_ONLY_NOT_RELEASE_APPROVAL')
+
+
+def preparation_review(root: Path, candidate: str, rows: list[dict]) -> dict:
+    sealed = False
+    try:
+        sealed = all(git(root, 'rev-parse', candidate + ':' + path) ==
+                     git(root, 'rev-parse', PREPARATION_REVIEW_BASIS + ':' + path) for path in ISOLATION_TREES)
+    except subprocess.SubprocessError:
+        pass
+    for row in rows:
+        row['preparation_review'] = preparation_classification(row['path'], sealed)
+    return dict(review_basis=PREPARATION_REVIEW_BASIS, application_isolation_trees_unchanged=sealed,
+                category_counts={key: sum(r['preparation_review']['category'] == key for r in rows)
+                                 for key in PREPARATION_CLASSES},
+                classification_complete=len(rows) == sum(1 for r in rows if r['preparation_review']['category'] in PREPARATION_CLASSES),
+                content_review_certified=False, independent_review_completed=False,
+                release_authorized=False, source_adopted=False)
+
+
+def manifest(root: Path, base: str, candidate: str, *, include_preparation_review=False) -> dict:
     if not all(re.fullmatch('[0-9a-f]{40}', value) for value in (base, candidate)):
         raise ValueError('Use full immutable commit SHAs, not moving refs')
     if git(root, 'rev-parse', '--is-shallow-repository') != 'false':
@@ -80,7 +162,7 @@ def manifest(root: Path, base: str, candidate: str) -> dict:
     def migrations(sha: str) -> list[str]:
         return [p for p in git(root, 'ls-tree', '-r', '--name-only', sha,
                                'database/migrations').splitlines() if p.endswith('.php')]
-    return dict(schema_version=1, base_sha=base, candidate_sha=candidate,
+    result = dict(schema_version=1, base_sha=base, candidate_sha=candidate,
                 ahead_commits=int(git(root, 'rev-list', '--count', base + '..' + candidate)),
                 changed_path_count=len(rows), changed_paths=rows,
                 baseline_migration_count=len(migrations(base)),
@@ -91,6 +173,9 @@ def manifest(root: Path, base: str, candidate: str) -> dict:
                 production_pending_migrations='UNKNOWN_REQUIRES_SEPARATE_OPERATOR_AUDIT',
                 live_sha_verified=False, ci_verified=False, device_verified=False,
                 release_authorized=False, verdict='SOURCE_INVENTORY_ONLY_PRODUCTION_NO_GO')
+    if include_preparation_review:
+        result['preparation_review'] = preparation_review(root, candidate, rows)
+    return result
 
 
 def main() -> int:
@@ -98,9 +183,10 @@ def main() -> int:
     parser.add_argument('--repo', type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument('--base', required=True)
     parser.add_argument('--candidate', required=True)
+    parser.add_argument('--preparation-review', action='store_true', help='Classify every path A-E for review allocation; never content approval')
     args = parser.parse_args()
     try:
-        result = manifest(args.repo, args.base, args.candidate)
+        result = manifest(args.repo, args.base, args.candidate, include_preparation_review=args.preparation_review)
     except (ValueError, OSError, subprocess.SubprocessError):
         print(json.dumps(dict(verdict='BLOCK_INVALID_OR_INCOMPLETE_GIT_SOURCE', release_authorized=False)))
         return 1
