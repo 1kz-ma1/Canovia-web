@@ -39,6 +39,7 @@ class _SnapshotLoader(importlib.abc.Loader):
     def __init__(self, placement, name, relative, is_package):
         self.placement = placement
         self.name, self.relative, self.package = name, relative, is_package
+        self.origin_root = placement._origin
         self.origin = str(placement._origin / relative) if placement._origin is not None else relative
 
     def create_module(self, spec):
@@ -48,7 +49,8 @@ class _SnapshotLoader(importlib.abc.Loader):
         # No authority: this executes public module declarations only. Live
         # methods remain BLOCK. Import environment remains managed-runtime trust.
         try:
-            if (module.__spec__.name != self.name or module.__spec__.loader is not self
+            if (self.placement._origin != self.origin_root
+                    or module.__spec__.name != self.name or module.__spec__.loader is not self
                     or module.__spec__.origin != self.origin):
                 raise Block()
             raw = self.placement.source(self.relative)

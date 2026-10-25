@@ -53,6 +53,16 @@ class Placement(unittest.TestCase):
         candidate.close()
         with self.assertRaises(Block):spec.loader.exec_module(module)
 
+    def test_public_origin_is_exact_once_and_prebinding_loader_is_revoked(self):
+        candidate=self.new()
+        old_spec=candidate.spec('e858_phase1.sql_pins')
+        candidate.bind_public_origin(str(self.root.resolve()/runtime.BASENAME))
+        spec=candidate.spec('e858_phase1.sql_pins')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        self.assertEqual(module.__file__,str(self.root.resolve()/runtime.BASENAME/'scripts/ci/e858_phase1/sql_pins.py'))
+        with self.assertRaises(Block):old_spec.loader.exec_module(importlib.util.module_from_spec(old_spec))
+        self.assertTrue(candidate.closed)
+
     def test_no_overwrite_symlink_existing_and_untrusted_anchor(self):
         (self.root/runtime.BASENAME).symlink_to(self.root)
         with self.assertRaises(Block):self.new()
