@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import signal
+import socket
 import subprocess
 import tempfile
 import time
@@ -12,6 +13,7 @@ from urllib.request import build_opener, ProxyHandler
 
 ROOT = Path(__file__).resolve().parents[2]
 JOURNEYS = {
+    'preparation_interest': (18805, 'preparation_interest_browser_smoke.mjs', 'CANOVIA_PREPARATION_INTEREST'),
     'preparation_surface': (18802, 'preparation_surface_browser_smoke.mjs', 'CANOVIA_PREPARATION_SURFACE'),
     'preparation': (18801, 'preparation_plan_ownership_browser_smoke.mjs', 'CANOVIA_PREPARATION'),
     'welcome': (8796, 'prelaunch_ia2d_browser_smoke.mjs', 'CANOVIA_IA2_BROWSER'),
@@ -45,8 +47,13 @@ def synthetic_environment(base, private, name, *, public_level=1, app_env='testi
 def run(name, artifacts, executable=None, engine='chromium'):
     port, script, prefix = JOURNEYS[name]
     base = f'http://127.0.0.1:{port}'
+    if name == 'preparation_interest':
+        # Refuse an occupied port; never reach or stop another local lab.
+        with socket.socket() as probe:
+            probe.bind(('127.0.0.1', port))
     with tempfile.TemporaryDirectory(prefix='canovia-integration-') as private:
-        env = synthetic_environment(base, private, name)
+        env = synthetic_environment(base, private, name, public_level=0 if name == 'preparation_interest' else 1,
+                                    app_env='local' if name == 'preparation_interest' else 'testing')
         database = Path(private) / ('learning-v621-browser.sqlite' if name == 'study' else 'synthetic.sqlite')
         database.touch(mode=0o600)
         env['DB_DATABASE'] = str(database)
@@ -63,10 +70,12 @@ def run(name, artifacts, executable=None, engine='chromium'):
         if executable:
             env['CANOVIA_BROWSER_EXECUTABLE_PATH'] = str(Path(executable).resolve(strict=True))
         artifacts.mkdir(parents=True, exist_ok=True)
+        if name == 'preparation_interest':
+            env['CANOVIA_INTEREST_SCREENSHOT'] = str((artifacts / 'interest-result-desktop.png').resolve())
         with (artifacts / f'{name}.log').open('w') as log:
             subprocess.run(['php', 'artisan', 'migrate', '--force', '--no-interaction'],
                            cwd=ROOT, env=env, stdout=log, stderr=log, check=True)
-            if name == 'preparation_surface':
+            if name in ('preparation_surface', 'preparation_interest'):
                 # Schema preparation precedes the restrictive runtime profile.
                 # No production migration or configuration change is run here.
                 env['CANOVIA_PREPARATION_ONLY'] = 'true'

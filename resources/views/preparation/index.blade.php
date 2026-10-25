@@ -5,6 +5,7 @@
     <h1 class="text-2xl font-bold">今の目標を、これからの一歩につなげる。</h1>
     <p>診断で現在地を整理し、目標と計画を保存できます。演習・作業実行は準備中です。正式版の提供時期や機能は確約されません。</p>
     @auth
+        <a class="btn-primary inline-flex" href="{{ route('preparation.interests.show') }}">30問で関心を見つける</a>
         @if(app(\App\Services\ReleaseLevelService::class)->allowsMinimum(1))
             <a class="btn-primary inline-flex" href="{{ route('personalization.show') }}">現在地を整理する</a>
         @endif

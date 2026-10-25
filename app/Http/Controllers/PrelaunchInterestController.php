@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\PrelaunchInterestContextService;
+use App\Services\PublicRoadmapProjectionService;
 use App\Services\ReleaseLevelService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,12 +21,49 @@ final class PrelaunchInterestController extends Controller
 
     public function show(Request $request, PrelaunchInterestContextService $contexts)
     {
-        return response()->json($contexts->read($this->owner($request)));
+        return $this->display($request, $contexts, 'preparation.interests');
     }
 
     public function result(Request $request, PrelaunchInterestContextService $contexts)
     {
-        return response()->json($contexts->read($this->owner($request)));
+        return $this->display($request, $contexts, 'preparation.interest-result');
+    }
+
+    private function display(Request $request, PrelaunchInterestContextService $contexts, string $view)
+    {
+        $data = $contexts->read($this->owner($request));
+        if ($request->expectsJson()) {
+            return response()->json($data);
+        }
+        $data['bank'] = config('prelaunch_interest_diagnostic');
+        if ($view === 'preparation.interest-result' && $data['record'] === null && ! $data['unsupported']) {
+            return redirect()->route('preparation.interests.show');
+        }
+
+        $areas = ['全般'];
+        $record = $data['record'];
+        $interests = $record['confirmed_categories'] ?? [];
+        if ($interests === [] && $record !== null) {
+            $ranked = $record['result']['categories'];
+            uasort($ranked, fn ($a, $b) => ($b['share_percent'] ?? -1) <=> ($a['share_percent'] ?? -1));
+            $interests = array_slice(array_keys(array_filter($ranked, fn ($c) => ($c['share_percent'] ?? 0) > 0)), 0, 2);
+        }
+        if (in_array('DV', $interests, true)) {
+            $areas[] = '開発';
+        }
+        $data['suggestedRoadmap'] = collect(app(PublicRoadmapProjectionService::class)->build())
+            ->flatMap(fn ($section) => $section['items'])->filter(fn ($item) => in_array($item['area'], $areas, true))->values();
+
+        return view($view, $data);
+    }
+
+    private function saved(Request $request, string $destination, ?string $revision = null)
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['saved' => true, 'revision' => $revision, 'redirect' => route($destination)]);
+        }
+
+        return redirect()->route($destination)->with('status', '保存しました。');
     }
 
     public function store(Request $request, PrelaunchInterestContextService $contexts)
@@ -46,8 +84,7 @@ final class PrelaunchInterestController extends Controller
         $answers = array_map(fn ($value) => $value === 'unknown' ? 'unknown' : (int) $value, $data['answers']);
         $saved = $contexts->saveAnswers($user, $data['revision'], $answers, (int) $data['step'], $data['action'] === 'result');
 
-        return response()->json(['saved' => true, 'revision' => $saved['revision'],
-            'redirect' => route($data['action'] === 'result' ? 'preparation.interests.result' : 'preparation.interests.show')]);
+        return $this->saved($request, $data['action'] === 'result' ? 'preparation.interests.result' : 'preparation.interests.show', $saved['revision']);
     }
 
     public function review(Request $request, PrelaunchInterestContextService $contexts)
@@ -61,7 +98,7 @@ final class PrelaunchInterestController extends Controller
         ]);
         $saved = $contexts->saveReview($user, $data['revision'], $data['confirmed_categories'] ?? [], $data['requested_support'] ?? []);
 
-        return response()->json(['saved' => true, 'revision' => $saved['revision'], 'redirect' => route('preparation.interests.result')]);
+        return $this->saved($request, 'preparation.interests.result', $saved['revision']);
     }
 
     public function destroy(Request $request, PrelaunchInterestContextService $contexts)
@@ -70,7 +107,7 @@ final class PrelaunchInterestController extends Controller
         $data = $request->validate($this->identityRules() + ['confirm_delete' => ['required', 'accepted']]);
         $contexts->delete($user, $data['revision']);
 
-        return response()->json(['saved' => true, 'redirect' => route('preparation.interests.show')]);
+        return $this->saved($request, 'preparation.interests.show');
     }
 
     private function identityRules(): array

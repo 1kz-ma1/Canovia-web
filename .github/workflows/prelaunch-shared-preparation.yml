@@ -24,6 +24,11 @@ on:
       - 'bootstrap/app.php'
       - 'config/release_levels.php'
       - 'resources/views/preparation/**'
+      - 'resources/js/preparation.mjs'
+      - 'vite.config.js'
+      - 'config/prelaunch_interest_diagnostic.php'
+      - 'scripts/ci/preparation_interest_browser_smoke.mjs'
+      - 'tests/Feature/PrelaunchInterestSurfaceTest.php'
       - 'resources/views/layouts/**'
       - 'tests/Feature/PreparationOnlyBoundaryTest.php'
       - 'tests/Feature/PreparationCompatibilityMatrixTest.php'
@@ -66,7 +71,7 @@ jobs:
           tests/Feature/PlanLifecyclePersonalizationV5829Test.php
           tests/Feature/PersonalizationBootstrapV5825Test.php
           tests/Feature/P0DatabaseSessionLoginRegressionTest.php
-          tests/Feature/PrelaunchInterestContextTest.php tests/Unit/PrelaunchInterestScoringServiceTest.php --colors=never
+          tests/Feature/PrelaunchInterestContextTest.php tests/Feature/PrelaunchInterestSurfaceTest.php tests/Unit/PrelaunchInterestScoringServiceTest.php --colors=never
       - run: npm install --no-save --package-lock=false --ignore-scripts playwright@1.56.1
       - run: test -x /usr/bin/google-chrome
       - run: git diff --exit-code -- package.json package-lock.json
@@ -80,6 +85,12 @@ jobs:
           python3 scripts/ci/integration_browser_regression.py
           --journey preparation_surface --browser-executable /usr/bin/google-chrome
           --artifacts "$RUNNER_TEMP/shared-preparation-surface"
+
+      - name: Optional 30-item diagnosis to canonical Plan, L0 owner and conflict boundaries
+        run: >-
+          python3 scripts/ci/integration_browser_regression.py
+          --journey preparation_interest --browser-executable /usr/bin/google-chrome
+          --artifacts "$RUNNER_TEMP/shared-preparation-interest"
 
       - name: Mac interactive launcher lifecycle and L0 public / explicit L1 tester (synthetic only)
         run: |

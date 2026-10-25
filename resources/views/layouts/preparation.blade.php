@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', '正式リリースへの準備 | Canovia')</title>
-    @vite(['resources/css/app.css'])
+    @vite(['resources/css/app.css', 'resources/js/preparation.mjs'])
 </head>
 <body class="pk-cosmic-shell min-h-screen bg-slate-950 text-slate-100 antialiased" data-preparation-only>
 <a href="#main" class="sr-only focus:not-sr-only">本文へ移動</a>
