@@ -19,7 +19,7 @@ final class ReleaseLevelService
         $runtime = getenv('CANOVIA_PREPARATION_ONLY');
 
         return config('release_levels.preparation_only', false) !== false
-            || ($runtime !== false && ! in_array($runtime, ['false', '(false)'], true));
+            || ($runtime !== false && ! in_array(strtolower($runtime), ['false', '(false)'], true));
     }
 
     public function __construct(

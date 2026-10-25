@@ -470,7 +470,7 @@ python3 scripts/ci/preparation_mac_lab.py --source-sha "$(git rev-parse HEAD)"
 
 ### 14.1 Cached false / STOP後再開の修正
 
-#888の既存Bus/Queue/Console/直接Job境界を再利用。修正前の合成3テストで、(1) runtimeの `CANOVIA_PREPARATION_ONLY=true` がcached falseに隠れること、(2) 同じapplicationが一度拒否した後にfalseへ変更するとhandlerを再開することを再現した。現在はraw runtime指定を制限の追加にだけ用い（falseでrestrictive configを解除しない）、一度STOPを観測したapplicationの実行guardを終端状態にする。Bus/Queue/Console/既存2 Jobが同一guardを使い、新しいapplication/processの正常な起動とは区別する。
+#888の既存Bus/Queue/Console/直接Job境界を再利用。修正前の合成3テストで、(1) runtimeの `CANOVIA_PREPARATION_ONLY=true` がcached falseに隠れること、(2) 同じapplicationが一度拒否した後にfalseへ変更するとhandlerを再開することを再現した。現在はraw runtime指定を制限の追加にだけ用い（Laravelと同じfalse/(false)の大文字小文字を許容し、falseでrestrictive configを解除しない）、一度STOPを観測したapplicationの実行guardを終端状態にする。Bus/Queue/Console/既存2 Jobが同一guardを使い、新しいapplication/processの正常な起動とは区別する。
 
 独立した合成PHPプロセスのメモリ内handlerだけで false→true→false の実行/拒否/拒否と回収を確認する。実queue daemon・scheduler・workerへの停止/再起動操作なし。関連PHP50件/404 assertions成功。missing Vite manifestはlocal build準備で解消し、テスト条件は緩和していない。
 

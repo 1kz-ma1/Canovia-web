@@ -7,6 +7,7 @@ on:
       - '.github/workflows/future-carousel.yml'
       - 'app/Http/Controllers/CanoviaFutureController.php'
       - 'app/Services/PublicRoadmapProjectionService.php'
+      - 'app/Services/ReleaseLevelService.php'
       - 'config/canovia*roadmap*'
       - 'config/canovia_future_media.php'
       - 'resources/views/feedback/**'
