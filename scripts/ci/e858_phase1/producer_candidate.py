@@ -16,7 +16,8 @@ from .connection_handoff_candidate import ConnectedPeer
 
 class ProducerBinding:
     def __init__(self,wire,procedure,worker):
-        self.wire=self.procedure=self.worker=None;self.state='STOPPED'
+        self.wire=self.worker=None;self.state='STOPPED'
+        self.procedure=procedure if type(procedure) is BProceduralAttempt else None
         try:
             if (not isinstance(wire,Phase1DriverCandidate) or type(procedure) is not BProceduralAttempt
                     or type(worker) is not PreparedChild):raise Block()
@@ -35,7 +36,9 @@ class ProducerBinding:
     def check(self):
         try:
             if self.state=='STOPPED':raise Block()
-            p=self.procedure;w=self.wire;p.check();w.check_binding()
+            p=self.procedure;w=self.wire
+            if type(p) is not BProceduralAttempt or not isinstance(w,Phase1DriverCandidate):raise Block()
+            p.check();w.check_binding()
             boundary=p.engine.boundary
             index=('control','data').index(self.role)
             if (p._seal!=self.seal or p.entry is not self.entry or w.entry is not self.entry

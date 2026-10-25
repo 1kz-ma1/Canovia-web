@@ -13,6 +13,7 @@ import test_e858_practical as fixture
 from e858_phase1 import b_procedural_attempt as b
 from e858_phase1 import b1_attempt_reservation as reservation
 from e858_phase1 import b1_package
+from e858_phase1.producer_candidate import ProducerBinding
 
 p=fixture.p
 Block=fixture.binding.Block
@@ -51,13 +52,15 @@ class Procedure(unittest.TestCase):
                         if mode!='UNBOUND':procedure.bind_engine(p.Adapter(entry,'phase1'))
                         self.assertLessEqual(procedure.until,initial)
                         self.assertEqual(procedure.state,'PREFLIGHTED')
-                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE','TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','TTY_COPY','ROOT_COPY','ENGINE_COPY','OPERATOR_CHANGED','CLEANUP_FAILURE','WORKER_EARLY'):
+                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE','TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','TTY_COPY','ROOT_COPY','ENGINE_COPY','OPERATOR_CHANGED','CLEANUP_FAILURE','WORKER_EARLY','INVALID_PRODUCER'):
                             if mode=='BEFORE_CONFIRM':
                                 with self.assertRaises(Block):procedure.reserve_attempt()
                             elif mode=='FAKE_GO':
                                 with self.assertRaises(Block):procedure.confirm_on_tty(approved=True)
                             elif mode=='CANCEL':
                                 procedure.cancel()
+                            elif mode=='INVALID_PRODUCER':
+                                with self.assertRaises(Block):ProducerBinding(object(),procedure,object())
                             elif mode=='WORKER_EARLY':
                                 with self.assertRaises(Block):procedure.bind_workers(())
                             elif mode=='CLEANUP_FAILURE':
@@ -178,7 +181,7 @@ class Procedure(unittest.TestCase):
             with self.subTest(response=response):self.trial('WRONG_CONFIRM',response)
 
     def test_unconfirmed_fake_go_and_cancellation_cannot_reach_input(self):
-        for mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL'):
+        for mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','INVALID_PRODUCER'):
             with self.subTest(mode=mode):self.trial(mode)
 
     def test_target_ca_runtime_and_store_alias_are_rejected(self):
