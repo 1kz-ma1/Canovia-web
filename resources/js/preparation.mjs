@@ -1,5 +1,6 @@
 // Preparation-only UI: no telemetry, providers, browser storage or automatic Plan writes.
 import './future-carousel.mjs';
+import '../css/preparation.css';
 
 for (const form of document.querySelectorAll('[data-interest-form]')) {
     const pages = [...form.querySelectorAll('[data-interest-page]')];
@@ -8,6 +9,17 @@ for (const form of document.querySelectorAll('[data-interest-form]')) {
     const previous = form.querySelector('[data-interest-prev]');
     const next = form.querySelector('[data-interest-next]');
     const status = form.querySelector('[data-interest-save-status]');
+    const answered = form.querySelector('[data-interest-answered]');
+    const meter = form.querySelector('[data-interest-meter]');
+    meter.hidden = false;
+    function updateAnswered() {
+        const count = form.querySelectorAll('[data-interest-question] input:checked').length;
+        // Unknown is a completed choice here, never a numeric score.
+        answered.textContent = `選択済み ${count} / 30問（わからないを含む）`;
+        meter.value = count;
+    }
+    form.addEventListener('change', updateAnswered);
+    updateAnswered();
     let current = Math.max(1, Math.min(6, Number(step.value) || 1));
     let pending = false;
     let conflict = false;
@@ -63,4 +75,28 @@ for (const form of document.querySelectorAll('[data-interest-form]')) {
             for (const button of buttons) button.disabled = conflict;
         }
     });
+}
+
+// Static suggestions only fill an empty new form after an explicit click.
+// They never submit, fetch, infer from scores, or replace saved/user-entered text.
+for (const form of document.querySelectorAll('[data-preparation-plan-form]')) {
+    const suggestions = form.querySelector('[data-preparation-templates]');
+    if (!suggestions) continue;
+    const fields = ['title', 'description', 'category'].map(name => form.elements[name]);
+    const status = suggestions.querySelector('[role="status"]');
+    const buttons = [...suggestions.querySelectorAll('[data-plan-example]')];
+    function update() {
+        for (const button of buttons) button.disabled = fields.some(field => field.value.trim() !== '');
+    }
+    form.addEventListener('input', update);
+    for (const button of buttons) button.addEventListener('click', () => {
+        if (fields.some(field => field.value.trim() !== '')) return;
+        const example = button.dataset;
+        for (const field of fields) field.value = example[field.name];
+        status.textContent = '例文を入力しました。自分の言葉に編集し、確認してから保存してください。まだ保存していません。';
+        update();
+        fields[0].focus();
+    });
+    suggestions.hidden = false;
+    update();
 }

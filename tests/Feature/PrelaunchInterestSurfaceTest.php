@@ -58,4 +58,21 @@ class PrelaunchInterestSurfaceTest extends TestCase
             'save_consent' => true, 'answers' => ['Q04' => 2, 'Q05' => 3]])->assertOk();
         $this->get('/preparation/interests/result')->assertDontSee('外部アプリの作業記録との連携');
     }
+
+    public function test_validation_return_keeps_explicitly_empty_review_separate_from_saved_choices(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $revision = $this->getJson('/preparation/interests')->json('revision');
+        $this->postJson('/preparation/interests', ['revision' => $revision, 'action' => 'result', 'step' => 1,
+            'save_consent' => true, 'answers' => ['Q01' => 3, 'Q02' => 3]])->assertOk();
+        $revision = $this->getJson('/preparation/interests')->json('revision');
+        $this->postJson('/preparation/interests/review', ['revision' => $revision,
+            'confirmed_categories' => ['CT'], 'requested_support' => ['ST']])->assertOk();
+        // A validation return with all choices cleared must not reselect saved values.
+        $response = $this->withSession(['_old_input' => ['review_present' => '1']])
+            ->get('/preparation/interests/result')->assertOk();
+        $this->assertDoesNotMatchRegularExpression('/name="(?:confirmed_categories|requested_support)\[\]"[^>]*checked/', $response->getContent());
+        $this->getJson('/preparation/interests')->assertJsonPath('record.confirmed_categories', ['CT'])
+            ->assertJsonPath('record.requested_support', ['ST']);
+    }
 }
