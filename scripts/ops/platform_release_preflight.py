@@ -229,6 +229,29 @@ def preparation_evaluate(repo: Path, sha: str, baseline_sha: str, get=None, ci_s
     return out
 
 
+CUTOVER_ORDER = (
+    "SOURCE_AND_CONFIG", "RECOVERY_PRECONDITIONS", "OLD_WEB_STOPPED", "CONSUMERS_STOPPED",
+    "IN_FLIGHT_DRAINED", "WRITERS_ABSENT", "SCHEMA_PRECONDITIONS", "MIGRATION_ONCE",
+    "RUNTIMES_ALIGNED", "LIMITED_WEB_STARTED", "ACCEPTANCE", "SAFE_SHUTDOWN",
+)
+
+
+def cutover_order(events):
+    """Pure plan-order check, NEVER verification of facts or execution permission."""
+    position, stopped = 0, False
+    if not isinstance(events, (list, tuple)) or len(events) > 32:
+        return {"state": "BLOCKING", "release_authorized": False}
+    for event in events:
+        if event == "STOP" and not stopped:
+            stopped = True
+            continue
+        if stopped or position >= len(CUTOVER_ORDER) or event != CUTOVER_ORDER[position]:
+            return {"state": "BLOCKING", "release_authorized": False}
+        position += 1
+    return {"state": "BLOCKING" if stopped else "VERIFIED_SOURCE" if position == len(CUTOVER_ORDER) else "UNKNOWN",
+            "scope": "PLAN_ORDER_ONLY_NOT_OBSERVATION_OR_APPROVAL", "release_authorized": False}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", type=Path, default=Path("."), help="Local full-history checkout with origin refs")

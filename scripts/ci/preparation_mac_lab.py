@@ -80,8 +80,46 @@ def stop_server(server):
         raise SafetyError('LAB_CLEANUP_UNVERIFIED')
 
 
+def start_owned_server(env, log, processes):
+    # Internal lab helper; fixed loopback ports and synthetic SQLite only.
+    database = Path(env.get('DB_DATABASE', ''))
+    if (env.get('APP_URL') not in [f'http://127.0.0.1:{p}' for p in PORTS.values()]
+            or env.get('APP_ENV') != 'local' or env.get('CANOVIA_MAC_LAB_FIXTURE') != '1'
+            or env.get('DB_CONNECTION') != 'sqlite' or env.get('DB_URL') != ''
+            or database.name != 'synthetic.sqlite' or not database.parent.name.startswith('canovia-preparation-mac-')
+            or not database.is_file() or database.is_symlink()):
+        raise SafetyError('LAB_SERVER_SCOPE_REJECTED')
+    port = env['APP_URL'].rsplit(':', 1)[1]
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', int(port)))
+    server = subprocess.Popen(['php', '-S', f'127.0.0.1:{port}', '-t', 'public',
+                               'scripts/ci/preparation_mac_router.php'],
+                              cwd=ROOT, env=env, stdout=log, stderr=log)
+    processes.append(server)
+    try:
+        opener = build_opener(ProxyHandler({}))
+        for _ in range(100):
+            if server.poll() is not None:
+                raise SafetyError('LAB_SERVER_EXITED')
+            try:
+                with opener.open(env['APP_URL'] + '/__preparation_lab_ready', timeout=1) as response:
+                    if response.read(64).decode() == env['CANOVIA_MAC_LAB_READY']:
+                        return server
+            except OSError:
+                pass
+            time.sleep(0.1)
+        raise SafetyError('LAB_READINESS_FAILED')
+    except BaseException:
+        stop_server(server)
+        raise
+
+
 @contextlib.contextmanager
-def serve(profile, sha):
+def serve(profile, sha, *, processes=None, keep_failed=False):
+    if processes is None:
+        processes = []
+    if not isinstance(processes, list) or processes:
+        raise SafetyError('LAB_FOREIGN_PROCESS_REGISTRY')
     check_checkout(ROOT, sha)
     port = PORTS[profile]
     with socket.socket() as probe:
@@ -91,6 +129,7 @@ def serve(profile, sha):
             raise SafetyError('LAB_PORT_OCCUPIED_DO_NOT_STOP_OTHER_SERVICE') from None
     private = Path(tempfile.mkdtemp(prefix='canovia-preparation-mac-'))
     server = None
+    failed = False
     try:
         private.chmod(0o700)
         for name in ('framework/sessions', 'framework/views', 'framework/cache/data', 'logs', 'app/private'):
@@ -106,30 +145,27 @@ def serve(profile, sha):
             env['CANOVIA_PREPARATION_ONLY'] = 'true' if profile == 'preparation' else 'false'
             token = secrets.token_hex(24)
             env['CANOVIA_MAC_LAB_READY'] = token
-            server = subprocess.Popen(['php', '-S', f'127.0.0.1:{port}', '-t', 'public',
-                                       'scripts/ci/preparation_mac_router.php'],
-                                      cwd=ROOT, env=env, stdout=log, stderr=log)
+            server = start_owned_server(env, log, processes)
             try:
-                opener = build_opener(ProxyHandler({}))
-                for _ in range(100):
-                    if server.poll() is not None:
-                        raise SafetyError('LAB_SERVER_EXITED')
-                    try:
-                        with opener.open(env['APP_URL'] + '/__preparation_lab_ready', timeout=1) as response:
-                            if response.read(64).decode() == token:
-                                break
-                    except OSError:
-                        pass
-                    time.sleep(0.1)
-                else:
-                    raise SafetyError('LAB_READINESS_FAILED')
                 yield env, server
             finally:
                 stop_server(server)
+    except BaseException:
+        failed = True
+        raise
     finally:
         # Keep files if termination cannot be verified; never claim cleanup succeeded.
-        if server is None or server.poll() is not None:
-            shutil.rmtree(private)
+        verified = True
+        for child in processes:
+            try:
+                stop_server(child)
+            except (OSError, subprocess.SubprocessError, SafetyError):
+                verified = False
+        if verified and all(child.poll() is not None for child in processes):
+            if not (keep_failed and failed):
+                shutil.rmtree(private)
+        else:
+            raise SafetyError('LAB_CLEANUP_UNVERIFIED')
 
 
 def main():
