@@ -52,13 +52,23 @@ class Procedure(unittest.TestCase):
                         if mode!='UNBOUND':procedure.bind_engine(p.Adapter(entry,'phase1'))
                         self.assertLessEqual(procedure.until,initial)
                         self.assertEqual(procedure.state,'PREFLIGHTED')
-                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE','TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','TTY_COPY','ROOT_COPY','ENGINE_COPY','OPERATOR_CHANGED','CLEANUP_FAILURE','WORKER_EARLY','INVALID_PRODUCER'):
+                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE','TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','TTY_COPY','ROOT_COPY','ENGINE_COPY','OPERATOR_CHANGED','CLEANUP_FAILURE','WORKER_EARLY','INVALID_PRODUCER','FOREIGN_TTY','FOREIGN_ROOT','FOREIGN_ENTRY','FOREIGN_STORE'):
                             if mode=='BEFORE_CONFIRM':
                                 with self.assertRaises(Block):procedure.reserve_attempt()
                             elif mode=='FAKE_GO':
                                 with self.assertRaises(Block):procedure.confirm_on_tty(approved=True)
                             elif mode=='CANCEL':
                                 procedure.cancel()
+                            elif mode.startswith('FOREIGN_'):
+                                calls=[]
+                                def forbidden():calls.append(True);raise RuntimeError(fixture.CANARY)
+                                foreign=types.SimpleNamespace(check=forbidden,close=forbidden,discard=forbidden)
+                                if mode=='FOREIGN_TTY':entry.terminal=foreign
+                                elif mode=='FOREIGN_ROOT':entry.root=foreign
+                                elif mode=='FOREIGN_ENTRY':procedure.entry=foreign
+                                elif mode=='FOREIGN_STORE':procedure.store=foreign
+                                with self.assertRaises(Block):procedure.check()
+                                self.assertEqual(calls,[])
                             elif mode=='INVALID_PRODUCER':
                                 with self.assertRaises(Block):ProducerBinding(object(),procedure,object())
                             elif mode=='WORKER_EARLY':
@@ -194,6 +204,10 @@ class Procedure(unittest.TestCase):
 
     def test_tty_operator_and_engine_context_replacement_is_terminal(self):
         for mode in ('TTY_COPY','OPERATOR_CHANGED','ENGINE_COPY'):
+            with self.subTest(mode=mode):self.trial(mode)
+
+    def test_rejected_foreign_references_never_execute_cleanup_callbacks(self):
+        for mode in ('FOREIGN_TTY','FOREIGN_ROOT','FOREIGN_ENTRY','FOREIGN_STORE'):
             with self.subTest(mode=mode):self.trial(mode)
 
     def test_cleanup_failure_is_redacted_terminal_without_retry(self):self.trial('CLEANUP_FAILURE')

@@ -34,7 +34,7 @@ class BProceduralAttempt:
         self.state='STOPPED';self.outcome='NOT_STARTED';self.reserved=False
         self.confirmed=False;self._seal=None;self._store_identity=None
         self.r1_started_at=None;self._refs=None;self._workers=None
-        self._engine_binding=None;self._boundary_binding=None
+        self._engine_binding=None;self._boundary_binding=None;self._captured_secret=None
         try:
             if type(launcher) is not LauncherCandidate or type(reservation_root) is not Root:raise Block()
             self.launcher=launcher;self.entry=launcher.entry;self.store=reservation_root
@@ -56,7 +56,7 @@ class BProceduralAttempt:
             self._operator=(os.getpid(),os.geteuid(),os.getegid(),os.getsid(0),os.getpgrp())
             review=self.entry.review;terminal=self.entry.terminal;program=review.program
             self._refs=(launcher,self.entry,self.entry.root,terminal,review,review.root,program,
-                        self.entry.target,self.entry.target.ca)
+                        self.entry.target,self.entry.target.ca,self.store)
             self._terminal=(terminal.fd,terminal.group,terminal.session,terminal.st[:5])
             self._program_context=(program.runtime,program.sha,hashlib.sha256(canonical(program.pins)).digest())
             self._seal=self._context()
@@ -73,15 +73,21 @@ class BProceduralAttempt:
     def _check_references(self):
         # Exact references and OS observations are continuity, NEVER proof of
         # the human's identity. Reject replacement before invoking its methods.
-        launcher,entry,root,terminal,review,review_root,program,target,ca=self._refs
+        launcher,entry,root,terminal,review,review_root,program,target,ca,store=self._refs
         if (self.launcher is not launcher or self.entry is not entry
                 or entry.root is not root or entry.terminal is not terminal
                 or entry.review is not review or review.root is not review_root
                 or review.program is not program or entry.target is not target
                 or target.ca is not ca or launcher.entry is not entry
+                or self.store is not None and self.store is not store
+                or self.store is None and not self.reserved
                 or (terminal.fd,terminal.group,terminal.session,terminal.st[:5])!=self._terminal
                 or (os.getpid(),os.geteuid(),os.getegid(),os.getsid(0),os.getpgrp())!=self._operator
                 or (program.runtime,program.sha,hashlib.sha256(canonical(program.pins)).digest())!=self._program_context):raise Block()
+        if self.r1_started_at is not None:
+            if entry.secret is not None and type(entry.secret) is not WindowedTTY:raise Block()
+            if self._captured_secret is None:self._captured_secret=entry.secret
+            elif entry.secret is not self._captured_secret:raise Block()
         if self._workers is not None:
             for worker,process,identity,ready in self._worker_seal:
                 if (worker._b_trial_binding is not self or worker.process is not process
@@ -225,10 +231,23 @@ class BProceduralAttempt:
     def close(self):
         self.state='STOPPED';okay=True
         if self.outcome!='NORMAL_DATA_CLOSE_OBSERVED_NOT_AUTHORITY':self.outcome='STOPPED_REMOTE_UNVERIFIED'
-        launcher,entry,store=self.launcher,self.entry,self.store
+        if self._refs is not None:
+            launcher,entry,root,terminal,review,review_root,program,target,ca,store=self._refs
+            # Cleanup ONLY the originally owned objects. Never dispatch close/
+            # discard to a rejected replacement. Restoration is for terminal
+            # release only: state is already STOPPED and cannot resume.
+            secret=self._captured_secret
+            if secret is None and type(entry.secret) is WindowedTTY:secret=entry.secret
+            if entry.secret is not None and type(entry.secret) is not WindowedTTY:okay=False
+            entry.root=root;entry.terminal=terminal;entry.review=review;entry.secret=secret
+            review.root=review_root;review.program=program
+        else:
+            launcher=self.launcher if type(self.launcher) is LauncherCandidate else None
+            entry=self.entry if type(self.entry) is p.ReviewedEntry else None
+            store=self.store if type(self.store) is Root else None
         self.launcher=self.entry=self.store=self.engine=None
         self._refs=self._workers=self._engine_binding=self._boundary_binding=None
-        self._worker_seal=();self._program_context=None
+        self._worker_seal=();self._program_context=self._captured_secret=None
         for obj in (launcher,entry,store):
             if obj is not None:
                 try:obj.close()

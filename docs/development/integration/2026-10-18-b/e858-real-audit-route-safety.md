@@ -1314,3 +1314,11 @@ trial for a corrected DNS/connection retry. Successful close remains ordinary
 resource release; existing Bridge owns final remote/secret cleanup. New owned
 negative cases change only equal-value Program/Target references or swap the
 bound worker role; each must refuse before DNS/auth/SQL and reap the two children.
+Review additionally found that rejecting a replaced reference could still call
+the replacement's cleanup method. Terminal cleanup now releases only the
+originally owned Entry/Root/TTY/Review/store and observed R1 buffer. It restores
+those owned references solely after STOP, never repairs a running attempt or
+invokes close/discard on a rejected unknown object. Unknown secret ownership or
+cleanup failure remains BLOCK. New foreign-reference tests assert no injected
+check/close/discard callback executes. This does not defend against hostile
+same-process method monkey-patching or replace B's managed-runtime trust.
