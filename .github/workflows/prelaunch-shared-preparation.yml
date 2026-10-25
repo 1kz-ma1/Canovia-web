@@ -41,6 +41,8 @@ on:
       - 'tests/Feature/PreparationCompatibilityMatrixTest.php'
       - 'scripts/ci/preparation_mac*'
       - 'scripts/ci/preparation_cutover*'
+      - 'scripts/ci/integration_freeze_manifest.py'
+      - 'tests/ci/test_integration_freeze_manifest.py'
       - 'tests/ci/test_preparation_cutover_rehearsal.py'
       - 'scripts/ci/test_preparation_mac_lab.py'
       - 'scripts/ci/preparation_surface_browser_smoke.mjs'
@@ -112,8 +114,9 @@ jobs:
       - name: Isolated cutover rehearsal (synthetic only)
         run: |
           python3 -B -m unittest discover -s tests/ci -p test_preparation_cutover_rehearsal.py -v
+          python3 -B -m unittest discover -s tests/ci -p test_integration_freeze_manifest.py -v
           mkdir -p "$RUNNER_TEMP/preparation-cutover"
-          python3 -B scripts/ci/integration_freeze_manifest.py --base 15abdc9de6f24b5250fb255c579d1aa55facaf1a --candidate "$(git rev-parse HEAD)" > "$RUNNER_TEMP/preparation-cutover/unshipped-source-manifest.json"
+          python3 -B scripts/ci/integration_freeze_manifest.py --base 15abdc9de6f24b5250fb255c579d1aa55facaf1a --candidate "$(git rev-parse HEAD)" --preparation-review > "$RUNNER_TEMP/preparation-cutover/unshipped-source-manifest.json"
           python3 -B scripts/ci/preparation_cutover_rehearsal.py --source-sha "$(git rev-parse HEAD)" --browser-executable /usr/bin/google-chrome --artifacts "$RUNNER_TEMP/preparation-cutover"
       - uses: actions/upload-artifact@v4
         if: always()

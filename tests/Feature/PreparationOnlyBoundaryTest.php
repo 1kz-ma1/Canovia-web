@@ -147,10 +147,16 @@ final class PreparationOnlyBoundaryTest extends TestCase
         $user = User::factory()->create();
         config(['canovia.super_admin_user_id' => $user->id]);
         $this->actingAs($user);
-        foreach (['/workspace/study', '/workspace/development', '/workspace/career', '/map', '/public-plans', '/admin'] as $url) {
+        foreach (['/workspace/study', '/workspace/development', '/workspace/career', '/map', '/public-plans', '/admin',
+            '/plans/999/tasks/999/study-practice/history',
+            '/plans/999/tasks/999/study-practice/attempts/999',
+            '/plans/999/tasks/999/study-practice/attempts/999/retry',
+            '/plans/999/tasks/999/learning/history'] as $url) {
             $this->get($url)->assertNotFound()->assertJsonPath('code', 'PREPARATION_SURFACE_CLOSED');
         }
-        foreach (['/work-sessions', '/offline/work-sessions/sync', '/api/integrations/github/webhook', '/api/execution/activities', '/api/mcp', '/account/mcp/link/start', '/tasks/999/work-logs'] as $url) {
+        foreach (['/work-sessions', '/offline/work-sessions/sync', '/api/integrations/github/webhook', '/api/execution/activities', '/api/mcp', '/account/mcp/link/start', '/tasks/999/work-logs',
+            '/plans/999/tasks/999/study-practice/attempts/999/retry',
+            '/plans/999/tasks/999/learning/confirm-next-action'] as $url) {
             $this->postJson($url)->assertNotFound();
         }
         $this->assertDatabaseCount('work_sessions', 0);

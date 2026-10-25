@@ -569,3 +569,71 @@ Recoveryの正本は [既存DDL/復旧gate](PRELAUNCH_AIVEN_RUNTIME_DDL_AND_RECO
 合成tokenを使ったnetwork-none/所有Nginxで修正前の漏えいを再現。新sourceではaccess logをmethod/status/bytes/latencyだけに限定し、request由来のraw Nginx error streamを `/dev/null` へ送り、代わりに502/403等のstatus監視を維持する。URL/query/Referer/header/body/IP/UAはaccess logへ出さない。raw upstream errorの診断能力は失われるので、事故時も未審査のdebug loggingを本番で有効化せず、固定statusとprivate/隔離再現で調査する。ルーティング・認証・DB・nginxのPHP front-controller制限は変更しない。
 
 テストは専用Nginx Debian fixtureの実HTTPでreset GET/POST、Referer/Authorization/Cookie、dotfile拒否、存在しないFPMへの502を含む。秘密を含み得るログ内容は成功/失敗どちらでもテスト出力へ出さず、固定判定のみ。コンテナはnetwork-none/read-onlyで作成・回収し、実PHP/DB/credentialsは起動しない。Dockerfileの実production構成・staging設定との回帰は既存CIを使う。Render edge/Laravel/FPM/IdP/外部mailerの実効ログや過去ログ保持をこの修正で安全と認定せず、実運用gateとして残す。新しい本番設定変更・実ログ参照/削除は実施しない。
+### 16.2 全差分分類と高リスク内容審査
+
+既存 `integration_freeze_manifest.py --preparation-review` を使い、historical production→固定候補の**全path**をA PRELAUNCH_REQUIRED / B DEFERRABLE_ISOLATED / C SECURITY_REVIEW_REQUIRED / D FUTURE_ONLY / E UNKNOWNへ漏れなく割り当てる。各pathのchange/両blob/依存/risk queueは従来通り保持。分類は審査対象の割当で、内容審査・実運用隔離・独立レビューのPASSではない。Aにも追加審査は必要、Dは非runtimeの文書/開発資産を含み、現行正本の権威をFuture Designへ降格する意味ではない。未知pathはEとし、既知runtimeは安易にBにせずCへ置く。件数・固定Source/tree/JSON hashは#488最終記録に固定する。default inventory modeと監査SQL/Referenceは不変。
+
+Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHistory/NextAction）のhandler実行だけに限定。専用routeがPreparation whitelist外で、constructorにI/Oがなく、shared codeからの別呼出しがないことを内容確認した。内部のReview↔Retry呼出しも同じ閉じた経路。DB/migration/共用serviceはBへ含めない。全app/bootstrap/config/routes/resourcesとComposer両fileのGit objectを#898 main `369e738bf75fa92a9109a3a87344053b030be442` と照合し、一つでも変更/欠損ならBをCへ戻す。runtimeのPreparation false・旧worker・実設定不明は、このSource限定Bから実運用PASSへ昇格しない。既存admin拒否テストに当該GET/POSTを加え、binding/controller前404を確認する。
+
+| 具体的な到達経路・内容審査 | Source判断・再利用証拠 | 本番へ残す条件 |
+| --- | --- | --- |
+| Nginx→public/index.php→bootstrap/AppServiceProvider→web/API | NginxはPHP実行をfront controllerに限定。Bootstrapはauth/session/CSRFとPreparationを共有。provider登録はbinding/guard/event設定で、登録時に外部通信しない。Queue/Bus/Consoleは同じSTOP latch。§16.1のURLログ欠陥を修正。 | edge/Laravel/FPM/IdPの実ログ、全runtime/config/cache/source一致。Sourceは本番観測ではない |
+| Preparation whitelist→Home/Auth/Plan/Personalization/PrelaunchInterest/Future/Help/privacy | default deny、admin例外なし、未知API拒否。専用layoutはpreparation.mjsを読み、app.js/専門autosave/instant SWを起動しない。Futureは承認済projectionのみ、Support DB/AI投票を使わない。既存#888–898 browser/所有権/CSRF/競合テストを再利用。 | 実認証/cookie/CSRF/旧installed SW、Safari/iPhone。旧SWのローカルHTMLはserver拒否と別 |
+| login/register→GuestPlanClaim→Plan lock/owner→LearningContextSourceEpoch/FirstRun/FutureMemo | 再生成Sessionと所有cookie照合、Plan-first transactionを確認。専門画面が閉じてもこの経路は到達する。epochはopt-in/private Studyでだけ書くが、共有契約から削れない。旧ID/ownerは維持、別Account拒否は既存テスト。 | 現Session/remember-cookie/APP_KEYとguest cookieの実効方針、旧writer不在。ユーザー案内は失効の証明ではない |
+| Plan save/update→row lock/revision→activity/GoalContext/epoch | 保存前にlive ownerを再検査。revisionで古いタブを拒否。Task/採点/履歴を書き換えず、canonical Planと必要な関連記録は更新する。非公開/共有の旧状態を勝手に消さない。 | 実114構造/trigger、既存Plan/owner/履歴の保持、mixed-writer不可。表示OFFをDB安全性と混同しない |
+| Account削除→locked User/Plans→cascade/private-file outbox→afterCommit | 明示password確認/本人Sessionに束縛。Account削除は本人のprivacy機能で、Cutoverによるデータ保持とは別。削除は専門機能OFFでも共有DB/実storageへ作用するため関連private-file serviceはCで追加審査対象。outboxは暗号化・失敗pending/quarantineを保持し、生pathをログへ出さない。 | 実disk/provider generationとAPP_KEY、削除失敗の担当/保管期限。Prep下の専門worker停止をprivacy retry成功と認定しない。snapshot復元による削除/取消復活はBLOCK |
+| 全20 migration/Release20PendingSchemaGuard/CheckReleaseSchemaLedger | 旧94blob保持、20件の内容/順序は既存transition-safety-reviewのM01–M20表を正本に再照合。M01全体precondition、M03→M04→M05/FOLLOWS、M08旧UNIQUE名/意味、M11→M12/13、M14/15→M16/17、M18/19 partial拒否、M20 epochを区別。全20がA、未公開用途でも除去しない。8.0/8.4/旧writer/部分DDL/restore証拠は再利用。 | 名前差strict BLOCK、完全TRIGGER/新名衝突、DDL principal/binlog/ledger/schema実測、全writer停止、fresh restore。down/自動修復なし |
+| Docker/PHP/Composer/startup | PHP8.4.27 pin+version check、Composer lockのphp-jwt7.2.1追加、no-dev install、public root、check-only startup、固定cache除去を確認。startup applyは承認SHA照合し一回だけ、失敗retryなし。自動migrationを復活させない。staging bootstrapは別guard。 | actual image/digest/PHP/extensions/vendor provenance、secret-file/APP_KEY、FPM OPcacheは新process/imageで揃える。Preparation=trueのWeb起動からmigrateを自動実行しない。one-off DDLの別承認済CLI profileは専門workerを一切起動しない |
+| 専門controller/service/MCP/GitHub/AI/provider/公開share | 4 handler以外は、共有DI/モデル/SQL/storage経路を否定できないため保守的C。Web/API denyとBus/Queue denyだけで全serviceを非到達と断定しない。実認証provider/JWT等の追加はComposerを通じ共有runtimeに存在する。 | 実worker/cron/webhook/consumer停止・再起動不可、全runtime Preparation。外部I/O/所有権/DBの独立レビュー要否は担当者が判断 |
+| Actions/production policy/CI | release同repo/main ancestry/merge parent、production reusable MySQL/upgrade/startup、5 required status contextsのSourceを確認。source-only checks/合成envは実DB/owner認可を検証しない。CIから本人GOを生成する箇所はない。 | rulesetの有効性/actor bypass/required checks/対象SHAのowner受入。CI成功とOwner GOを別に保持 |
+| scripts/opsの旧collector、Track H/E、配布物 | 本番entrypointからは呼ばれないが、既存collectorには実接続能力があるためDへ隠さずC。候補を同梱しても実用採用/認可にはならない。e8584公開BLOCKは不変。 | §16.3の独立審査/方式選択。Codex self-reviewを独立第三者の完了にしない |
+
+この表は高リスクの**内容と到達経路**に基づくsource reviewであり、Cの全変更をセキュリティ承認した票ではない。今回新たに見つけて再現した公開必須欠陥は§16.1。追加の根拠なしに認証/DBの契約を書換えたり、全ファイルの機械ラベルをレビュー済みと表示しない。
+
+候補比較: **A（開始時mainそのまま）**は既知ログ欠陥が残るため推奨しない。**B（最小安全修正後main）**を審査用候補案とする。完全SHA/tree/依存lock/SQL/Reference/20 migration/対象機能/必要CIを#488へ固定し、本番採用や新release refは作らない。**C（15abから限定cherry-pick）**はCanonical Account/Plan/guest/privacy/authorization epoch/private-file/20 migrationの推移的依存を再構築する別候補で、差分数だけで安全とは言えず、未検証のschema分岐と旧writer互換性を増やすため今回は構築しない。Bも実環境・独立審査未達のため未採用。
+
+### 16.3 実DB監査の方式比較・e858 Critical Path
+
+共通DBの現ledger/physical/grants/TRIGGER/DDL-binlog監査は先行公開に必須だが、「e858というツールの完成」自体を唯一の方法と定義しない。一方、**現在採用済みで同じ安全基準を満たす代替の実行経路はない**。
+
+| 方式 | 再利用できるもの | 現状不足・採否 |
+| --- | --- | --- |
+| e858 B方式 | 固定source/SQL/ref、Full94同一TLS、Q0/Q1/control、caps、DNS/TCP/TLS/TTY/Runtime/予約、owned remote終了観測 | genuine private admission/Live executor未実装。Phase1はQ0/Q1と補助観測のみで、full17の構造監査ではない。将来実装を独立レビューして正式採用する第一候補。現時点BLOCK |
+| Track H old Live94 shell collector | 旧94/15abの7 Git blob・login-path/VERIFY_IDENTITY/grantsの歴史的証拠 | 3 session非束縛、期限/remote終了/role/出自/保持の既存8 blocker。現在の114 source/20 pending/全構造の代替不可。実行しない |
+| Track H one-client CI executor | 固定7 SQL、単一client、合成TLS/role/remote観測・hardcoded Docker guard | CI/旧94限定、不完全physical証拠でHOLD、実endpoint/実資格情報readerなし。guard解除やSQL交換で使わない |
+| 既存認可DBAの独立監査基盤 | 既存の正式承認済み・source-bound・単一対象/TLS/session・固定SQL/caps・最小権限・独立remote観測を満たすなら方式候補になり得る | 現在その基盤/担当/受入証拠は提示されておらずUNKNOWN。ownerが方法/権限/停止責任を選び、独立レビューが同等性を証明する前は採用しない。Console画面/手動SQLコピーだけで代用しない |
+
+最短の推奨は、既存e858部品を保持し、**Bの人的監督を信頼する運用契約と閉じたactivation差分を、接続機能を開く前に独立レビューする**こと。新しい署名Authority/耐rollback ledgerをBへ必須追加しない。別DBA経路が既存資産として実在するなら同等性審査で比較するが、ownerの方式選定をCodexが代行しない。いずれもfull scope・正常/異常remote終了・現在の対象binding/roles・TRIGGER別証拠が必要。実MySQL権限を増やして通さない。
+
+具体的な未実装: `practical.PrivateReview.check` のpending属性照合は真正認可を受理する起点ではない。`LauncherCandidate.run`、`OpenerCandidate.open`、`Adapter.prepare`、`PrivateWire.connect` はいずれも無条件BLOCK。Runtime→Entry→BProceduralAttempt→予約→PreparedChild/ProducerBinding→Phase1Driver→SQL Gate/Bridge→Control/Dataの内部結合はowned fixtureでのみ成立する。認可された単一対象からこのexecutorを起動する**本番用結線はない**。これを「承認待ちだけ」とは呼ばずA TECHNICAL_WORK_REMAININGとする。
+
+| 残項目 | コード/審査/本人/実環境の境界 |
+| --- | --- |
+| PrivateReviewの真正B起点→固定Runtime/Entry/target/CA/scope/UTC/試行へ束縛 | 新しいlive admissionの設計/コード差分と独立レビュー。bool/JSON/TTY文字列/予約marker/自己署名を本人認証にしない。管理Mac/本人監督の信頼は運用前提として本人判断 |
+| Launcher→Opener→Adapter/Wire→既存executor | 4入口の実行有効化に触れるため別の明示承認・別PR・独立レビューが必要。今回コードを開かない。callback/factory等の迂回も不可 |
+| closed archive/runtime/secret custody | #816–887の受入を再利用。新入口の差分だけ新たな配布物hash/import closure・管理Mac受入が必要。Python/driver/OSの完全秘密消去・rollback耐性を保証しない |
+| Phase1からfull17への範囲 | Q0/Q1でcurrent identity/grants/controlを受入しても、physical/ledger/INDEX-FK/TRIGGER・full17は別scope/GO。固定SQLの置換や接続追加を無断で行わない |
+| remote異常/権限/実target | 実Aivenの同principal観測可能性・role/failover/CID再利用・remote消滅/incident経路はLIVE_UNVERIFIED。local close/QUITやCI管理observerを実保証にしない。確認不能ならREMOTE_TERMINATION_UNVERIFIED/HOLD、新GOなしretry禁止 |
+
+今回の源泉審査では、4 BLOCKを維持したまま追加すべき具体的な純粋検査欠陥は見つかっていない。新しいapproval fixtureや候補クラスを増やさない。次の安全な工程は**閉じたままのactivation変更案とB運用前提に対する独立技術審査・方式選定**であり、実Aiven接続の依頼ではない。
+
+### 16.4 Gate matrix / 本人操作の最短単位
+
+以下の「Source/隔離」は確認した範囲だけ。PASSを空欄へ伝播しない。候補案は§16.2/#488の固定Source、e858監査Sourceは旧e858のまま。各工程の担当/権限/副作用/秘密custody/STOP/事故責任は§15.4の10行packetを再利用し、同じMac/CA/旧94検査を再依頼しない。
+
+| Gate | Source | Isolated | Live | Owner | Release Blocking / 不足証拠 |
+| --- | --- | --- | --- | --- | --- |
+| 全差分/依存/候補完全SHA・tree | 分類/内容審査、C追加審査は残る | exact HEAD必要CI | 実image/Live SHA未確認 | 正式候補未採用 | YES / C高リスクの独立審査要否・正式固定 |
+| PHP/Composer/Docker/startup/logging | 既知ログ欠陥修正、check-only/cache制限 | Nginx実HTTP/Docker/既存PHP CI | 配備image/digest/log/secret/cache未受入 | 配備・ログ運用未受入 | YES / edge/FPM等とsource一致 |
+| Account/Plan/Context/Guest/CSRF | owner/lock/revision/namespace確認 | 既存本人/他者拒否・再訪・30問 | Session/cookie/key/IdP未受入 | 実機・Session方針未受入 | YES / 旧Session失効と保存復帰の実効条件 |
+| 専門UI/API/Job隔離 | default deny/STOP確認、B4 handler限定 | 既存matrix+当該route拒否 | 全runtime/旧writer不明 | UI一時閉鎖は受入済、運用は別 | YES / 実効flag/worker/scheduler/cron/再起動制御 |
+| 20 migration/名前/制約/台帳 | 旧94blob+20依存不変 | 8.0/8.4/partial/旧行/restore再利用 | 現ledger/完全physical未観測 | DDL GOなし | YES / INDEX-FK strict名前差、TRIGGER全可視、DDL/binlog |
+| e858 admission/Live executor | NOT_IMPLEMENTED / 4BLOCK | 内部のみ検証済み | NOT_RUN | P1/R1–R6/tooling/B2未成立 | YES / 技術差分+独立審査。別監査経路も未採用 |
+| Backup/restore/削除・取消保持 | 既存Recovery正本、raw data取得なし | 合成logical restoreのみ | fresh backup/独立restore/容量/鍵/RPO/RTO未測定 | リスク/復旧責任未受入 | YES / 実Full復元とlogical復元を区別、post-snapshot writeは別整合 |
+| Writer/consumer/in-flight/cutover | 順序とterminal STOP | #898 owned local15拒否 | 全writer不在/remote未知 | 停止窓/復旧担当未承認 | YES / 旧Web/worker/cron/queue/自動復帰の独立観測 |
+| Runtime/OPcache/Session/installed SW | 共通Source、別entrypoint | 合成SQLite/cookie・Chromium/WebKit | 実cache/remember/edge/IdP/SW未受入 | Mac/iPhone差分未受入 | YES / CI画像は実機代替ではない |
+| Production rules/release/deploy | policy/5 required contexts | existing fail-closed CI | Render Live/branch/AutoDeploy UNKNOWN | 候補採用/promotion/deploy/公開GOなし | YES / 固定release→production merge→manual deployは別承認 |
+
+今はMac操作なし。後日ownerが行う最小単位は (1) GitHub上で候補案/監査方式/独立レビュー担当と停止・復旧責任を決める（秘密の提出なし） (2) Mac復帰後に今回UI差分だけを合成labで短時間受入、並行して正式tooling/private target/runtime/P1/R1–R6をprivateに受入 (3) fresh Phase1 GOの限定観測（実行入口の別実装/審査完了後だけ） (4) 別full metadata/DBA証拠受入 (5) 別write fence/backup/restore/一回migration/限定runtime切替の各承認 (6) 別本番昇格/manual deploy/限定smoke/公開判断。Phase1/full17/DDL/deployを一つのGOにまとめない。各単位はscope/固定SHA/時間窓を限定し、失敗/unknownはSTOP、同じGOで再実行しない。rawログ/個人データ/実target/CA/password/署名は本人private保管、GitHubはSHA/固定判定/時刻/件数/cleanupと不足だけ。
+
+Critical Pathは「独立審査とlive admission実装の別承認→現在のDB/権限/物理観測→fresh restoreとwriter fence→実runtime/session/device→正式候補採用・配備・公開判断」。Macの利用再開日と実環境条件に依存し、12/1を無条件には保証しない。現在 **BLOCKING_SHARED_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD**。
