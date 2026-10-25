@@ -48,7 +48,7 @@ class FreezeManifestTest(unittest.TestCase):
                     raise subprocess.CalledProcessError(1, ['git'])
                 return 'changed' if drift and args[-1].startswith('candidate:') else 'same'
             rows = [dict(path=p) for p in paths]
-            with patch.object(freeze, 'git', side_effect=fake_git):
+            with patch.object(freeze, 'ISOLATION_OBJECTS', {k: 'same' for k in freeze.ISOLATION_TREES}), patch.object(freeze, 'git', side_effect=fake_git):
                 result = freeze.preparation_review(Path('.'), 'candidate', rows)
             self.assertTrue(result['classification_complete'])
             self.assertEqual(sum(result['category_counts'].values()), len(paths))
@@ -57,6 +57,20 @@ class FreezeManifestTest(unittest.TestCase):
             self.assertFalse(result['release_authorized'])
             self.assertFalse(result['independent_review_completed'])
             self.assertFalse(result['source_adopted'])
+
+    def test_squashed_review_basis_commit_is_not_needed_for_object_seal_comparison(self):
+        calls = []
+        def candidate_only(root, *args):
+            calls.append(args[-1])
+            self.assertTrue(args[-1].startswith('candidate:'))
+            return freeze.ISOLATION_OBJECTS[args[-1].split(':', 1)[1]]
+        rows = [dict(path=next(iter(freeze.ISOLATED_HANDLERS)))]
+        with patch.object(freeze, 'git', side_effect=candidate_only):
+            report = freeze.preparation_review(Path('.'), 'candidate', rows)
+        self.assertTrue(report['application_isolation_trees_unchanged'])
+        self.assertEqual(report['category_counts']['DEFERRABLE_ISOLATED'], 1)
+        self.assertEqual(len(calls), len(freeze.ISOLATION_OBJECTS))
+        self.assertFalse(report['release_authorized'])
 
     def test_complete_delta_and_migration_identity_without_approval(self):
         with tempfile.TemporaryDirectory() as directory:

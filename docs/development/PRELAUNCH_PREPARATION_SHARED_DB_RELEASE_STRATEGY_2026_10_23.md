@@ -573,7 +573,7 @@ Recoveryの正本は [既存DDL/復旧gate](PRELAUNCH_AIVEN_RUNTIME_DDL_AND_RECO
 
 既存 `integration_freeze_manifest.py --preparation-review` を使い、historical production→固定候補の**全path**をA PRELAUNCH_REQUIRED / B DEFERRABLE_ISOLATED / C SECURITY_REVIEW_REQUIRED / D FUTURE_ONLY / E UNKNOWNへ漏れなく割り当てる。各pathのchange/両blob/依存/risk queueは従来通り保持。分類は審査対象の割当で、内容審査・実運用隔離・独立レビューのPASSではない。Aにも追加審査は必要、Dは非runtimeの文書/開発資産を含み、現行正本の権威をFuture Designへ降格する意味ではない。未知pathはEとし、既知runtimeは安易にBにせずCへ置く。件数・固定Source/tree/JSON hashは#488最終記録に固定する。default inventory modeと監査SQL/Referenceは不変。
 
-Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHistory/NextAction）のhandler実行だけに限定。専用routeがPreparation whitelist外で、constructorにI/Oがなく、shared codeからの別呼出しがないことを内容確認した。内部のReview↔Retry呼出しも同じ閉じた経路。DB/migration/共用serviceはBへ含めない。全app/bootstrap/config/routes/resourcesとComposer両fileのGit objectを#898 main `369e738bf75fa92a9109a3a87344053b030be442` と照合し、一つでも変更/欠損ならBをCへ戻す。runtimeのPreparation false・旧worker・実設定不明は、このSource限定Bから実運用PASSへ昇格しない。既存admin拒否テストに当該GET/POSTを加え、binding/controller前404を確認する。
+Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHistory/NextAction）のhandler実行だけに限定。専用routeがPreparation whitelist外で、constructorにI/Oがなく、shared codeからの別呼出しがないことを内容確認した。内部のReview↔Retry呼出しも同じ閉じた経路。DB/migration/共用serviceはBへ含めない。全app/bootstrap/config/routes/resources/public、Docker/Nginx/PHP/supervisor/startupとComposer両fileのGit objectを、manifestの固定 `review_basis`（初回#898、§16.5後は同Auth拒否差分を審査したSource）と照合し、一つでも変更/欠損ならBをCへ戻す。runtimeのPreparation false・旧worker・実設定不明は、このSource限定Bから実運用PASSへ昇格しない。既存admin拒否テストに当該GET/POSTを加え、binding/controller前404を確認する。
 
 | 具体的な到達経路・内容審査 | Source判断・再利用証拠 | 本番へ残す条件 |
 | --- | --- | --- |
@@ -588,7 +588,7 @@ Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHisto
 | Actions/production policy/CI | release同repo/main ancestry/merge parent、production reusable MySQL/upgrade/startup、5 required status contextsのSourceを確認。source-only checks/合成envは実DB/owner認可を検証しない。CIから本人GOを生成する箇所はない。 | rulesetの有効性/actor bypass/required checks/対象SHAのowner受入。CI成功とOwner GOを別に保持 |
 | scripts/opsの旧collector、Track H/E、配布物 | 本番entrypointからは呼ばれないが、既存collectorには実接続能力があるためDへ隠さずC。候補を同梱しても実用採用/認可にはならない。e8584公開BLOCKは不変。 | §16.3の独立審査/方式選択。Codex self-reviewを独立第三者の完了にしない |
 
-この表は高リスクの**内容と到達経路**に基づくsource reviewであり、Cの全変更をセキュリティ承認した票ではない。今回新たに見つけて再現した公開必須欠陥は§16.1。追加の根拠なしに認証/DBの契約を書換えたり、全ファイルの機械ラベルをレビュー済みと表示しない。
+この表は高リスクの**内容と到達経路**に基づくsource reviewであり、Cの全変更をセキュリティ承認した票ではない。今回新たに見つけて再現した公開必須欠陥は§16.1と§16.5。追加の根拠なしに認証/DBの契約を書換えたり、全ファイルの機械ラベルをレビュー済みと表示しない。
 
 候補比較: **A（開始時mainそのまま）**は既知ログ欠陥が残るため推奨しない。**B（最小安全修正後main）**を審査用候補案とする。完全SHA/tree/依存lock/SQL/Reference/20 migration/対象機能/必要CIを#488へ固定し、本番採用や新release refは作らない。**C（15abから限定cherry-pick）**はCanonical Account/Plan/guest/privacy/authorization epoch/private-file/20 migrationの推移的依存を再構築する別候補で、差分数だけで安全とは言えず、未検証のschema分岐と旧writer互換性を増やすため今回は構築しない。Bも実環境・独立審査未達のため未採用。
 
@@ -637,3 +637,15 @@ Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHisto
 今はMac操作なし。後日ownerが行う最小単位は (1) GitHub上で候補案/監査方式/独立レビュー担当と停止・復旧責任を決める（秘密の提出なし） (2) Mac復帰後に今回UI差分だけを合成labで短時間受入、並行して正式tooling/private target/runtime/P1/R1–R6をprivateに受入 (3) fresh Phase1 GOの限定観測（実行入口の別実装/審査完了後だけ） (4) 別full metadata/DBA証拠受入 (5) 別write fence/backup/restore/一回migration/限定runtime切替の各承認 (6) 別本番昇格/manual deploy/限定smoke/公開判断。Phase1/full17/DDL/deployを一つのGOにまとめない。各単位はscope/固定SHA/時間窓を限定し、失敗/unknownはSTOP、同じGOで再実行しない。rawログ/個人データ/実target/CA/password/署名は本人private保管、GitHubはSHA/固定判定/時刻/件数/cleanupと不足だけ。
 
 Critical Pathは「独立審査とlive admission実装の別承認→現在のDB/権限/物理観測→fresh restoreとwriter fence→実runtime/session/device→正式候補採用・配備・公開判断」。Macの利用再開日と実環境条件に依存し、12/1を無条件には保証しない。現在 **BLOCKING_SHARED_REMAINING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD**。
+
+### 16.5 Reset mailの非ログ配送境界（追加の具体的欠陥）
+
+§16.1後の最終内容確認で、Laravelの既定 `mail.default=log` と `failover→smtp/log` も確認した。許可済みforgot-passwordは、Nginxを秘匿してもResetPassword通知のbearer linkをLaravel LogTransportが記録し得る。合成User/NullHandlerのMessageLogged観測で修正前のreset link混入を再現した。実メールや実ログの観測ではない。
+
+local/testing以外ではbroker呼出し前に既存メール設定を検査し、log/array/不明/legacy-global driver、空/循環/過大なcomposite、URL/queryでlogへ差替わる設定を固定の一般向け送信不能メッセージで拒否する。tokenを生成せず通知せず、設定値/parse errorは出力しない。SMTP/sendmail/既存既知providerの構成形だけを許し、これは実配送・送信者/宛先・TLS/Providerログ・実秘密保管の受入ではない。Mailer overrideの解析はLaravelと同じConfigurationUrlParserを再利用し、新しいcredential loaderは作らない。既存login/register/Plan/Sessionとlocal/testingの開発通知は変更しない。本番メール設定の変更や実送信は実施しない。
+
+同じrequest/brokerの修正前後試験、nested failover、URL override、cycle/unknown/empty、既知SMTPのNotification fake、開発環境の互換性を検証する。アカウント存在の有無によらず配送設定不明なら同じ拒否とし、public responseへ設定詳細を出さない。実メール配送の最終受入は別のowner/live gateで、log fallbackを本番で有効にして通さない。
+
+この修正は共有AuthのSource変更なので、A–E分類のB根拠も新Sourceで再審査する。4専門controller・routes/bootstrap/config/resources/依存lockは不変で、共有Authの差分はこの通知前拒否だけ。追加した既存Preparation境界/本人Session回帰が成功した同じapp treeを新しい `review_basis` と公開Git object sealへ束縛し直す。比較はcandidate自身のobjectだけで行い、Squash後に到達不能になり得るPR中間commitの取得へ依存しない。sealは承認tokenや実環境証拠ではない。旧Mac/旧94/CA監査や既存UI本人受入を再要求せず、以前の#898全app tree一致を無条件に継続主張しない。
+
+Source上で解消した既知の公開必須ログ欠陥は§16.1と本節の2件。Render edge/FPM/Laravelの他の実効ログ、過去ログ保持、実メールProvider/TLS、current Session/remember-token policyは引き続き独立受入が必要。実運用を変更しない限りPRODUCTION_NO_GO_HOLD。

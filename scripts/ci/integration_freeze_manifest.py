@@ -57,9 +57,26 @@ def risk_areas(path: str) -> list[str]:
 
 
 # Work allocation, not approval. Narrow B claims are tied to the application
-# trees actually reviewed at #898; any change requires another reachability review.
-PREPARATION_REVIEW_BASIS = '369e738bf75fa92a9109a3a87344053b030be442'
-ISOLATION_TREES = ('app', 'bootstrap', 'config', 'routes', 'resources', 'composer.json', 'composer.lock')
+# trees reviewed after the reset-mail guard; changes require a new review.
+PREPARATION_REVIEW_BASIS = '65dd5499471e77da062c739471128efe162ac723'
+# Objects remain reachable from the candidate even after squash/branch deletion.
+ISOLATION_OBJECTS = {
+    'app': '68b19bb19d7bbc633c0a0475bef182c05dea6c7d',
+    'bootstrap': '3dfc58f7e5f95fab5956ed595c4440762e5224c0',
+    'config': '1f156aab4e55462d1eab2395c928f67125336950',
+    'routes': '467dc94fddd591e13f9448aba8cfd51aa9afb499',
+    'resources': '58b26914ca56c4a385bd936c60af9c55d226e50d',
+    'composer.json': 'f6928b8c320277418c1c26805b4bf95459687b5a',
+    'composer.lock': '59ca8630c36f930b572f8455669ffd511b75209b',
+    'public': '2c459b6e190608da067972de53414f8589624f6d',
+    'Dockerfile': 'dbdb69eb4041841cbec6808c8ab1327ac44b63be',
+    'docker/nginx.conf': 'd69ddf8144545abe5a1c45402dc89102376e28a3',
+    'docker/php-production.ini': '353ae9f4a6c240097c73aac6f326e3e7b1c03801',
+    'docker/supervisord.conf': '00c50a9d153cdcf768099631c7bd3155d9c13bfb',
+    'docker/render-start.sh': '79167ad4acc225f0e34524a950db42e43fa60739',
+    'docker/startup-migration-policy.sh': '19ca41a1721c73c3225efabd98757a9b1d286e9d',
+}
+ISOLATION_TREES = tuple(ISOLATION_OBJECTS)
 ISOLATED_HANDLERS = {
     'app/Http/Controllers/StudyPracticeReviewController.php',
     'app/Http/Controllers/StudyPracticeRetryController.php',
@@ -124,13 +141,14 @@ def preparation_classification(path: str, isolation_sealed: bool) -> dict:
 def preparation_review(root: Path, candidate: str, rows: list[dict]) -> dict:
     sealed = False
     try:
-        sealed = all(git(root, 'rev-parse', candidate + ':' + path) ==
-                     git(root, 'rev-parse', PREPARATION_REVIEW_BASIS + ':' + path) for path in ISOLATION_TREES)
+        sealed = all(git(root, 'rev-parse', candidate + ':' + path) == expected
+                     for path, expected in ISOLATION_OBJECTS.items())
     except subprocess.SubprocessError:
         pass
     for row in rows:
         row['preparation_review'] = preparation_classification(row['path'], sealed)
-    return dict(review_basis=PREPARATION_REVIEW_BASIS, application_isolation_trees_unchanged=sealed,
+    return dict(review_basis=PREPARATION_REVIEW_BASIS, isolation_object_seals=ISOLATION_OBJECTS,
+                application_isolation_trees_unchanged=sealed,
                 category_counts={key: sum(r['preparation_review']['category'] == key for r in rows)
                                  for key in PREPARATION_CLASSES},
                 classification_complete=len(rows) == sum(1 for r in rows if r['preparation_review']['category'] in PREPARATION_CLASSES),
