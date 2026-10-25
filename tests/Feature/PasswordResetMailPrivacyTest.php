@@ -50,7 +50,11 @@ final class PasswordResetMailPrivacyTest extends TestCase
             'cyclic' => ['transport' => 'failover', 'mailers' => ['cyclic']],
             'empty' => ['transport' => 'roundrobin', 'mailers' => []],
         ];
+        $case = 0;
         foreach ($mailers as $name => $config) {
+            // Independent synthetic callers keep the real six/minute limiter
+            // active without letting it mask the seventh policy rejection.
+            $this->withServerVariables(['REMOTE_ADDR' => '192.0.2.'.(++$case)]);
             config(['mail.default' => $name, 'mail.mailers.'.$name => $config]);
             $this->from('/forgot-password')->post('/forgot-password', ['email' => $user->email])
                 ->assertSessionHasErrors('email');

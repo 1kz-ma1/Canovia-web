@@ -57,8 +57,8 @@ def risk_areas(path: str) -> list[str]:
 
 
 # Work allocation, not approval. Narrow B claims are tied to the application
-# trees actually reviewed at #898; any change requires another reachability review.
-PREPARATION_REVIEW_BASIS = '369e738bf75fa92a9109a3a87344053b030be442'
+# trees reviewed after the reset-mail guard; changes require a new review.
+PREPARATION_REVIEW_BASIS = '65dd5499471e77da062c739471128efe162ac723'
 ISOLATION_TREES = ('app', 'bootstrap', 'config', 'routes', 'resources', 'composer.json', 'composer.lock')
 ISOLATED_HANDLERS = {
     'app/Http/Controllers/StudyPracticeReviewController.php',
