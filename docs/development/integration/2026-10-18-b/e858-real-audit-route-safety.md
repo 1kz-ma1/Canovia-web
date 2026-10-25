@@ -1277,3 +1277,48 @@ inert dispatcher context still lack the separately reviewed authentic private
 operational authorization-to-live-executor origin. That code is NOT_IMPLEMENTED,
 not merely awaiting a signature. Classification remains A, and shared-DB
 release/restore/schema/owner/device gates remain independent and on HOLD.
+
+### 2026-10-25 B activation continuity / reserved-worker assembly
+
+Gap review reuses #806's accepted isolated TLS/remote observations and #878–#886
+rather than recreating them. The current call graph is verified public placement
+→ snapshot Program/wheel → Program/RuntimeFileLock → reviewed Entry/Root/TTY →
+B local confirmation/reservation → owned-only worker/Producer/driver → Gate/Bridge
+→ normal-close observation. The actual private operational GO origin and live
+executor/launcher wiring are **TECHNICAL_WORK_REMAINING**, not signature-only
+acceptance. Runtime/driver/SQL kernels are IMPLEMENTED/VERIFIED_ISOLATED;
+managed-Mac/private custody/P1/R1–R6/tooling adoption are OWNER_ACCEPTANCE_REQUIRED,
+independent review is INDEPENDENT_REVIEW_REQUIRED, real TLS/grants/remote are
+LIVE_UNVERIFIED. Phase1 is Q0/Q1; full metadata remains separately unapproved.
+
+Extend the existing BProceduralAttempt, not an authority or a parallel token:
+exact Program/runtime/pins, private Root/Review/Target/CA and controlling-TTY
+references plus current process/OS session continuity are sealed before input.
+Equal-value copies cannot replace these objects. OS/TTY continuity does not
+identify the human, and bool/JSON/marker/confirmation strings never issue GO.
+Engine/boundary substitution, drift, expiry, cancellation and cleanup failure
+are terminal. Existing private/native checks and four public BLOCKs remain.
+
+The archive-excluded owned executor now reserves the trial BEFORE preparing its
+two fixed DNS children, then binds the same role-ordered PreparedChild objects
+before R1. The contract starts no process and accepts no callback/endpoint.
+Worker/trial association is sticky after failure/close. The existing Producer
+must use the corresponding bound child; a role switch or reuse is refused before
+DNS/auth/SQL. Existing component-only tests without worker assembly remain inert
+and cannot activate a live connection. No supervisor/SQL/TLS code is duplicated.
+Public receipt flags stay false; remote uncertainty and local rollback limits
+remain explicit. Final exact HEAD/CI/MySQL evidence is recorded in #488.
+A Producer failure now cancels the borrowed existing B trial before returning
+BLOCK, including handoff cleanup failure. It cannot leave an otherwise usable
+trial for a corrected DNS/connection retry. Successful close remains ordinary
+resource release; existing Bridge owns final remote/secret cleanup. New owned
+negative cases change only equal-value Program/Target references or swap the
+bound worker role; each must refuse before DNS/auth/SQL and reap the two children.
+Review additionally found that rejecting a replaced reference could still call
+the replacement's cleanup method. Terminal cleanup now releases only the
+originally owned Entry/Root/TTY/Review/store and observed R1 buffer. It restores
+those owned references solely after STOP, never repairs a running attempt or
+invokes close/discard on a rejected unknown object. Unknown secret ownership or
+cleanup failure remains BLOCK. New foreign-reference tests assert no injected
+check/close/discard callback executes. This does not defend against hostile
+same-process method monkey-patching or replace B's managed-runtime trust.
