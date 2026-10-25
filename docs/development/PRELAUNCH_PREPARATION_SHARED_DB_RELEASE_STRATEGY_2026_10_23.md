@@ -377,3 +377,68 @@ Mac Safari本人受入、iPhone実機、実効全runtime profile/旧worker/cache
 - **既存HOLDは維持**：AP学習画面を閉じてしまう`preparation_only`全員適用、20件の新migration/実Aiven照合、復元、worker/runtime config、Mac/iPhone本人受入、公開候補の固定SHA/Owner GO。`main`統合、合成E2E、文書変更のいずれも本番配備の証明ではない。
 
 **新チャット/ Codex追加指示:** 「先行関心診断の最初にカテゴリを直接選ばせない。`12/D-2026-10-24-02`と30問アイテムバンクv0を最新の入口にする。回答5択のUnknownは欠測。本人結果はグラフとCanovia Future承認済み情報/任意Planにつなぎ、需要/利用意向は別質問。旧Study/Dev ContextとPlanを壊さず小PRで実装。実Aiven・Render・production/HOLDに触れない。」
+
+## 13. 2026-10-25 Shared-runtime convergence / activation review delta
+
+The current source audit compares development `e8fad276dab68dccdd35e445c3dcf78ee6c97a1b`
+with historical production source `15abdc9de6f24b5250fb255c579d1aa55facaf1a`.
+Git source is not Render Live or real Aiven acceptance. The Render read-only
+connector is unavailable in this session; current Live/branch/auto-deploy are
+**UNKNOWN**, not inferred from historical OFF/old-Live records. No settings are
+changed. Local full-history comparison confirms94→114 migration files,20 additions
+and no removed old migration; actual production ledger/schema remain unknown.
+
+| Shared surface | Classification / current evidence and remaining gate |
+| --- | --- |
+| Schema/20 migrations/data/old writer | BLOCKING_SHARED: reuse existing isolated8.0/8.4 forward/partial-DDL/retry/constraint/recovery CI; real ledger/schema/DDL principal/binlog and mixed old/new writers NOT_RUN |
+| Startup migrations | BLOCKING_SHARED: current startup defaults to check-only ledger readiness, explicit exact-SHA apply runs once and never automatic rollback. Runtime effective settings/writer fence need owner acceptance |
+| Docker/PHP/Nginx/dependencies | BLOCKING_SHARED: source and CI exist; actual Render image/flags/caches/health/worker version UNKNOWN |
+| Auth/session/CSRF/owner | BLOCKING_SHARED: existing #857/#859/#861 account/guest/replay/IDOR/conflict tests reused; real session/domain/cookie/device acceptance separate |
+| Guest→Account/Plan revisit | BLOCKING_SHARED: existing canonical ownership/claim and same-ID browser journeys; no new Preview DB or forced guest persistence |
+| Feature/level/route/API | BLOCKING_SHARED: existing preparation whitelist/default L0/admin denial preserved; no actor is implicitly assigned L1. Missing runtime flag evidence is not a PASS |
+| Queue/worker/scheduler | BLOCKING_SHARED: Queue::before and Console denial existed, but dispatchNow/non-queued dispatchSync bypassed queue events. Reproduced with a handler/closure; add the same restrictive profile to the Bus handler pipeline. false-profile behavior preserved. Old processes/cached false config still require an explicit stop/restart/fence; no hot-config guarantee |
+| Browser SW/static assets | BLOCKING_SHARED operational check: existing SW caches shell assets, not private page responses or mutations; preparation HTML is no-store/private. Historical installed SW/CDN/native browser state still requires real acceptance |
+| Recovery/restore/forward repair | BLOCKING_SHARED: synthetic recovery and #800 logical restore reused, not actual Aiven Full backup restore or real restore proof |
+| Render/production rules | UNKNOWN→BLOCKING: Git production ref rechecked independently; actual Render and operator branch protection/Auto Deploy readiness require read-only owner evidence |
+| Deferred specialist UI/API/jobs | DEFERRABLE_ISOLATED only where preparation route/feature/queue/console refusal is proven. Internal Study/Dev/AI/MCP/GitHub/charging capabilities are not made public by this work |
+| Account/Plan runtime acceptance | BLOCKING_SHARED: original account/Plan contract remains authoritative; old AP/Study/Development data retained, but enabling preparation hides their execution/history UI, including owner's AP use. No production adoption inferred |
+
+### 13.1 Interest experience and current authority
+
+The30-item config and pure scoring Service from #863 exist; the preparation
+screen still uses the older Study/Development form. Thirty-question namespace,
+progress persistence/result/revisit and opt-in Plan bridge are implementation
+work, not completed evidence. Use the existing bank and scorer; answers remain
+four agreement levels plus unknown (five choices total), per §12. Do not add a
+sixth choice or call Unknown zero without a later product decision. Existing
+legacy context and all Plan/Task/history must survive any new namespaced save.
+
+### 13.2 Track E — review packet, not activation
+
+Reuse #887's exact checked HEAD `a7f7b0d5b366a2e0797141d21f2d3ff569111a8b`,
+25 CI jobs, both MySQL59 cases, #806 TLS/remote and prior Mac reports. No e858
+code or accepted fixture is recreated. `PrivateReview.check` remains pending-only;
+`LauncherCandidate.run`, `OpenerCandidate.open`, `Adapter.prepare` and
+`PrivateWire.connect` remain unconditional BLOCK. Actual private B admission and
+live executor wiring are **NOT_IMPLEMENTED / A: TECHNICAL_WORK_REMAINING**.
+
+Before changing those functions, independent review must cover (1) the human
+owner/operator and managed Mac operating assumptions, (2) exact public source,
+wheel/runtime and tooling/bundle adoption, (3) private target/CA/scope custody and
+independent expected hashes, (4) fresh B2 and one local trial, (5) cancellation,
+revocation/expiry/interrupt STOP, (6) no target/role/Runtime substitution or retry,
+(7) same-target2TLS/Control→Data/SQL guards, (8) remote-unverified HOLD/incident
+responsibility, (9) cleanup and private storage/deletion/OS/loader residual risks,
+and (10) new differential tests and managed-Mac acceptance. Human supervision is
+not software identity authentication; no new external signature authority or
+rollback-resistant nonce service is made mandatory. Self-review/CI are not an
+independent reviewer or owner signature. No approval-shaped object is added.
+
+The minimum later order is private operational admission contract review →
+bootstrap/Entry binding → separately reviewed single-target executor linkage →
+owned-only negative/regression and exact artifact review → managed-Mac new-delta
+acceptance/adoption/P1/R1–R6 → separately scoped fresh B2. Phase1 bootstrap and
+full17 metadata need distinct scopes. Real TLS/grants/remote state, schema/index/
+FK/TRIGGER/principal/binlog/restore and production publication remain separate.
+This packet does not authorize any execution or release, and P2 must not delay
+safe Track R implementation. All results/immutable SHAs go to existing #488.

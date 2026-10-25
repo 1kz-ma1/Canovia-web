@@ -197,6 +197,43 @@ final class PreparationOnlyBoundaryTest extends TestCase
         }
     }
 
+    public function test_synchronous_and_direct_bus_execution_cannot_bypass_the_queue_boundary(): void
+    {
+        foreach (['dispatchSync', 'dispatchNow'] as $method) {
+            $command = new PreparationSynchronousCommand;
+            try {
+                \Illuminate\Support\Facades\Bus::$method($command);
+                $this->fail('A direct command handler ran');
+            } catch (\RuntimeException $error) {
+                $this->assertSame('PREPARATION_EXECUTION_CLOSED', $error->getMessage());
+            }
+            $this->assertFalse($command->ran);
+        }
+        $ran = false;
+        try {
+            \Illuminate\Support\Facades\Bus::dispatchNow(function () use (&$ran): void { $ran = true; });
+            $this->fail('A direct closure ran');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('PREPARATION_EXECUTION_CLOSED', $error->getMessage());
+        }
+        $this->assertFalse($ran);
+    }
+
+    public function test_normal_profile_keeps_existing_synchronous_bus_behavior(): void
+    {
+        config(['release_levels.preparation_only' => false]);
+        $command = new PreparationSynchronousCommand;
+        \Illuminate\Support\Facades\Bus::dispatchSync($command);
+        $this->assertTrue($command->ran);
+        config(['release_levels.preparation_only' => true]);
+        try {
+            \Illuminate\Support\Facades\Bus::dispatchNow(new PreparationUnknownQueuedJob);
+            $this->fail('A queued command was executed directly');
+        } catch (\RuntimeException $error) {
+            $this->assertSame('PREPARATION_EXECUTION_CLOSED', $error->getMessage());
+        }
+    }
+
     public function test_console_blocks_scheduler_provider_and_unapproved_migration_before_execution(): void
     {
         foreach (['schedule:run', 'queue:work', 'migrate', 'inspire'] as $command) {
@@ -231,5 +268,15 @@ final class PreparationUnknownQueuedJob implements \Illuminate\Contracts\Queue\S
     public function handle(): void
     {
         throw new \LogicException('UNAPPROVED_HANDLER_REACHED');
+    }
+}
+
+final class PreparationSynchronousCommand
+{
+    public bool $ran = false;
+
+    public function handle(): void
+    {
+        $this->ran = true;
     }
 }

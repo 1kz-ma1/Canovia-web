@@ -79,6 +79,11 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // dispatchNow and non-queued dispatchSync do not emit Queue::before.
+        // Keep the same restrictive profile at the command handler boundary.
+        \Illuminate\Support\Facades\Bus::pipeThrough([
+            \App\Bus\Middleware\EnsurePreparationExecution::class,
+        ]);
         // Recheck in the running process, before any queued handler (including
         // old deliveries). Queue reservation/failure bookkeeping is not a
         // proof of zero DB writes or a substitute for a stopped writer window.
