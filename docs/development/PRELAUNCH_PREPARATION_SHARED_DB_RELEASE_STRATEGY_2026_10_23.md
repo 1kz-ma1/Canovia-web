@@ -490,7 +490,7 @@ python3 scripts/ops/platform_release_preflight.py --repo . --preparation \
   --live-sha 15abdc9de6f24b5250fb255c579d1aa55facaf1a --github-readonly
 ```
 
-ここでlive-shaは歴史的Git比較対象で、現在Render Liveの証明ではない。proposal sourceをレポートするだけで新候補へ自動採用しない。Mac操作は不要。
+ここでlive-shaは歴史的Git比較対象で、現在Render Liveの証明ではない。proposal sourceをレポートするだけで新候補へ自動採用しない。Mac操作は不要。CLIは任意の補助module importによるPython bytecode生成も禁止し、GitHub無接続stubによる子プロセス回帰で作業treeへ__pycache__を書かないことを検証する。
 
 ### 14.3 Macなしの390px画像確認
 

@@ -1,5 +1,8 @@
 """Pinned local Git / mocked GitHub GET, never a provider or approval fixture."""
 import copy
+import json
+import os
+import shutil
 from pathlib import Path
 import subprocess
 import sys
@@ -147,6 +150,24 @@ class PreparationPreflightTests(unittest.TestCase):
         self.assertEqual(report['checks']['ci_tree_binding'], 'FAIL')
         self.assertEqual(report['checks']['exact_head_ci'], 'UNKNOWN')
         self.assertEqual(report['result'], 'FAIL')
+
+    def test_cli_github_read_only_mode_does_not_write_import_cache(self):
+        tool = self.root / 'tool'
+        tool.mkdir()
+        original = Path(__file__).resolve().parents[2] / 'scripts/ops/platform_release_preflight.py'
+        script = tool / 'platform_release_preflight.py'
+        shutil.copyfile(original, script)
+        # A private, disposable GET-metadata stub, not a live approval/client.
+        (tool / 'pages.json').write_text(json.dumps(self.pages))
+        (tool / 'platform_ci_runtime_report.py').write_text(
+            "import json\nfrom pathlib import Path\n"
+            "def api(path):\n    return json.loads(Path(__file__).with_name('pages.json').read_text())[path.removeprefix('repos/1kz-ma1/Canovia-web/')]\n")
+        result = subprocess.run([sys.executable, str(script), '--repo', str(self.root), '--preparation',
+                                 '--release-sha', self.head, '--live-sha', self.old, '--github-readonly'],
+                                capture_output=True, text=True, timeout=20, env={"PATH": os.defpath, "GIT_CONFIG_NOSYSTEM": "1"})
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(json.loads(result.stdout)['checks']['exact_head_ci'], 'PASS')
+        self.assertEqual(list(tool.rglob('__pycache__')), [])
 
     def test_api_exception_is_sanitized_and_never_replaced_by_claims(self):
         def unavailable(path):

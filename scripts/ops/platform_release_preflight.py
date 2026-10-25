@@ -14,6 +14,9 @@ import re
 import subprocess
 import sys
 
+# A read-only CLI must not create repository __pycache__ on optional imports.
+sys.dont_write_bytecode = True
+
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 BRANCH = re.compile(r"release/[A-Za-z0-9][A-Za-z0-9._/-]*\Z")
 MANUAL_GATES = (
