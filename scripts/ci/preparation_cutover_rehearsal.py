@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import selectors
+import re
 import sqlite3
 import subprocess
 import sys
@@ -137,7 +138,7 @@ def rehearse(source, artifacts, executable=None):
             actors = []
             def quiescent():
                 require(old_web.poll() is not None, 'CUTOVER_OLD_WEB_REMAINS')
-                require(all(p.poll() is not None for p in actors), 'CUTOVER_OLD_CONSUMER_REMAINS')
+                require(all(p.poll() is not None for p in processes), 'CUTOVER_OLD_CONSUMER_REMAINS')
                 require(lock_free(database), 'CUTOVER_INFLIGHT_OR_UNKNOWN')
             blocked('old_web_still_writable', quiescent)
             worker = actor(database, 'idle', processes); actors.append(worker)
@@ -216,6 +217,6 @@ if __name__ == '__main__':
         result = rehearse(args.source_sha, args.artifacts, args.browser_executable)
         print(json.dumps({k: result[k] for k in ('result', 'source_sha', 'negative_case_count', 'cleanup_verified', 'release_authorized')}))
     except (SafetyError, OSError, ValueError, sqlite3.Error, subprocess.SubprocessError) as error:
-        code = str(error) if isinstance(error, SafetyError) and str(error).replace('_', '').isupper() and len(str(error)) < 80 else 'CUTOVER_EXECUTION_UNVERIFIED'
+        code = str(error) if isinstance(error, SafetyError) and re.fullmatch(r'(CUTOVER|LAB)_[A-Z_]{1,64}', str(error)) else 'CUTOVER_EXECUTION_UNVERIFIED'
         print(json.dumps(dict(result='BLOCKING', code=code, scope='OWNED_REHEARSAL_ONLY', release_authorized=False)))
         raise SystemExit(2)

@@ -91,6 +91,7 @@ def start_owned_server(env, log, processes):
         raise SafetyError('LAB_SERVER_SCOPE_REJECTED')
     port = env['APP_URL'].rsplit(':', 1)[1]
     with socket.socket() as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         probe.bind(('127.0.0.1', int(port)))
     server = subprocess.Popen(['php', '-S', f'127.0.0.1:{port}', '-t', 'public',
                                'scripts/ci/preparation_mac_router.php'],
