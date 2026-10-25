@@ -559,3 +559,13 @@ Recoveryの正本は [既存DDL/復旧gate](PRELAUNCH_AIVEN_RUNTIME_DDL_AND_RECO
 | 10 First manual deploy/limited smoke / owner Render担当 / RC | 別の明示deploy GO、Auto Deploy OFF確認、6–9/復旧・緊急停止担当確定 | 本番配備/限定本人操作は別承認 | 限定範囲でauth/Plan/隔離・実機smoke、監視/停止可能 | 旧writer/不整合/unknownでwrite閉鎖・HOLD、独断rollback不可 | fixed Live SHAと受入記録。一般公開/Auto Deployはさらに別判断 |
 
 実環境未受入の技術的不一致は、本人署名だけで許容したことにしない。Macが使えない今は本人操作を要求しない。正式P1/R1〜R6/B2/独立審査はこのpacketで代行しない。
+
+## 16. 2026-10-25 Release Candidate security review（Source/隔離のみ）
+
+### 16.1 公開auth URLのNginxログ境界
+
+共通経路の内容審査で、既存Nginx access logの `$request` / `$http_referer` が、Preparationでも許可する `/reset-password/{token}?email=...` を記録し得ることを確認した。通常のupstream failureのNginx error logもrequest URIを含むため、access formatだけの変更では不十分。これは過去から存在する欠陥で、本番で漏えいが起きたという実測ではない。
+
+合成tokenを使ったnetwork-none/所有Nginxで修正前の漏えいを再現。新sourceではaccess logをmethod/status/bytes/latencyだけに限定し、request由来のraw Nginx error streamを `/dev/null` へ送り、代わりに502/403等のstatus監視を維持する。URL/query/Referer/header/body/IP/UAはaccess logへ出さない。raw upstream errorの診断能力は失われるので、事故時も未審査のdebug loggingを本番で有効化せず、固定statusとprivate/隔離再現で調査する。ルーティング・認証・DB・nginxのPHP front-controller制限は変更しない。
+
+テストは専用Nginx Debian fixtureの実HTTPでreset GET/POST、Referer/Authorization/Cookie、dotfile拒否、存在しないFPMへの502を含む。秘密を含み得るログ内容は成功/失敗どちらでもテスト出力へ出さず、固定判定のみ。コンテナはnetwork-none/read-onlyで作成・回収し、実PHP/DB/credentialsは起動しない。Dockerfileの実production構成・staging設定との回帰は既存CIを使う。Render edge/Laravel/FPM/IdP/外部mailerの実効ログや過去ログ保持をこの修正で安全と認定せず、実運用gateとして残す。新しい本番設定変更・実ログ参照/削除は実施しない。
