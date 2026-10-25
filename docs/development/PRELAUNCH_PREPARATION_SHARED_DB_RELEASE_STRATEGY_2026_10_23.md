@@ -573,7 +573,7 @@ Recoveryの正本は [既存DDL/復旧gate](PRELAUNCH_AIVEN_RUNTIME_DDL_AND_RECO
 
 既存 `integration_freeze_manifest.py --preparation-review` を使い、historical production→固定候補の**全path**をA PRELAUNCH_REQUIRED / B DEFERRABLE_ISOLATED / C SECURITY_REVIEW_REQUIRED / D FUTURE_ONLY / E UNKNOWNへ漏れなく割り当てる。各pathのchange/両blob/依存/risk queueは従来通り保持。分類は審査対象の割当で、内容審査・実運用隔離・独立レビューのPASSではない。Aにも追加審査は必要、Dは非runtimeの文書/開発資産を含み、現行正本の権威をFuture Designへ降格する意味ではない。未知pathはEとし、既知runtimeは安易にBにせずCへ置く。件数・固定Source/tree/JSON hashは#488最終記録に固定する。default inventory modeと監査SQL/Referenceは不変。
 
-Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHistory/NextAction）のhandler実行だけに限定。専用routeがPreparation whitelist外で、constructorにI/Oがなく、shared codeからの別呼出しがないことを内容確認した。内部のReview↔Retry呼出しも同じ閉じた経路。DB/migration/共用serviceはBへ含めない。全app/bootstrap/config/routes/resourcesとComposer両fileのGit objectを、manifestの固定 `review_basis`（初回#898、§16.5後は同Auth拒否差分を審査したSource）と照合し、一つでも変更/欠損ならBをCへ戻す。runtimeのPreparation false・旧worker・実設定不明は、このSource限定Bから実運用PASSへ昇格しない。既存admin拒否テストに当該GET/POSTを加え、binding/controller前404を確認する。
+Bは審査した4 controller（StudyPracticeReview/Retry、AdaptiveLearningHistory/NextAction）のhandler実行だけに限定。専用routeがPreparation whitelist外で、constructorにI/Oがなく、shared codeからの別呼出しがないことを内容確認した。内部のReview↔Retry呼出しも同じ閉じた経路。DB/migration/共用serviceはBへ含めない。全app/bootstrap/config/routes/resources/public、Docker/Nginx/PHP/supervisor/startupとComposer両fileのGit objectを、manifestの固定 `review_basis`（初回#898、§16.5後は同Auth拒否差分を審査したSource）と照合し、一つでも変更/欠損ならBをCへ戻す。runtimeのPreparation false・旧worker・実設定不明は、このSource限定Bから実運用PASSへ昇格しない。既存admin拒否テストに当該GET/POSTを加え、binding/controller前404を確認する。
 
 | 具体的な到達経路・内容審査 | Source判断・再利用証拠 | 本番へ残す条件 |
 | --- | --- | --- |

@@ -68,6 +68,13 @@ ISOLATION_OBJECTS = {
     'resources': '58b26914ca56c4a385bd936c60af9c55d226e50d',
     'composer.json': 'f6928b8c320277418c1c26805b4bf95459687b5a',
     'composer.lock': '59ca8630c36f930b572f8455669ffd511b75209b',
+    'public': '2c459b6e190608da067972de53414f8589624f6d',
+    'Dockerfile': 'dbdb69eb4041841cbec6808c8ab1327ac44b63be',
+    'docker/nginx.conf': 'd69ddf8144545abe5a1c45402dc89102376e28a3',
+    'docker/php-production.ini': '353ae9f4a6c240097c73aac6f326e3e7b1c03801',
+    'docker/supervisord.conf': '00c50a9d153cdcf768099631c7bd3155d9c13bfb',
+    'docker/render-start.sh': '79167ad4acc225f0e34524a950db42e43fa60739',
+    'docker/startup-migration-policy.sh': '19ca41a1721c73c3225efabd98757a9b1d286e9d',
 }
 ISOLATION_TREES = tuple(ISOLATION_OBJECTS)
 ISOLATED_HANDLERS = {
