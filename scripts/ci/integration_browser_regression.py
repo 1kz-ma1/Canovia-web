@@ -72,6 +72,7 @@ def run(name, artifacts, executable=None, engine='chromium'):
         artifacts.mkdir(parents=True, exist_ok=True)
         if name == 'preparation_interest':
             env['CANOVIA_INTEREST_ENGINE'] = engine
+            env['CANOVIA_INTEREST_SCREENSHOT_DIR'] = str((artifacts / 'interest-mobile').resolve())
             env['CANOVIA_INTEREST_SCREENSHOT'] = str((artifacts / 'interest-result-desktop.png').resolve())
         with (artifacts / f'{name}.log').open('w') as log:
             subprocess.run(['php', 'artisan', 'migrate', '--force', '--no-interaction'],
