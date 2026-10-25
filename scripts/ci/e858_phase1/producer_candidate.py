@@ -23,6 +23,7 @@ class ProducerBinding:
             self.wire=wire;self.procedure=procedure;self.worker=worker
             self.entry=wire.entry;self.gate=wire.gate;self.plan=wire.plan
             self.seal=procedure._seal;self.role=wire.gate.role
+            if procedure._workers is not None and procedure._workers[('control','data').index(self.role)] is not worker:raise Block()
             if (worker._producer_binding is not None or procedure.r1_started_at is None
                     or not worker.ready_at<=procedure.r1_started_at or worker.parent!=os.getpid()):raise Block()
             worker._producer_binding=self  # consumed even if a later check fails

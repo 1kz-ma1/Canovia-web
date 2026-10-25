@@ -189,9 +189,18 @@ class OwnedBoundary(old.FixtureBoundary):
             if entry.secret is not None or entry.target.host not in HOSTS:raise Block()
             value=namespace()
             self.launcher=OwnedPhase1Activation(entry,value)
-            preparation_until=min(entry.until,time.monotonic()+2)
+        except BaseException:
+            self.close();raise Block() from None
+    def before_input(self):
+        try:
+            procedure=self.launcher._procedure
+            if procedure is None or self.workers or self.entry.secret is not None:raise Block()
+            procedure.confirm_on_tty();procedure.reserve_attempt()
+            preparation_until=min(self.entry.until,time.monotonic()+2)
             for _ in range(2):
-                entry.check();self.workers.append(DNSWorker(preparation_until))
+                self.entry.check();self.workers.append(DNSWorker(preparation_until))
+            procedure.bind_workers(tuple(w.prepared for w in self.workers))
+            procedure.before_input()
         except BaseException:
             self.close();raise Block() from None
     def factory(self,gate,fault=None):
@@ -242,10 +251,10 @@ def child_case(fault,parent):
     mapped='PHASE1' if fault=='NORMAL' else fault
     capture=p.ReviewedEntry.capture;captures=[]
     def before_input(entry):
+        if len(OwnedBoundary.created)!=1:raise Block()
+        OwnedBoundary.created[0].before_input()
         if len(DNSWorker.created)!=2 or any(w.used or not w.prepared.ready or w.process.poll() is not None for w in DNSWorker.created):raise Block()
         for worker in DNSWorker.created:worker.prepared.check()
-        if len(OwnedBoundary.created)!=1:raise Block()
-        OwnedBoundary.created[0].launcher.before_input()
         captures.append(True)
         return capture(entry)
     original_read=old.b.Channel.read

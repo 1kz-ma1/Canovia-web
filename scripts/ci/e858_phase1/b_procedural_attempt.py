@@ -18,6 +18,7 @@ from .launcher_candidate import LauncherCandidate
 from .private_binding import Block
 from .identity_core import WindowedTTY
 from .protocol import Gate
+from .backend_candidate import PreparedChild
 
 
 class BProceduralAttempt:
@@ -32,7 +33,8 @@ class BProceduralAttempt:
         self.launcher=None;self.entry=None;self.store=None;self.engine=None
         self.state='STOPPED';self.outcome='NOT_STARTED';self.reserved=False
         self.confirmed=False;self._seal=None;self._store_identity=None
-        self.r1_started_at=None
+        self.r1_started_at=None;self._refs=None;self._workers=None
+        self._engine_binding=None;self._boundary_binding=None
         try:
             if type(launcher) is not LauncherCandidate or type(reservation_root) is not Root:raise Block()
             self.launcher=launcher;self.entry=launcher.entry;self.store=reservation_root
@@ -51,6 +53,12 @@ class BProceduralAttempt:
             # Never reset/extend Entry's 120s; clamp it to the existing UTC window.
             self.entry.until=min(self.entry.until,mono+self.expires-now)
             self.launcher.until=self.entry.until;self.until=self.entry.until;self.last_wall=now
+            self._operator=(os.getpid(),os.geteuid(),os.getegid(),os.getsid(0),os.getpgrp())
+            review=self.entry.review;terminal=self.entry.terminal;program=review.program
+            self._refs=(launcher,self.entry,self.entry.root,terminal,review,review.root,program,
+                        self.entry.target,self.entry.target.ca)
+            self._terminal=(terminal.fd,terminal.group,terminal.session,terminal.st[:5])
+            self._program_context=(program.runtime,program.sha,hashlib.sha256(canonical(program.pins)).digest())
             self._seal=self._context()
             self.state='PREFLIGHTED';self.outcome='PENDING_PROCEDURAL_REVIEW'
         except BaseException:
@@ -62,16 +70,38 @@ class BProceduralAttempt:
             target_sha256=value['binding_sha256'],store=list(self._store_identity),
             until=self.until))).hexdigest()
 
+    def _check_references(self):
+        # Exact references and OS observations are continuity, NEVER proof of
+        # the human's identity. Reject replacement before invoking its methods.
+        launcher,entry,root,terminal,review,review_root,program,target,ca=self._refs
+        if (self.launcher is not launcher or self.entry is not entry
+                or entry.root is not root or entry.terminal is not terminal
+                or entry.review is not review or review.root is not review_root
+                or review.program is not program or entry.target is not target
+                or target.ca is not ca or launcher.entry is not entry
+                or (terminal.fd,terminal.group,terminal.session,terminal.st[:5])!=self._terminal
+                or (os.getpid(),os.geteuid(),os.getegid(),os.getsid(0),os.getpgrp())!=self._operator
+                or (program.runtime,program.sha,hashlib.sha256(canonical(program.pins)).digest())!=self._program_context):raise Block()
+        if self._workers is not None:
+            for worker,process,identity,ready in self._worker_seal:
+                if (worker._b_trial_binding is not self or worker.process is not process
+                        or worker.identity!=identity or worker.ready_at!=ready
+                        or worker.parent!=self._operator[0]):raise Block()
+            if any(a is not b[0] for a,b in zip(self._workers,self._worker_seal)) or len(self._workers)!=2:raise Block()
+
     def check(self):
         try:
             if self.state in ('STOPPED','NORMAL_FINISHED') or self.entry is None:raise Block()
+            self._check_references()
             self.entry.check()
             now=time.time()
             if (not self.last_wall<=now<self.expires
                     or self.entry.until!=self.until or not time.monotonic()<self.until
                     or self._context()!=self._seal):raise Block()
             self.last_wall=now
-            if self.engine is not None and (self.engine.entry is not self.entry or self.engine.scope!='phase1'):raise Block()
+            if self.engine is not None and (self.engine is not self._engine_binding
+                    or self.engine.boundary is not self._boundary_binding
+                    or self.engine.entry is not self.entry or self.engine.scope!='phase1'):raise Block()
             if self.store is not None and identity(os.fstat(self.store.check()))!=self._store_identity:raise Block()
         except BaseException:
             self.close();raise Block() from None
@@ -131,7 +161,31 @@ class BProceduralAttempt:
             self.check()
             if (self.engine is not None or self.state!='PREFLIGHTED' or not isinstance(engine,p.Adapter)
                     or engine.entry is not self.entry or engine.scope!='phase1'):raise Block()
-            self.engine=engine
+            self.engine=engine;self._engine_binding=engine;self._boundary_binding=engine.boundary
+        except BaseException:
+            self.close();raise Block() from None
+
+    def bind_workers(self, workers):
+        """Bind already-prepared direct children AFTER reservation, BEFORE R1.
+
+        No process is started here and no worker/marker is an execution permit.
+        Only the owned executor currently calls this optional assembly seam.
+        """
+        try:
+            self.check()
+            if (self.state!='RESERVED_NOT_AUTHORITY' or self.r1_started_at is not None
+                    or self.entry.secret is not None or self._workers is not None
+                    or type(workers) is not tuple or len(workers)!=2
+                    or any(type(w) is not PreparedChild for w in workers)
+                    or workers[0] is workers[1] or workers[0].process is workers[1].process):raise Block()
+            for worker in workers:
+                if getattr(worker,'_b_trial_binding',None) is not None or worker._producer_binding is not None:raise Block()
+            self._workers=workers
+            self._worker_seal=tuple((w,w.process,w.identity,w.ready_at) for w in workers)
+            for worker in workers:
+                worker._b_trial_binding=self  # sticky, including failure/cleanup
+                worker.check()
+            self.check()
         except BaseException:
             self.close();raise Block() from None
 
@@ -139,6 +193,8 @@ class BProceduralAttempt:
         try:
             self.check()
             if self.state!='RESERVED_NOT_AUTHORITY' or not self.reserved or self.engine is None:raise Block()
+            if self._workers is not None:
+                for worker in self._workers:worker.check()
             self.launcher._before_input();self.r1_started_at=time.monotonic();self.state='INPUT_STARTED'
         except BaseException:
             self.close();raise Block() from None
@@ -171,6 +227,8 @@ class BProceduralAttempt:
         if self.outcome!='NORMAL_DATA_CLOSE_OBSERVED_NOT_AUTHORITY':self.outcome='STOPPED_REMOTE_UNVERIFIED'
         launcher,entry,store=self.launcher,self.entry,self.store
         self.launcher=self.entry=self.store=self.engine=None
+        self._refs=self._workers=self._engine_binding=self._boundary_binding=None
+        self._worker_seal=();self._program_context=None
         for obj in (launcher,entry,store):
             if obj is not None:
                 try:obj.close()

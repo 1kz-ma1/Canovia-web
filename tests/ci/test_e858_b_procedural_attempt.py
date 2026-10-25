@@ -1,4 +1,5 @@
 """B local procedure on real synthetic controlling PTYs; no owner or live GO."""
+import copy
 import contextlib
 import io
 import os
@@ -50,17 +51,34 @@ class Procedure(unittest.TestCase):
                         if mode!='UNBOUND':procedure.bind_engine(p.Adapter(entry,'phase1'))
                         self.assertLessEqual(procedure.until,initial)
                         self.assertEqual(procedure.state,'PREFLIGHTED')
-                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE'):
+                        if mode in ('BEFORE_CONFIRM','FAKE_GO','CANCEL','TARGET','CA','RUNTIME','ENGINE_SCOPE','TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','TTY_COPY','ROOT_COPY','ENGINE_COPY','OPERATOR_CHANGED','CLEANUP_FAILURE'):
                             if mode=='BEFORE_CONFIRM':
                                 with self.assertRaises(Block):procedure.reserve_attempt()
                             elif mode=='FAKE_GO':
                                 with self.assertRaises(Block):procedure.confirm_on_tty(approved=True)
                             elif mode=='CANCEL':
                                 procedure.cancel()
+                            elif mode=='CLEANUP_FAILURE':
+                                original_close=launcher.close
+                                def fail_cleanup():
+                                    original_close();raise RuntimeError(fixture.CANARY)
+                                with patch.object(launcher,'close',side_effect=fail_cleanup):
+                                    with self.assertRaises(Block) as caught:procedure.close()
+                                self.assertNotIn(fixture.CANARY,str(caught.exception))
+                            elif mode=='OPERATOR_CHANGED':
+                                actual=os.getpid()
+                                with patch.object(b.os,'getpid',return_value=actual+1):
+                                    with self.assertRaises(Block):procedure.check()
                             else:
                                 if mode=='TARGET':(self.private/'target.json').write_bytes(b'{}')
                                 if mode=='CA':(self.private/'ca.pem').write_bytes(b'not-a-ca')
                                 if mode=='ENGINE_SCOPE':procedure.engine.scope='metadata'
+                                if mode=='TARGET_COPY':entry.target=copy.copy(entry.target)
+                                if mode=='REVIEW_COPY':entry.review=copy.copy(entry.review)
+                                if mode=='PROGRAM_COPY':entry.review.program=copy.copy(entry.review.program)
+                                if mode=='TTY_COPY':entry.terminal=copy.copy(entry.terminal)
+                                if mode=='ROOT_COPY':entry.root=copy.copy(entry.root)
+                                if mode=='ENGINE_COPY':procedure.engine=copy.copy(procedure.engine)
                                 if mode=='RUNTIME':
                                     with patch.object(self.program,'runtime','0'*64):
                                         with self.assertRaises(Block):procedure.check()
@@ -162,6 +180,16 @@ class Procedure(unittest.TestCase):
     def test_target_ca_runtime_and_store_alias_are_rejected(self):
         for mode in ('TARGET','CA','RUNTIME','ALIASED_ROOT','ENGINE_SCOPE'):
             with self.subTest(mode=mode):self.trial(mode)
+
+    def test_equal_value_target_review_program_and_roots_cannot_replace_bound_references(self):
+        for mode in ('TARGET_COPY','REVIEW_COPY','PROGRAM_COPY','ROOT_COPY'):
+            with self.subTest(mode=mode):self.trial(mode)
+
+    def test_tty_operator_and_engine_context_replacement_is_terminal(self):
+        for mode in ('TTY_COPY','OPERATOR_CHANGED','ENGINE_COPY'):
+            with self.subTest(mode=mode):self.trial(mode)
+
+    def test_cleanup_failure_is_redacted_terminal_without_retry(self):self.trial('CLEANUP_FAILURE')
 
     def test_confirmation_reuse_expiry_and_backward_clock_stop(self):
         for mode in ('CONFIRM_TWICE','EXPIRED','CLOCK_ROLLBACK'):
