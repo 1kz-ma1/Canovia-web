@@ -442,3 +442,9 @@ full17 metadata need distinct scopes. Real TLS/grants/remote state, schema/index
 FK/TRIGGER/principal/binlog/restore and production publication remain separate.
 This packet does not authorize any execution or release, and P2 must not delay
 safe Track R implementation. All results/immutable SHAs go to existing #488.
+
+### 13.3 30問の本人保存境界（2026-10-25、開発用）
+
+既存 `user_personalization_contexts.self_reported_context.interest_diagnostic` に版付きの回答・採点snapshot・明示的な関心修正・支援希望を分離保存する。migrationなし、本人sessionのみ、L0のPreparation-only限定route。個人保存への同意を必須とし、市場分析への同意や外部AI送信を兼ねない。既存の純粋採点Serviceから結果を再計算し、未知版は上書きしない。
+
+User→Contextの同一順序lock、namespace単位revision、同一送信の冪等性により旧タブ・応答消失・legacy自己申告更新を扱う。旧自己申告・推定・観測・Plan/Task/履歴は維持し、legacy AI contextへ新namespaceを渡さない。準備profile OFFでは新routeを404にする。UI・ブラウザ受入は別sliceであり、この保存実装だけで利用体験完成や本番受入とはしない。

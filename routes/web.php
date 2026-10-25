@@ -5,6 +5,7 @@ use App\Enums\FeatureKey;
 use App\Http\Controllers\WorkLogController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PrelaunchInterestController;
 use App\Http\Controllers\CanoviaMapController;
 use App\Http\Controllers\CapabilityActivationController;
 use App\Http\Controllers\MapPersonalizationController;
@@ -753,3 +754,11 @@ Route::get('/admin/templates/login', [AdminTemplateController::class, 'login'])-
 Route::post('/admin/templates/login', [AdminTemplateController::class, 'authenticate'])->name('admin.templates.authenticate');
 Route::get('/admin/templates/create', [AdminTemplateController::class, 'create'])->name('admin.templates.create');
 Route::post('/admin/templates', [AdminTemplateController::class, 'store'])->name('admin.templates.store');
+
+Route::middleware(['auth', 'throttle:60,1'])->prefix('preparation/interests')->name('preparation.interests.')->group(function () {
+    Route::get('/', [PrelaunchInterestController::class, 'show'])->name('show');
+    Route::get('/result', [PrelaunchInterestController::class, 'result'])->name('result');
+    Route::post('/', [PrelaunchInterestController::class, 'store'])->name('store');
+    Route::post('/review', [PrelaunchInterestController::class, 'review'])->name('review');
+    Route::delete('/', [PrelaunchInterestController::class, 'destroy'])->name('destroy');
+});
