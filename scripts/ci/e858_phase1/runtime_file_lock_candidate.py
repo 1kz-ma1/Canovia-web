@@ -28,6 +28,12 @@ def _identity(path):
             st.st_nlink, st.st_size, st.st_mtime_ns, st.st_ctime_ns)
 
 
+def _identity_directory(path):
+    st=os.lstat(path)
+    if not stat.S_ISDIR(st.st_mode) or stat.S_ISLNK(st.st_mode):raise Block()
+    return (st.st_dev,st.st_ino,st.st_uid,st.st_gid,st.st_mode,st.st_ctime_ns)
+
+
 def _expected_modules(program):
     """Only package files already included and source checked by Program."""
     expected = {}
@@ -46,7 +52,7 @@ def _expected_modules(program):
 class RuntimeFileLockCandidate:
     """One revocable, read-only observation: NEVER execution authority."""
 
-    def __init__(self, program, root, archive, expected_archive_sha, head):
+    def __init__(self, program, root, archive, expected_archive_sha, head, *, source_root=None):
         self._closed = True
         self._modules = {}
         try:
@@ -60,6 +66,12 @@ class RuntimeFileLockCandidate:
                 raise Block()
             self._program = program
             self._root = Path(root)
+            if source_root is not None and (type(source_root) is not str
+                    or not Path(source_root).is_absolute()
+                    or Path(source_root).resolve(strict=True)!=Path(source_root)):
+                raise Block()
+            self._source_root=Path(source_root) if source_root is not None else self._root
+            self._source_root_identity=_identity_directory(self._source_root)
             self._archive = archive
             self._sha = expected_archive_sha
             self._head = head
@@ -67,7 +79,7 @@ class RuntimeFileLockCandidate:
             if not stat.S_ISDIR(self._root_identity.st_mode):
                 raise Block()
             self._expected = _expected_modules(program)
-            self._source_ids = {name: _identity(self._root / path)
+            self._source_ids = {name: _identity(self._source_root / path)
                                 for path, _ in self._expected.values()
                                 for name in (path,)}
             self._sys_path = tuple(sys.path)
@@ -99,6 +111,7 @@ class RuntimeFileLockCandidate:
                         self._root_identity.st_uid, self._root_identity.st_gid,
                         self._root_identity.st_mode, self._root_identity.st_ctime_ns)):
                 raise Block()
+            if _identity_directory(self._source_root)!=self._source_root_identity:raise Block()
             current = {name: sys.modules[name] for name in self._expected
                        if name in sys.modules}
             if (set(current) != set(self._modules)
@@ -106,7 +119,7 @@ class RuntimeFileLockCandidate:
                 raise Block()
             for name, value in current.items():
                 relative, expected_bytes = self._expected[name]
-                real = self._root / relative
+                real = self._source_root / relative
                 declared = getattr(value, '__file__', None)
                 spec = getattr(value, '__spec__', None)
                 origin = getattr(spec, 'origin', None)
@@ -117,14 +130,15 @@ class RuntimeFileLockCandidate:
                         or private_distribution._public_file(real, 4*1024*1024, allow_empty=True)
                         != expected_bytes):
                     raise Block()
-            if any(_identity(self._root / name) != identity
+            if any(_identity(self._source_root / name) != identity
                    for name, identity in self._source_ids.items()):
                 raise Block()
             return dict(result='B1_PUBLIC_SOURCE_IDENTITIES_RECHECKED',
                         tooling_sha=self._head, source_count=len(self._source_ids),
                         loaded_source_modules=len(current),
                         lock_type='READ_ONLY_DRIFT_DETECTION_NOT_OS_ENFORCED',
-                        file_placement='OBSERVED_EXISTING_CHECKOUT_NOT_INSTALLED',
+                        file_placement=('OBSERVED_EXISTING_CHECKOUT_NOT_INSTALLED' if self._source_root==self._root
+                                        else 'STAGED_PROGRAM_ORIGINS_OBSERVED_NOT_ADOPTED'),
                         operator_identity='UNVERIFIED', native_linkage='EXTERNAL_TRUST_REQUIRED',
                         owner_approval_verified=False, live_tooling_adopted=False,
                         execution_allowed=False, real_aiven_connected=False,
