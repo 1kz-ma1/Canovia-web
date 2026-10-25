@@ -173,4 +173,18 @@ final class PrelaunchInterestContextTest extends TestCase
         $row->update(['self_reported_context' => $payload]);
         $this->getJson('/preparation/interests/result')->assertOk()->assertJsonPath('record.result.status', 'insufficient_evidence');
     }
+    public function test_delete_and_recreate_at_same_clock_time_invalidates_the_old_tab(): void
+    {
+        $this->freezeTime();
+        $this->actingAs(User::factory()->create());
+        $empty = $this->revision();
+        $first = $this->postJson('/preparation/interests', $this->input($empty))->assertOk()->json('revision');
+        $this->deleteJson('/preparation/interests', ['revision' => $first, 'confirm_delete' => true])->assertOk();
+        $second = $this->postJson('/preparation/interests', $this->input($empty))->assertOk()->json('revision');
+        $this->assertNotSame($first, $second, 'A new record lifetime must not revive an old tab revision');
+        $this->postJson('/preparation/interests', $this->input($first, ['Q01' => 0]))
+            ->assertUnprocessable()->assertJsonValidationErrors('revision');
+        $this->assertSame(3, $this->getJson('/preparation/interests')->json('record.answers.Q01'));
+    }
+
 }
