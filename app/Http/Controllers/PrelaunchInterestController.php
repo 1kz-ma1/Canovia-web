@@ -43,7 +43,7 @@ final class PrelaunchInterestController extends Controller
         $areas = ['全般'];
         $record = $data['record'];
         $interests = $record['confirmed_categories'] ?? [];
-        if ($interests === [] && $record !== null) {
+        if ($interests === [] && $record !== null && ! isset($record['reviewed_at'])) {
             $ranked = $record['result']['categories'];
             uasort($ranked, fn ($a, $b) => ($b['share_percent'] ?? -1) <=> ($a['share_percent'] ?? -1));
             $interests = array_slice(array_keys(array_filter($ranked, fn ($c) => ($c['share_percent'] ?? 0) > 0)), 0, 2);

@@ -48,6 +48,7 @@ final class PrelaunchInterestContextService
                 'state' => $result ? 'result' : 'draft',
                 'confirmed_categories' => $old['confirmed_categories'] ?? [],
                 'requested_support' => $old['requested_support'] ?? [],
+                'reviewed_at' => $old['reviewed_at'] ?? null,
                 'personal_storage_consent_at' => $old['personal_storage_consent_at'] ?? now()->toIso8601String(),
                 'updated_at' => now()->toIso8601String()];
         });
@@ -66,7 +67,7 @@ final class PrelaunchInterestContextService
 
                 // Explicit self-correction / service interest are separate from inferred scores.
                 return [...$record, 'confirmed_categories' => $confirmed, 'requested_support' => $support,
-                    'updated_at' => now()->toIso8601String()];
+                    'reviewed_at' => now()->toIso8601String(), 'updated_at' => now()->toIso8601String()];
             });
     }
 

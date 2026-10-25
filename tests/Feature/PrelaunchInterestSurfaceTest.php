@@ -40,4 +40,22 @@ class PrelaunchInterestSurfaceTest extends TestCase
         $this->get('/feedback?from=interest-diagnostic')->assertOk()->assertSee('関心のふりかえりへ戻る');
         $this->get('/feedback?from=https://example.test')->assertOk()->assertDontSee('関心のふりかえりへ戻る');
     }
+
+    public function test_explicit_empty_correction_does_not_fall_back_to_inferred_development_interest(): void
+    {
+        $this->actingAs(User::factory()->create());
+        $revision = $this->getJson('/preparation/interests')->json('revision');
+        $this->postJson('/preparation/interests', ['revision' => $revision, 'action' => 'result', 'step' => 1,
+            'save_consent' => true, 'answers' => ['Q04' => 3, 'Q05' => 3]])->assertOk();
+        $this->get('/preparation/interests/result')->assertSee('外部アプリの作業記録との連携');
+        $record = $this->getJson('/preparation/interests/result');
+        $this->postJson('/preparation/interests/review', ['revision' => $record->json('revision'),
+            'confirmed_categories' => [], 'requested_support' => []])->assertOk();
+        $this->get('/preparation/interests/result')->assertDontSee('外部アプリの作業記録との連携');
+        $this->getJson('/preparation/interests/result')->assertJsonPath('record.result.categories.DV.share_percent', 100);
+        $revision = $this->getJson('/preparation/interests')->json('revision');
+        $this->postJson('/preparation/interests', ['revision' => $revision, 'action' => 'result', 'step' => 1,
+            'save_consent' => true, 'answers' => ['Q04' => 2, 'Q05' => 3]])->assertOk();
+        $this->get('/preparation/interests/result')->assertDontSee('外部アプリの作業記録との連携');
+    }
 }

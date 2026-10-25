@@ -26,12 +26,12 @@
         <details><summary class="cursor-pointer">割合の出し方</summary><p class="mt-3">回答を0〜3点にし、設問ごとの分野・重みで平均します。基本設問への回答が十分な分野だけで合計を100%に配分します。「わからない」と未回答は分母から除きます。心理尺度ではなく、選択を考えるための目安です。</p></details>
     </section>
     <form method="POST" action="{{ route('preparation.interests.review') }}" class="page-card space-y-5 p-6">
-        @csrf<input type="hidden" name="revision" value="{{ old('revision', $revision) }}">
+        @csrf<input type="hidden" name="review_present" value="1"><input type="hidden" name="revision" value="{{ old('revision', $revision) }}">
         <fieldset class="space-y-3"><legend class="text-xl font-bold">自分で選ぶ、今の関心</legend><p>結果と違っていても大丈夫です。選んだ内容を別に保存し、グラフの点数は書き換えません。</p>
-        @foreach($bank['categories'] as $key => $label)<label class="flex items-center gap-3"><input type="checkbox" name="confirmed_categories[]" value="{{ $key }}" @checked(in_array($key, old('confirmed_categories', $record['confirmed_categories']), true))>{{ $label }}</label>@endforeach
+        @foreach($bank['categories'] as $key => $label)<label class="flex items-center gap-3"><input type="checkbox" name="confirmed_categories[]" value="{{ $key }}" @checked(in_array($key, (session()->hasOldInput('review_present') ? (array) old('confirmed_categories', []) : $record['confirmed_categories']), true))>{{ $label }}</label>@endforeach
         </fieldset>
         <fieldset class="space-y-3"><legend class="font-bold">Canoviaで準備したいこと（任意）</legend><p>関心とは別の希望です。機能提供やSupport投票を意味しません。</p>
-        @foreach($bank['categories'] as $key => $label)<label class="flex items-center gap-3"><input type="checkbox" name="requested_support[]" value="{{ $key }}" @checked(in_array($key, old('requested_support', $record['requested_support']), true))>{{ $label }}</label>@endforeach
+        @foreach($bank['categories'] as $key => $label)<label class="flex items-center gap-3"><input type="checkbox" name="requested_support[]" value="{{ $key }}" @checked(in_array($key, (session()->hasOldInput('review_present') ? (array) old('requested_support', []) : $record['requested_support']), true))>{{ $label }}</label>@endforeach
         </fieldset>
         <button class="btn-secondary" type="submit">自分の関心・希望を保存する</button>
     </form>

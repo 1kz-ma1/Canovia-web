@@ -454,7 +454,7 @@ User→Contextの同一順序lock、namespace単位revision、同一送信の冪
 
 新しいJSはPreparation-only専用で、通信失敗時は入力を残し成功を表示しない。旧タブ競合は上書きせず、最新記録への導線を出す。同じ回答の応答消失再送は§13.3の冪等性を利用する。JSなしでも標準フォームで保存可能。本人の確認済み関心（未指定なら採点上位）から、既存公開projectionの全般/対応分野だけを紹介し、非掲載分野の機能やSupport数を創作しない。分析・外部送信・自動Plan作成なし。
 
-差分受入: PHP73件/754 assertionsと、既存runnerの新 `preparation_interest` journey。127.0.0.1:18805/使い捨てSQLite/合成Accountのみ、L0で登録→回答→保存/再読み込み→修正→Future→任意Plan→編集→logout/login→同一ID再訪を確認する。旧タブ、通信失敗、同一送信、CSRF、別Accountの閲覧/編集拒否、認証失効、専門URL拒否、390px/desktopを含む。既存Preparation false/true×L0/L1×匿名/本人/adminの12ケース、旧AP/Development/履歴保持、Guest/Planの旧ブラウザ検証を同じCIで回帰する。CI番号・最終HEAD・統合SHAはIssue #488に固定する。Chromiumの合成検証をSafari/iPhone実機PASSとはしない。
+差分受入: PHP74件/761 assertionsと、既存runnerの新 `preparation_interest` journey。127.0.0.1:18805/使い捨てSQLite/合成Accountのみ、L0で登録→回答→保存/再読み込み→修正→Future→任意Plan→編集→logout/login→同一ID再訪を確認する。旧タブ、通信失敗、同一送信、CSRF、別Accountの閲覧/編集拒否、認証失効、専門URL拒否、390px/desktopを含む。既存Preparation false/true×L0/L1×匿名/本人/adminの12ケース、旧AP/Development/履歴保持、Guest/Planの旧ブラウザ検証を同じCIで回帰する。CI番号・最終HEAD・統合SHAはIssue #488に固定する。Chromiumの合成検証をSafari/iPhone実機PASSとはしない。
 
 本人の新しい実機差分はこの30問UIと再訪導線のみ。旧94件・CA/grants・e858 Macテストを再要求しない。既存Mac labを、採用した固定mainの別clean checkout（.env/privateデータなし、専用vendor、build済み）で再利用する:
 
