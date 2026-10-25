@@ -36,7 +36,8 @@ class DispatcherBindingCandidate:
             procedure._runtime_dispatch_binding=self  # sticky even after failure/close
             self.entry=procedure.entry;self.program=self.entry.review.program
             self.seal=procedure._seal;self.target=self.entry.target
-            self.attempt_id=self.entry.review.value['attempt_id']
+            self.review_value=dict(self.entry.review.value)
+            self.attempt_id=self.review_value['attempt_id']
             self.runtime=self.program.runtime;self.pid=os.getpid()
             self.until=min(procedure.until,placement.until)
             self.state='BOUND_NOT_AUTHORIZED';self.check()
@@ -51,11 +52,15 @@ class DispatcherBindingCandidate:
                 self.lock.check()  # read-only Git may spawn ONLY before R1
             else:
                 self.lock.check_sources()  # never fork/exec a password-bearing process
-            self.placement.check();p.check()  # existing Entry/Program checks retained
-            value=self.entry.review.check()
+            self.placement.check()
+            if p.r1_started_at is None:p.check()
+            # No duplicated expensive private/runtime checks inside the existing
+            # 2-second opener. Producer/Bridge retain them before EVERY I/O.
+            value=self.entry.review.value
             if (p.entry is not self.entry or p._runtime_dispatch_binding is not self
                     or p._seal!=self.seal or p.until<self.until
-                    or self.entry.target!=self.target or value['attempt_id']!=self.attempt_id
+                    or self.entry.target!=self.target or value!=self.review_value
+                    or value['attempt_id']!=self.attempt_id
                     or self.entry.review.program is not self.program or self.lock._program is not self.program
                     or self.program.runtime!=self.runtime or self.program.sha!=self.placement.archive_sha
                     or self.program.pins['tooling_sha']!=self.placement.tooling_sha
@@ -65,7 +70,7 @@ class DispatcherBindingCandidate:
                 if (producer.procedure is not p or producer.entry is not self.entry
                         or producer.state=='STOPPED' or producer._runtime_dispatch_binding is not self
                         or producer.wire.gate is not producer.gate or producer.wire.plan is not producer.plan):raise Block()
-                producer.wire.check_binding()
+                if producer.wire.entry is not self.entry:raise Block()
             return dict(result='RUNTIME_TRIAL_PRODUCER_BOUND_NOT_AUTHORIZED',
                 state=self.state,roles_bound=len(self.producers),execution_allowed=False,
                 runtime_installation='SNAPSHOT_STAGED_CHECKOUT_OBSERVED_NOT_LIVE_BOOTSTRAP',
@@ -79,7 +84,8 @@ class DispatcherBindingCandidate:
             self.check()
             index=len(self.producers)
             if type(producer) is not ProducerBinding or index>=2:raise Block()
-            producer.check()
+            # The existing Producer will recheck Entry/Program/plan before I/O.
+            # Here we bind its identity only; this method cannot execute I/O.
             if (producer.procedure is not self.procedure or producer.entry is not self.entry
                     or producer.role!=('control','data')[index]
                     or producer.state!='BOUND_NOT_AUTHORIZED'

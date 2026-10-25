@@ -1244,3 +1244,9 @@ runtime checks. No deadline is enlarged or restarted; a true overrun still BLOCK
 A regression asserts no Popen at role binding and no checkout/Program callback
 inside source-only observation. Source-only is explicitly not a fresh Git audit,
 operator authorization or live-runtime provenance proof.
+Role binding itself performs only source/FD observations and immutable-object
+context comparisons after R1; it is not a new pre-I/O admission decision. The
+existing Producer/driver/Bridge still perform the full private Entry/Program,
+TLS, SQL and deadline checks before each I/O. Repeating those checks inside the
+inert binding would consume the already running 2-second open window without
+adding execution authority. No existing Producer/driver check is removed.
