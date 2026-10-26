@@ -30,12 +30,16 @@ export async function boundaries({browser,origin,stored}){
     const xhr=await new Promise(resolve=>{const x=new XMLHttpRequest();x.open('POST',origin+'/forbidden-xhr');x.onload=()=>resolve(true);x.onerror=()=>resolve(false);x.send('SYNTHETIC');});
     const beacon=navigator.sendBeacon(origin+'/forbidden-beacon','SYNTHETIC');
     const ws=await new Promise(resolve=>{try{const w=new WebSocket(origin.replace('http:','ws:')+'/forbidden-ws');w.onopen=()=>{w.close();resolve(true);};w.onerror=()=>resolve(false);}catch{resolve(false);}});
+    // Drain queued transport/events; no attempted request may reach the route guard.
+    await new Promise(resolve=>setTimeout(resolve,100));
     return {fetched,external,xhr,beacon,ws,violations};
   },origin);
   // sendBeacon's boolean means queued, not that CSP permitted any transmission.
   assert.equal(typeof blocked.beacon,'boolean');
   for(const key of ['fetched','external','xhr','ws'])assert.equal(blocked[key],false,key);
-  assert.ok(blocked.violations.filter(v=>v==='connect-src').length>=5,'Each transport produced a CSP violation');assert.equal(unexpected,0,'CSP rejects before transport');
+  // WebKit coalesces/omits some violation events. Network denial is measured
+  // independently for all transports, not inferred from an event count.
+  assert.ok(blocked.violations.includes('connect-src'),'CSP enforcement event observed');assert.equal(unexpected,0,'CSP rejects before transport');
   // Dedicated DB and old preview namespace coexist without touching each other.
   if(stored){
     await page.evaluate(async()=>{await new Promise((resolve,reject)=>{const q=indexedDB.open('canovia-local-preview-v1',1);q.onupgradeneeded=()=>q.result.createObjectStore('legacy');q.onerror=reject;q.onsuccess=()=>{const db=q.result,tx=db.transaction('legacy','readwrite');tx.objectStore('legacy').put('SYNTHETIC_OLD','untouched');tx.oncomplete=()=>{db.close();resolve();};};});});
