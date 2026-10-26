@@ -37,6 +37,10 @@ async function register(ctx) {
     await page.locator('[name="email"]').fill(email);
     await page.locator('[name="password"]').fill('Synthetic-Interest-2026');
     await page.locator('[name="password_confirmation"]').fill('Synthetic-Interest-2026');
+    // A fresh no-JS context can still be laying out fonts/styles. Observe the
+    // same loaded geometry we assert elsewhere; do not force clicks or retry POSTs.
+    await page.waitForLoadState('networkidle');
+    await fits(page);
     await page.getByRole('button', { name: '登録してそのまま続ける', exact: true }).click();
     await page.waitForURL(base + '/');
     return { page, email };

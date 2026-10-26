@@ -85,6 +85,7 @@ ISOLATED_HANDLERS = {
 }
 REQUIRED_SHARED = {
     'AGENTS.md', '.dockerignore', 'Dockerfile', 'composer.json', 'composer.lock',
+    'package.json', 'package-lock.json',
     'bootstrap/app.php', 'app/Providers/AppServiceProvider.php',
     'routes/web.php', 'routes/console.php', 'config/canovia.php', 'config/release_levels.php',
     'config/prelaunch_interest_diagnostic.php', 'config/canovia_public_roadmap.php',
