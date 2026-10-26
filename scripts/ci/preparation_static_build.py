@@ -38,7 +38,7 @@ def candidate_files(source,profile):
     if profile not in ('B','C'): raise ValueError('PROFILE_NOT_IMPLEMENTED')
     inputs={}
     read=lambda p:source_file(source,p,inputs)
-    files={'index.html':read('preparation-local/index.html'),'style.css':read('preparation-local/style.css'),
+    files={'index.html':read('preparation-local/index.html'),'404.html':read('preparation-local/404.html'),'style.css':read('preparation-local/style.css'),
         'preparation.css':read('resources/css/preparation.css')}
     for module in MODULES:files['src/'+module+'.mjs']=read(f'preparation-local/src/{module}.mjs')
     files['src/repository.mjs']=repository_bytes(read('local-preview/src/repository.mjs')) if profile=='B' else read('preparation-local/src/memory-repository.mjs')
@@ -51,8 +51,30 @@ def candidate_files(source,profile):
         files[f'assets/{category}.webp']=read(f'public/images/preparation/{category}.webp')
     files['assets/canovia-wordmark.png']=read('public/brand/canovia-wordmark.png')
     files['_headers']=('/*\n'+''.join(f'  {k}: {v}\n' for k,v in HEADERS.items())).encode()
+    hosting_contract(files)
     if any(len(v)>MAX_MEMBER for v in files.values()) or sum(map(len,files.values()))>8*1024*1024:raise ValueError('ASSET_CAP')
     return files,inputs
+def hosting_contract(files):
+    """Our shared static-only subset; not an implementation of either CDN."""
+    raw=files['_headers'].decode('utf-8')
+    lines=raw.splitlines()
+    if not lines or lines[0]!='/*' or '\r' in raw or len(lines)!=len(HEADERS)+1:raise ValueError('HEADER_SYNTAX')
+    parsed={}
+    for line in lines[1:]:
+        if len(line)>2000 or not line.startswith('  ') or ': ' not in line:raise ValueError('HEADER_SYNTAX')
+        name,value=line[2:].split(': ',1);key=name.lower()
+        if key in parsed or not value or any(c in value for c in ('\x00','\r','\n')):raise ValueError('HEADER_SYNTAX')
+        parsed[key]=value
+    if parsed!={k.lower():v for k,v in HEADERS.items()}:raise ValueError('HEADER_POLICY')
+    # Reject ambiguous/duplicate CSP directives even when HEADERS was edited.
+    expected={'default-src':"'none'",'script-src':"'self'",'style-src':"'self'",'img-src':"'self'",'connect-src':"'none'",'worker-src':"'none'",'object-src':"'none'",'base-uri':"'none'",'form-action':"'none'",'frame-ancestors':"'none'"}
+    directives=[x.strip().split() for x in parsed['content-security-policy'].split(';')]
+    if len(directives)!=len(expected) or any(len(x)!=2 or expected.get(x[0])!=x[1] for x in directives) or len({x[0] for x in directives})!=len(expected):raise ValueError('CSP_POLICY')
+    if parsed['cache-control']!='no-store' or parsed['referrer-policy']!='no-referrer':raise ValueError('HEADER_POLICY')
+    missing=files.get('404.html',b'')
+    if not missing or b'<script' in missing.lower() or b'<form' in missing.lower() or b'http' in missing.lower():raise ValueError('STATIC_404_REQUIRED')
+    return {'shared_header_subset':'PASS','static_404':'PASS','provider_runtime':'UNVERIFIED'}
+
 def manifest_for(source,profile,files,inputs):
     return dict(kind='PREPARATION_STATIC_CANDIDATE_V1',profile=profile,source_sha=source,source_tree=subprocess.check_output(['git','rev-parse',source+'^{tree}'],cwd=ROOT,text=True).strip(),source_inputs=inputs,
         files={n:digest(v) for n,v in sorted(files.items())},adopted_origin=None,release_approved=False,
@@ -98,7 +120,7 @@ def verify_directory(directory):
     for name,value in files.items():
         if public_file(root,name,MAX_MEMBER)!=value:raise ValueError('ASSET_BYTES_MISMATCH')
     return files
-def verify_archive(archive):
+def verify_archive(archive,expected_profile='B'):
     """No extraction: compare every ZIP entry with frozen Git bytes before use."""
     source=clean_source()
     raw=public_file(Path(archive).parent,Path(archive).name,10*1024*1024)
@@ -114,10 +136,12 @@ def verify_archive(archive):
                 stat.S_IFMT(info.external_attr>>16)!=stat.S_IFREG):raise ValueError('ZIP_ENTRY')
         meta=json.loads(z.read('manifest.json'))
         if not isinstance(meta,dict):raise ValueError('ZIP_MANIFEST')
+        if expected_profile not in ('B','C') or meta.get('profile')!=expected_profile:raise ValueError('PROFILE_MISMATCH')
         files,inputs=candidate_files(source,meta.get('profile'))
         files['manifest.json']=canonical_manifest(manifest_for(source,meta['profile'],files,inputs))
         if set(names)!=set(files) or any(z.read(n)!=b for n,b in files.items()):raise ValueError('ZIP_BYTES')
-    return dict(source_sha=source,profile=meta['profile'],sha256=digest(raw),release_approved=False)
+    hosting_contract(files)
+    return dict(source_sha=source,profile=meta['profile'],sha256=digest(raw),offline_source_integrity='PASS',hosting='LIVE_VERIFICATION_REQUIRED',origin='OWNER_ACCEPTANCE_REQUIRED',release_approved=False)
 
 def build(output, profile='B'):
     source=clean_source();files,inputs=candidate_files(source,profile)
@@ -136,6 +160,6 @@ if __name__ == '__main__':
         def error(self,message):raise ValueError('ARGUMENTS_REJECTED')
     try:
         p=Parser();g=p.add_mutually_exclusive_group(required=True);g.add_argument('--out');g.add_argument('--verify-zip');p.add_argument('--profile',choices=['B','C'],default='B')
-        a=p.parse_args();print(json.dumps(verify_archive(a.verify_zip) if a.verify_zip else build(a.out,a.profile)))
+        a=p.parse_args();print(json.dumps(verify_archive(a.verify_zip,a.profile) if a.verify_zip else build(a.out,a.profile)))
     except (OSError,ValueError,KeyError,RecursionError,zipfile.BadZipFile,subprocess.SubprocessError):
         print('PREPARATION_BUILD_BLOCK',file=sys.stderr);sys.exit(2)

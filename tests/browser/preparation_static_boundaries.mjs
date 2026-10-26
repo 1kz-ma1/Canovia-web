@@ -1,7 +1,8 @@
+import {readFile} from 'node:fs/promises';
 // Only the owned loopback fixture; route guard blocks any accidental external I/O.
 import assert from 'node:assert/strict';
 import http from 'node:http';
-export async function boundaries({browser,origin,stored}){
+export async function boundaries({browser,origin,stored,directory}){
   const request=(path,method='GET',headers={})=>new Promise((resolve,reject)=>{
     const q=http.request(origin,{path,method,headers},r=>{let body='';r.on('data',b=>body+=b);r.on('end',()=>resolve({status:r.statusCode,headers:r.headers,body}));});q.on('error',reject);q.end();
   });
@@ -59,4 +60,32 @@ export async function boundaries({browser,origin,stored}){
   if(stored){await up.getByText('保存領域を開けませんでした。記録を削除せず、設定や対応する版を確認してください。',{exact:true}).waitFor();assert.equal(await up.locator('#app h1').count(),0);}
   else{await up.getByRole('heading',{name:'自分の関心から、次の準備へ。'}).waitFor();}
   await unavailable.close();
+  await hostingDifferences({browser,origin,directory});
+}
+
+async function hostingDifferences({browser,origin,directory}){
+  // A response model only: no DNS, TLS, provider, deployment or Origin adoption.
+  const meta=JSON.parse(await readFile(directory+'/manifest.json','utf8')),files={};
+  for(const name of Object.keys(meta.files))files['/'+name]=await readFile(directory+'/'+name);
+  files['/']=files['/index.html'];
+  const headers=Object.fromEntries(files['/_headers'].toString().trim().split('\n').slice(1).map(v=>{const n=v.indexOf(':');return [v.slice(0,n).trim().toLowerCase(),v.slice(n+1).trim()];}));
+  const context=await browser.newContext(),allowed=new Set([origin,'https://preflight-a.invalid','https://preflight-b.invalid','https://preview-a.invalid']);let outside=0;
+  await context.addInitScript(()=>{window.idbCalls=0;const open=IDBFactory.prototype.open;IDBFactory.prototype.open=function(...a){window.idbCalls++;return open.apply(this,a);};});
+  await context.route('**/*',route=>{
+    const u=new URL(route.request().url());if(!allowed.has(u.origin)){outside++;return route.abort();}
+    const raw=files[u.pathname];
+    // Static hosts can serve the index with query/Cookie/Auth, unlike the lab.
+    return route.fulfill({status:raw?200:404,body:raw||files['/404.html'],headers:{...headers,'access-control-allow-origin':'*','content-type':u.pathname.endsWith('.mjs')?'text/javascript':u.pathname.endsWith('.css')?'text/css':u.pathname.endsWith('.png')?'image/png':u.pathname.endsWith('.webp')?'image/webp':'text/html'}});
+  });
+  const page=await context.newPage();
+  await page.goto(origin+'/?SYNTHETIC_QUERY');await page.getByText('この配信先・配信処理は未採用です。記録を書き換えず終了しました。',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.idbCalls),0,'Query STOP before storage, even when host returns 200');
+  assert.equal((await page.goto('https://preflight-a.invalid/unknown')).status(),404);await page.getByRole('heading',{name:'ページが見つかりません',exact:true}).waitFor();assert.equal(await page.locator('script').count(),0);
+  for(const target of ['https://preflight-a.invalid','https://preflight-b.invalid','https://preview-a.invalid']){
+    await page.goto(target);await page.getByText('この配信先・配信処理は未採用です。記録を書き換えず終了しました。',{exact:true}).waitFor();assert.equal(await page.evaluate(()=>window.idbCalls),0,'Invalid test origins must never activate the app');
+    const value=await page.evaluate(()=>new Promise((resolve,reject)=>{const q=indexedDB.open('preparation-hosting-origin-probe',1);q.onupgradeneeded=()=>q.result.createObjectStore('probe');q.onerror=reject;q.onsuccess=()=>{const db=q.result,tx=db.transaction('probe','readwrite'),store=tx.objectStore('probe'),r=store.get('marker');let previous=null;r.onsuccess=()=>{previous=r.result??null;store.put('SYNTHETIC_ORIGIN_ONLY','marker');};tx.oncomplete=()=>{db.close();resolve(previous);};};}));
+    assert.equal(value,null,'Distinct production/preview origins must not share IndexedDB');
+  }
+  await page.goto('https://preflight-a.invalid');await page.getByText('この配信先・配信処理は未採用です。記録を書き換えず終了しました。',{exact:true}).waitFor();
+  assert.equal(await page.evaluate(()=>new Promise(resolve=>{const q=indexedDB.open('preparation-hosting-origin-probe');q.onsuccess=()=>{const db=q.result,r=db.transaction('probe').objectStore('probe').get('marker');r.onsuccess=()=>{resolve(r.result);db.close();};};})),'SYNTHETIC_ORIGIN_ONLY');
+  assert.equal(outside,0);await context.close();
 }

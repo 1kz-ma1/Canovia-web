@@ -130,10 +130,10 @@ try{
   await imported.close();
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
-  await boundaries({browser,origin,stored});
+  await boundaries({browser,origin,stored,directory});
   assert.equal(Buffer.concat(serverOutput).toString(),'','Local server must not log URLs/inputs/errors');
   assert.deepEqual(errors,[]);assert.ok(traffic.every(r=>new URL(r.url).origin===origin&&!new URL(r.url).search&&r.method==='GET'));
-  console.log(JSON.stringify({engine:process.env.BROWSER_ENGINE||'chromium',profile:meta.profile,diagnosis_graph_review_future:true,plans_export_import:true,quota_abort_conflict:stored,process_restart:stored,storage_clear:stored,mobile_keyboard:true,asset_get_only:true,http_csp_origin_distribution:true,scoring_parity:133,device_verified:false,release_approved:false}));
+  console.log(JSON.stringify({engine:process.env.BROWSER_ENGINE||'chromium',profile:meta.profile,diagnosis_graph_review_future:true,plans_export_import:true,quota_abort_conflict:stored,process_restart:stored,storage_clear:stored,mobile_keyboard:true,asset_get_only:true,http_csp_origin_distribution:true,hosting_model_origin_isolation:true,scoring_parity:133,device_verified:false,release_approved:false}));
 }catch(error){
   if(browser){for(const c of browser.contexts())for(const p of c.pages())console.log('STATIC_FAILURE_STATE',await p.evaluate(async()=>{const app=await import('/src/app.mjs');return {hash:location.hash,message:document.querySelector('#message')?.textContent,counts:document.querySelector('#result-counts')?.textContent,checked:document.querySelectorAll('input[type=radio]:checked').length,answers:Object.keys(app.state?.diagnosis?.answers||{}).length};}).catch(()=>({unavailable:true})));}
   console.log('STATIC_PAGE_ERRORS',errors);throw error;
