@@ -706,3 +706,11 @@ Phase1は独立schemaと133 pure PHP対照ケース、静的entrypoint・診断/
 Schema1は独立installation UUID/版/revision、診断回答・本人選択/希望、Plan、Import receipt。得点は固定bankから常に再計算し二重保存しない。UUID/checksumを本人認証へ昇格しない。未知schemaを推測変換/削除しない。保存/Import失敗・競合で既存stateを保持し、B保存不能を自動Cへ切り替えない。
 
 Chromium/WebKit CIは合成受入であり、Mac Safari/iPhone Web実機は別ゲート。WKWebViewは初回Web公開の必要条件へ追加しない。独立origin/headers/配布hash、保存消失/Export保管説明と実機受入、別公開GOが揃うまでPRODUCTION_NO_GO_HOLD。段階ごとのPR/SHA/CI/最終artifactはIssue #488へ記録する。
+
+### Phase2 — 端末内Plan・明示Export/Import
+
+Bは`canovia-preparation-v1`の専用DB/storeで保存し、旧local-previewのtransaction/CAS engineをnamespaceだけ変えてbuilderから再利用する。旧DBは読み書きしない。Cは同じschemaのmemory repositoryで、Bのopen失敗から自動切替しない。Plan最大100件/state1MiB、JSON Import2MiB、深さ12/node100,000、unknown schema/重複key/危険key/不正型/衝突は拒否。得点は復元した回答から固定bankで再計算する。
+
+backupは既存canonical/checksum primitiveを再利用しnode capだけ厳しくする。format `canovia.preparation.local`・schema1・bank版・source installation/UUIDを保持するがAccount本人性ではない。checksum不一致/異なる診断/同UUID異内容は上書きせず停止。preview→明示確認→同じraw/hashとrevisionでatomic merge、失敗時は旧state保持。Import receiptと既存record一致でも二重取込を拒否。checksumは改変不能性/暗号化を保証しない。
+
+Planは本人の手動入力/編集だけ。応答前に保存成功を表示せず、失敗時は入力を残す。Exportは非暗号化JSONの明示downloadで、ファイルの実保管・別保管からのImportは本人受入。将来のCanonical Importには別本人認証/所有権/同意/重複排除/削除取消保持が必要で、今回実装しない。
