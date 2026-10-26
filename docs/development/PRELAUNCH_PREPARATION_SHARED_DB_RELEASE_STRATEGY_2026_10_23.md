@@ -779,7 +779,7 @@ Canonical Account/Plan/DB・Session・旧Webは利用せず、既存e858監査/�
 | CF-P | https://developers.cloudflare.com/pages/configuration/preview-deployments/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/preview-deployments.mdx): Previewは既定公開、Accessは別設定、noindexは認可ではない |
 | CF-G | https://developers.cloudflare.com/pages/configuration/git-integration/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/git-integration/index.mdx): Git連携はpush→build/deploy。main統合権限を公開権限に転用しない |
 | CF-R | https://developers.cloudflare.com/pages/configuration/rollbacks/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/rollbacks.mdx): 成功したproduction deploymentへ戻せる。previewはrollback対象外 |
-| CF-D | https://developers.cloudflare.com/pages/configuration/custom-domains/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/custom-domains.mdx): provider host/custom domainの採用・DNS/証明書は別工程 |
+| CF-D | https://developers.cloudflare.com/pages/configuration/custom-domains/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/custom-domains.mdx): custom domainのCAAが証明書発行を妨げ得る。provider host/custom domainの採用・DNS/証明書は別工程 |
 | CF-L | https://developers.cloudflare.com/pages/platform/limits/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/platform/limits.mdx): Free500build/月・20000files・25MiB/file・100custom domains/project・account100project上限（この案で追加契約しない） |
 | CF-$ | https://developers.cloudflare.com/pages/functions/pricing/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/functions/pricing.mdx): static requestsはFree/Paidともfree/unlimited。Functions/Workersは別quota/課金 |
 | NL-C | https://docs.netlify.com/manage/routing/headers/ / https://docs.netlify.com/manage/routing/redirects/overview/ | [Netlify公式技術reference](https://github.com/netlify/context-and-tools/blob/b9f53856d45aa2e8cf24721fd8a82e222deb323d/skills/netlify-config/SKILL.md): publish dirの`_headers`、storeのstaticだけ、headersはcontext別ではなくglobal、function/proxyは別。SPA200 rewriteは明示規則で、今回禁止 |
@@ -844,7 +844,7 @@ browser差分試験はCDNを実装するものではない。route interception�
 #908の20枚Artifactの保存記録と、同じUI/storage blobに対応する既存390px合成画像・UIコードを確認する。環境proxyでArtifactの再取得は不可のため、実Artifactを再downloadして全画像を検査したとは記録しない。実Safariは本人受入中で未判定。
 
 - **新たな確定P0/P1はなし**（合成/Sourceで確認した範囲）。保存不能/Quota/unknown版は明示STOP、未保存入力は残す。診断は任意、Unknown/未回答を区別、Planは手動、Cのreload消失とExportなしの復旧不能を説明、Importはpreview/確認あり。これを実Safariの操作性保証に昇格しない。
-- **P2**: 5問ページ切替後のfocus/読み上げ案内、長い結果画面での次の導線、保存/Exportの初回理解を将来改善候補として記録。今回はUI変更や自動保存/新機能を追加しない。
+- **P2**: 既存合成画像ではradioへの自動scroll時にsticky進捗帯が最初の設問の一部と重なる。実Safariの再現性/影響は未確認で、表示位置とfocus/読み上げ案内を後続確認する。長い結果画面での次の導線、保存/Exportの初回理解を将来改善候補として記録。今回はUI変更や自動保存/新機能を追加しない。
 - 配布上の404不足とB/C取り違えは今回の安全修正として扱い、見た目の改善や新UX開発へ拡大しない。Safariで保存/Import不能等が判明すればP0/P1へ再分類し、Bの公開をHOLDする。
 
 #### 残る最小判断・公開前のLive受入
