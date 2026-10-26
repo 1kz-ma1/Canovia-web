@@ -28,6 +28,7 @@ try{
     for(const input of await page.locator(`[data-page="${step}"] input[value="3"]`).all())await input.check();
     if(step<6)await page.getByRole('button',{name:'次の5問',exact:true}).click();
   }
+  assert.equal(await page.locator('input[type=radio]:checked').count(),30,'ALL_ANSWERS_BEFORE_RESULT');
   await page.getByRole('button',{name:'今の回答で結果を見る',exact:true}).click();
   await page.getByText('回答 30問 ／ わからない 0問 ／ 未回答 0問',{exact:true}).waitFor();
   assert.equal(await page.locator('meter').count(),8);
@@ -41,6 +42,9 @@ try{
   await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
   assert.deepEqual(errors,[]);assert.ok(traffic.every(r=>new URL(r.url).origin===origin&&!new URL(r.url).search&&r.method==='GET'));
   console.log(JSON.stringify({engine:process.env.BROWSER_ENGINE||'chromium',profile:meta.profile,diagnosis_graph_review_future:true,mobile_keyboard:true,asset_get_only:true,device_verified:false,release_approved:false}));
+}catch(error){
+  if(browser){for(const c of browser.contexts())for(const p of c.pages())console.log('STATIC_FAILURE_STATE',await p.evaluate(async()=>{const app=await import('/src/app.mjs');return {hash:location.hash,message:document.querySelector('#message')?.textContent,counts:document.querySelector('#result-counts')?.textContent,checked:document.querySelectorAll('input[type=radio]:checked').length,answers:Object.keys(app.state?.diagnosis?.answers||{}).length};}).catch(()=>({unavailable:true})));}
+  console.log('STATIC_PAGE_ERRORS',errors);throw error;
 }finally{
   if(browser)await browser.close();server.kill('SIGTERM');await new Promise(r=>server.exitCode!==null||server.signalCode!==null?r():server.once('exit',r));
 }
