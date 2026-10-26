@@ -854,3 +854,103 @@ browser差分試験はCDNを実装するものではない。route interception�
 選定後の別承認工程: (1) originとprovider構成/費用採用 (2) fixed Source/artifact/CI＋継続中Safari差分受入の照合 (3) 最小配備・実HTTPS/全header/CORS/Cookie/Host/query/method/404/古いmodule/preview/停止方法確認 (4) 本人による公開可否。初回配備そのものが公開を伴い得るため、previewだから無承認で行えるとは解釈しない。機能が隠れたままかを含め、app未採用OriginのSTOPを解除する変更は別承認/レビューへ残す。
 
 12月1日のCritical Pathは、残る配布整合性→Hosting/Origin/公開範囲/費用の選定→本人Safari受入→別承認の配備と実効security/運用受入→公開GO。日付を理由に未検証をPASSにしない。Cへ縮小してもHosting/Origin/公開GOは残る。Canonical/e858/復元/旧WriterのHOLDは継続し、今回Local-first経路の成功で解除しない。**PRODUCTION_NO_GO_HOLD**。
+
+### Render継続方針の技術審査（2026-10-27 JST、採用・配備なし）
+
+本追補は上記2026-10-26の「Cloudflare第一推奨」を**Render専用Static Site第一推奨へ更新**する。正式採用ではない。最新mainは `c72523469f2f866d8a2c0d9d2cd9d5935b544e54`、PR #906–#909はいずれもMERGEDとGitHubで再確認。Issue #488の直近証拠・未完了ゲートも照合した。Cloudflare用コード/検証は保持。今回は仕様のみを変更し、実Origin/null、app/UI/schema、配布コードは変更しない。
+
+#### 現状証拠と3構成案
+
+Render MCP `list_workspaces` / `list_services(includePreviews=true)` / 対象2件の `get_service` を読み取り。`My Workspace` = `tea-d4vb3f6mcj7s73djkrqg` とownerId一致。
+
+- Canovia (`srv-dagfn2id0e5s73cac7ng`): Docker `./Dockerfile`、Web/free、Suspended(user)、Auto Deploy no/off、main、Preview off。
+- Canovia-Welcome (`srv-dahn5k142hec739l0fmg`): Static Site、root `static-welcome`、Build Command空、Publish `.`、Auto Deploy no/off、main、Preview off。Render subdomain enabled。
+- `canovia-mcp-staging` は対象外。workspaceの実plan・残帯域/分数・支払方法・spend limit・既存Header/Rewrite/custom domain一覧は今回の応答に含まれず **UNKNOWN**。`buildPlan=starter` はworkspace料金planの証明ではない。
+
+ソースの `static-welcome/config.js` は旧WebをappUrlに指定。`app.js` は初期表示で `wake()`→`/health?from=welcome&t=...` をGET/CORS/credentials omit/no-storeで要求し、7秒timeout、約2.2秒/遅延後6.5秒間隔で再試行する。ready headerでボタン有効化、再訪者は450ms後に旧Webへ遷移。強制open、future/supportの `/feedback` 導線も旧Web向け。**Suspendedを前提にHTMLを実ブラウザで開かず、旧Web/healthへのHTTPは実施しない**。これは最新mainソースの証拠で、既存配信bytes一致や実利用者数を測定したものではない。
+
+| 観点 | A: Welcome再利用 | B: 専用Static Site（第一推奨） | C: Laravel Web再利用 |
+|---|---|---|---|
+| 既存影響 | 既存入口/再訪者の体験を置換。旧health・遷移の除去と別受入が必要 | Welcome・旧Webを変更せず独立運用。入口リンク変更も将来別承認 | Suspended解除が必要で今回禁止。旧サービス全体の安全審査へ戻る |
+| DB/Laravel/Session | 完全な静的配布へ置換すれば分離可能 | PHP/DB/認証/env groupを持たず最も明確に分離 | 現Docker/Session/DB設定からの分離証拠が必要。画面非表示だけでは不十分 |
+| 手動/固定SHA | root/build/publish変更後は可能、既存設定を上書き | Auto Deploy OFF、Preview OFF、特定full SHAを手動指定する設計 | fixed SHA自体は可能だがWeb再起動と旧安全ゲートが付随 |
+| Origin/IndexedDB | Welcome Originを継承できるが既存Cookie/SW/storage履歴は未確認 | 新しい独立HTTPS Originを一度採用し更新時維持。aliasは別storage | 旧Canonicalと同Originを期待しない。既存Cookie/Sessionとの衝突リスク |
+| headers/404/cache | Static向け別設定が必要。現在設定はUNKNOWN | 同左。未知pathをindexへrewriteしない | Docker/server/middleware/CDNの全経路審査が必要 |
+| 公開範囲 | Publish `.` のままrepo rootへ変えるのは禁止 | 固定allowlist出力だけ、repo/public全体は公開しない | PHP/env/管理asset/旧routeへの露出面が広い |
+| 停止/rollback | Welcomeも停止対象になる | 先行版だけ停止可能、workspace障害/枠共有は残る | 正式版/旧サービスとの停止責任が混在 |
+| 月額/上限 | Staticのcompute追加費なし、workspace帯域/分数消費 | 同左、Site分離で無料枠が増えるわけではない | 現plan free。継続稼働/必要有料planの実見積はUNKNOWN |
+| 将来Laravel | 同Providerでも自動移行はない | Laravelを独立して安全化し、後日明示接続。AWS移転も可能 | 見かけの連続性のためにCanonicalの未解消リスクを持ち込む |
+
+**Aは技術的に再利用可能だが現状のまま不可、今回は推奨しない。Bを条件付き第一推奨、Cを先行公開経路から除外**。BでもWelcomeの既存利用者問題は解消しない。旧入口の利用数はUNKNOWNであり、Welcomeのhealth廃止/静的案内/リンク変更を行うなら独立した限定承認とレビューが必要。今回Welcomeのsource/配信/設定は変更しない。
+
+#### 公式仕様・取得限界
+
+2026-10-27 JSTに公式本文をWeb取得。Renderの `.md` はツールがtext/markdown非対応のためHTMLを読んだ。従来のproxy取得不能とは別の取得経路であり、実サービスへアクセスした証拠ではない。
+
+| 公式本文 | 今回確認した要点 |
+|---|---|
+| [Render Static Sites](https://render.com/docs/static-sites) | Gitからbuild、独立URL/TLS、static配信、cache invalidation、依存自動install。作成時に初回deployが走るため作成も今回禁止 |
+| [Deploys](https://render.com/docs/deploys) | 特定SHA指定可。Dashboard指定はAuto Deploy無効化、CLI/APIは無効化しないため明示OFF照合が必要 |
+| [Static headers](https://render.com/docs/static-site-headers) / [Routes](https://render.com/docs/redirects-rewrites) | Dashboardでpath/name/value、`/*`。既存assetはrewriteより優先。`_headers`のCloudflare形式を適用済みとは扱わない |
+| [Rollback](https://render.com/docs/rollbacks) | 旧build artifact利用、保持数はplan依存。**static headers/routes/custom domainsは現設定のまま** |
+| [Bandwidth](https://render.com/docs/outbound-bandwidth) / [Build pipeline](https://render.com/docs/build-pipeline) | workspace共有枠・超過課金とpipeline spend limit。下記費用表参照 |
+| [Native runtime](https://render.com/docs/native-runtimes) | 言語別build toolchainの説明はあるが、このStatic SiteでのPython/Git版・checkout形態は実測していない |
+| [Cloudflare料金](https://developers.cloudflare.com/pages/functions/pricing/) / [制限](https://developers.cloudflare.com/pages/platform/limits/) | Functionsを呼ばないstatic requestはfree/unlimited、Free 500build/月、20分/build、20000files、25MiB/file |
+| [Amplify manual](https://docs.aws.amazon.com/amplify/latest/userguide/manual-deploys.html) / [headers](https://docs.aws.amazon.com/amplify/latest/userguide/custom-headers.html) / [料金](https://aws.amazon.com/amplify/pricing/) | GitなしZIP配備、headersはconsole/customHttp.yml。無料適用はaccount条件に依存 |
+| [CloudFront料金](https://aws.amazon.com/cloudfront/pricing/) / [S3料金](https://aws.amazon.com/s3/pricing/) / [OAC](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-restricting-access-to-s3.html) | flat-rateと従量を区別。private S3 REST origin+OAC案。website endpointはOAC非対応 |
+| [AWS Budgets](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-managing-costs.html) | 通知・制御補助、更新遅延あり。通知を即時の請求hard capとみなさない |
+
+#### Render向け配布契約（オフライン設計、実設定なし）
+
+| 項目 | 固定する設計・確認方法 | 未完了/STOP |
+|---|---|---|
+| Root/Build/Publish | rootはrepo全体のcheckout。builderは複数dirのGit blobを読むため `static-welcome`/`preparation-local` rootでは不可。BuildはPython3.9+とGit、下記順序。Publishは専用 `.render-static-B` のみ | `.`/`public`/repo全体のPublishは拒否。新Site構築は別GO |
+| Source SHA | 手動指定のfull40 SHA、checkout HEAD、manifest source_sha/tree/inputs、CI対象HEADを照合。moving main/latest deployを使用しない | squash後は同treeでもmanifest SHA/ZIP hashが変わる。旧PR ZIPのhashを流用しない |
+| Build tools | Python/Git版・regular blob・clean checkoutを確認。`SKIP_INSTALL_DEPS=true` を候補設定としComposer/npm/PHPやネット依存installを不要にする。env group/DB secretsを接続しない | 実RenderのGit metadata/clean状態/Python版はUNKNOWN。欠落/汚れなら失敗終了、fallback build禁止 |
+| allowlist/manifest/ZIP | 既存builderの25files、B/C明示、source-bound完全byte/集合照合。ZIP展開せず検証後に同builder出力をPublishへコピー | 余剰 `.env`/PHP/旧JS/SW/worker/Functions/fixture、未知profile、hash差異でSTOP |
+| Security Headers | 各 `HEADERS` 要素を `{path:'/*',name,value}` の一意な設定へ転記。CSP・Referrer・nosniff・Permissions・no-storeを既存値と完全一致照合。`_headers`は残すがRender設定の代替にしない | 現設定とエラー/redirect/aliasを含む実効適用はUNKNOWN。meta CSPだけで代用しない |
+| 404/Rewrite | routesは空を期待。hash routingなので `/* → /index.html` 不要。root404は配布維持 | 未知pathの実status/body、custom404採用有無は未検証。SPA fallback/外部redirectはSTOP |
+| Query/Cookie/CORS | queryはappが保存前STOP。Cookie/Authorization/非GET拒否はloopback独自の機能で、Static CDNに同じ拒否を期待しない。appはAPI/認証/Cookieを使わない | CDNはquery/Cookieを受け取り得る。独立Originでも親domain Cookieは届き得るため既存Domain Cookieを棚卸し。CORS既定/削除可否/OPTIONS/HostはUNKNOWN。資格情報付きCORSを許可しない |
+| Cache | 全assetのno-storeを期待、index/module混在/304/旧tab/圧縮応答を別承認後確認 | provider内部cacheとbrowser cacheを混同しない。旧tabは即失効不可 |
+| HTTPS/alias | 採用Originは現在null。主HTTPS hostを一つ採用する別工程。独自domain維持は将来移転に有効 | Render alias/preview/custom domainは別Origin。aliasで別DBを作らせずSTOP/主host誘導を別審査。DNS/TLS/redirect/旧SWは未受入 |
+| Auto/Preview | Auto Deploy OFF、PR Preview generation off、手動full SHAだけ。deploy hook/自動CI deployなし | OFFは配信停止ではない。初回作成/Previewも公開し得るため今回実行不可 |
+| Rollback | codeとheader/routes/domain設定のrevisionを一組で記録。旧build保持期限とsource再build手段を保管 | Headerは戻らず、IndexedDBも戻らない。schema/Export互換不明なら非破壊STOP/inert停止候補、Clear-Site-Data禁止 |
+| Source変更 | 新SHA/tree/ZIP/CI、公開asset差分・設定差分・schema互換を再審査 | Origin有効化、CSP緩和、API/telemetry追加、bank/schema変更、未知toolchain、採用hash不一致は新公開を停止。既配信停止は別操作/承認 |
+
+候補Build Commandの**処理順序**（Renderへ登録・実行していない）: (1) `git rev-parse HEAD` が承認full SHAと一致しcleanであること (2) 私有一時dirを作成 (3) `python3 -B scripts/ci/preparation_static_build.py --profile B --out <一時dir>/B` (4) `--verify-zip <一時dir>/B.zip --profile B` と期待hash照合 (5) 出力dirを既存でない `.render-static-B` へコピー。出力を先にcheckout内へ作るとclean_source検査を汚すため、ZIP検証を済ませてからコピーする。ZIPやtool用設定をPublishへ追加しない。実際に登録可能なbuild wrapperは採用後の限定差分で固定し、実deploy前に独立checkoutで検証する。
+
+Render用header候補は既存 `HEADERS` からオフラインで生成できる。Blueprint自動同期事故を避け、今回はrepo rootの `render.yaml` やdeploy可能な設定ファイルを新設しない。候補設定の審査はheader集合/一意性/固定CSP/no-store・routes空・Auto/Preview off・root/publish・固定Source/profileを照合する。現在は**候補変換の整合だけ検証可能**で、Dashboardとの差分/実効HTTP/TLSは `LIVE_VERIFICATION_REQUIRED` のまま。Providerの完全parserを模倣する新実装は不要と判断。
+
+オフライン実績（基準main `c7252346`、各25files）: 既存負例12件成功、B/C生成・profile指定ZIP検証成功。B ZIP SHA256 `29d4d32524e1d9729a88855c72fb63dcb0d3c2b343be7817b61bab7566885a4e`、C `f0dbcbfef930c9c1ba8c4bce00687e247a3ad65a6bf2862f67313445de886cc6`。どちらもrelease_approved=false。前PR HEADのhashとはSourceが異なる。新たな配布Source採用ではない。今回UI/storage blobを変えないため、本人Safariの既存差分受入を再開始させない。
+
+#### Provider最終比較と費用判断
+
+金額はUSD、税/為替/domain登録・更新/既存DB保管費等は別。契約実額・残枠・既存サービス負担はUNKNOWN。全案とも公開前の実効CDN検証は未実施で、試験deployにも別承認が必要。
+
+| 案 | 費用・上限の公式確認 | 小規模安全性/固定配備/長期運用 |
+|---|---|---|
+| Render Static | Staticは無料開始。workspace帯域Hobby5GB/Pro25GB/Scale1TB、超過internet $0.15/GB。Starter pipeline月500/1000/5000分、build120分上限。分数超過購入はspend limit/支払方法に依存、追加分単価はUNKNOWN | 既存運用とLaravel監視を集約。固定SHA手動可。Header/routesが配布と別revision、他Siteが枠を消費する点が負担。pipeline上限は帯域課金capではない |
+| Cloudflare Pages Direct Upload | static request無料/unlimited。Free500build/月/20分、20000files/25MiB。手元既成asset uploadならprovider build不要。domain/追加製品費は別 | Git未連携で公開権限を分離しやすく、費用予測では優位。別provider運用/Preview・既定CORS等の受入が必要。固定ZIP＋Source記録で再現 |
+| Amplify Hosting static/manual | 標準build $0.01/分、CDN保存$0.023/GB月、転送$0.15/GB（無料適用外）。無料枠の本人account適格性はUNKNOWN。SSR/WAF/backendは範囲外 | GitなしZIP対応。IAM/課金/headersと停止責任の追加設計が必要。LaravelをAmplifyへそのまま移す方式ではない。今導入する運用増加に見合う利点は弱い |
+| S3＋CloudFront | flat-rateに$0/月、$15/月等・overageなしの記載。Free表示1M requests/100GB・S3 credit5GB。従量案は別。実適格性・allowance超過時処理・private origin/header機能適合・S3全費用はUNKNOWN。地域別S3/CloudFront従量単価は今回未確定 | private S3 REST+OAC、headers/cache/error/IAMの細かい設計が可能。固定prefix/manifestを切替する設計が必要で、素朴な上書きsyncをatomic deployとみなさない。初期/継続運用は最大 |
+
+Renderは支払方法があれば帯域超過を請求、なければworkspaceサービス停止となり得る。無課金化のため支払方法を外すなど既存workspace全体を変更してはならない。採用時は残枠・通知・pipeline spend limit・帯域費用許容・停止責任を読み取り確認し、不明なら採用保留。AWS Budgetsも請求停止の保証にならない。CloudFrontの新flat-rateを無視して「AWSは必ず従量」と断定しないが、関連費用と適合が不明な現在の小規模先行版に直ちに採用しない。
+
+Canovia全体では **Render B → Cloudflare Direct Upload → Amplify → S3/CloudFront（運用体制確立後再評価）** の優先順位を推奨。根拠は既存Render管理の再利用とLaravelを別安全トラックで継続できること。費用上限が満たせない場合はCloudflareを再優先する。静的JS/標準HTTPS/明示JSON Exportとprovider外のSource/ZIP/設定記録を維持し、Functions/独自Auth SDK/edge DBに依存しない。将来AWS移転時もHeader/404/cacheをadapter設定として再検証し、同domain維持だけでstorage移行成功としない。
+
+#### 段階的移行・残る判断
+
+以下のPhase A–Dは移行段階であり、上記Hosting構成A/B/Cや配布profile B/Cとは別。
+
+| 段階 | Hosting・データ所有権 | Origin/IndexedDB・Export/Import | 正式版との接続条件 |
+|---|---|---|---|
+| Phase A: Local-first B独立公開 | 専用Static候補。本人の端末内記録、クラウド/管理者の復元なし | 独立HTTPSの明示採用後に固定、専用DB、JSONの本人保管/復元。実Safari未受入 | Canonicalへの通信・Auth・AIなし。別Hosting/Origin/security/公開GOが必要 |
+| Phase B: 利用者検証/UI/安定化 | 同static/同Originを継続、最小匿名support。analytics追加は別同意/設計 | schema/Export互換、Quota/消去説明、旧tab/rollback受入。Cへ暗黙縮小しない | 正式版の安全ゲートをLocal-first成功で解除しない |
+| Phase C: Canonical安全性解消 | Laravel/DBは別安全トラック。Render継続/AWS等は別判断 | staticの端末記録を保全。旧DB所有権/backup/restore/Writer/Session/Cutover/独立審査 | e858のBLOCK、実DB/復元、認証境界の受入を完了して別GO。今回実行なし |
+| Phase D: 正式認証/クラウド保存/AI | Laravel正式版の本人認証・権限/同意/費用制御が必要 | 正式版とstaticが同Originとは限らない。異OriginはIDBを読めず、本人Export→別工程のImport。同Originでも自動吸上げ禁止 | Canonical Importは本人認証、所有権/同意、厳格schema/容量/版検証、重複/衝突排除、原子的保存/失敗保持、監査・削除取消を別設計/受入 |
+
+独自domainを維持してproviderだけ変える場合はscheme/host/portが同じなら通常IDB Originを維持できるが、同browser/profile・storage消去/SW/互換の確認が必要。host/port変更、Safari profile変更では別storageとなる。DNS redirectはデータ移送ではない。旧staticのExport導線/保管期間/終了通知を別計画とし、先行版を消して正式版へ強制移転しない。
+
+本人が次に承認すべき最小事項は **「Welcomeを変更せず、専用Render Static Siteを採用候補として設計を確定する方針」**。この判断にサービス作成・実Origin採用・設定登録・deploy・課金・外部公開は含めない。続く各操作は具体的Source/設定/予算/停止票と実Safari結果を揃えた別判断。
+
+2026年12月1日は目標のまま。今回の仕様比較によるapp/schema改修は不要だが、残るcritical pathは費用/Origin候補の判断→継続中Safari差分受入→別承認された限定配備→実効headers/404/query/Cookie/CORS/cache/alias/停止受入→本人公開GO。Renderの初回作成自体がdeployを開始するので、公開前工程へ紛れ込ませない。日付達成を保証せず、CanonicalのPhase C/Dを先行版必須に混ぜない。**HOSTING_RECOMMENDED_NOT_ADOPTED / LIVE_HOSTING_NOT_RUN / SAFARI_ACCEPTANCE_PENDING / PRODUCTION_NO_GO_HOLD**。e858解除・実Aiven/Migration/Auth0/production/release/旧Web Resume/HTTP/Welcome更新は一切行わない。
