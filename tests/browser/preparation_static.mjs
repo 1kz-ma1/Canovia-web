@@ -25,7 +25,10 @@ try{
   await page.getByText('回答 0問 ／ わからない 1問 ／ 未回答 29問',{exact:true}).waitFor();
   await page.getByRole('link',{name:'回答を見直す・再計算する',exact:true}).click();
   for(let step=1;step<=6;step++){
-    for(const input of await page.locator(`[data-page="${step}"] input[value="3"]`).all())await input.check();
+    await page.locator(`[data-page="${step}"]`).waitFor({state:'visible'});
+    const inputs=await page.locator(`[data-page="${step}"] input[value="3"]`).all();
+    assert.equal(inputs.length,5,'VISIBLE_PAGE_HAS_FIVE_QUESTIONS');
+    for(const input of inputs)await input.check();
     if(step<6)await page.getByRole('button',{name:'次の5問',exact:true}).click();
   }
   assert.equal(await page.locator('input[type=radio]:checked').count(),30,'ALL_ANSWERS_BEFORE_RESULT');
