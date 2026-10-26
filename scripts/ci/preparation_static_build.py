@@ -87,7 +87,8 @@ def verify_directory(directory):
     files,inputs=candidate_files(source,meta.get('profile'))
     if raw!=canonical_manifest(manifest_for(source,meta['profile'],files,inputs)):raise ValueError('MANIFEST_MISMATCH')
     expected=set(files)|{'manifest.json'};actual=set()
-    for path in root.rglob('*'):
+    for count,path in enumerate(root.rglob('*'),1):
+        if count>32:raise ValueError('ASSET_COUNT_CAP')
         name=path.relative_to(root).as_posix()
         if path.is_symlink():raise ValueError('ASSET_LINK')
         if path.is_dir():

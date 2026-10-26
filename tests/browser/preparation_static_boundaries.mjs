@@ -32,8 +32,10 @@ export async function boundaries({browser,origin,stored}){
     const ws=await new Promise(resolve=>{try{const w=new WebSocket(origin.replace('http:','ws:')+'/forbidden-ws');w.onopen=()=>{w.close();resolve(true);};w.onerror=()=>resolve(false);}catch{resolve(false);}});
     return {fetched,external,xhr,beacon,ws,violations};
   },origin);
-  for(const key of ['fetched','external','xhr','beacon','ws'])assert.equal(blocked[key],false,key);
-  assert.ok(blocked.violations.includes('connect-src'));assert.equal(unexpected,0,'CSP rejects before transport');
+  // sendBeacon's boolean means queued, not that CSP permitted any transmission.
+  assert.equal(typeof blocked.beacon,'boolean');
+  for(const key of ['fetched','external','xhr','ws'])assert.equal(blocked[key],false,key);
+  assert.ok(blocked.violations.filter(v=>v==='connect-src').length>=5,'Each transport produced a CSP violation');assert.equal(unexpected,0,'CSP rejects before transport');
   // Dedicated DB and old preview namespace coexist without touching each other.
   if(stored){
     await page.evaluate(async()=>{await new Promise((resolve,reject)=>{const q=indexedDB.open('canovia-local-preview-v1',1);q.onupgradeneeded=()=>q.result.createObjectStore('legacy');q.onerror=reject;q.onsuccess=()=>{const db=q.result,tx=db.transaction('legacy','readwrite');tx.objectStore('legacy').put('SYNTHETIC_OLD','untouched');tx.oncomplete=()=>{db.close();resolve();};};});});
