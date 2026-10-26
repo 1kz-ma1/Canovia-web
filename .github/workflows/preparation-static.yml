@@ -2,7 +2,7 @@ name: Preparation Static Local-first
 on:
   pull_request:
     branches: [main]
-    paths: ['preparation-local/**', 'local-preview/src/repository.mjs', 'local-preview/src/backup.mjs', 'scripts/ci/preparation_static*', 'tests/browser/preparation_static.mjs', 'config/prelaunch_interest_diagnostic.php', 'config/canovia_public_roadmap.php', 'resources/css/preparation.css', 'public/images/preparation/**', 'public/brand/canovia-wordmark.png', '.github/workflows/preparation-static.yml', 'docs/development/LOCAL_FIRST_PREVIEW*']
+    paths: ['preparation-local/**', 'local-preview/src/repository.mjs', 'local-preview/src/backup.mjs', 'scripts/ci/preparation_static*', 'tests/browser/preparation_static*.mjs', 'config/prelaunch_interest_diagnostic.php', 'config/canovia_public_roadmap.php', 'resources/css/preparation.css', 'public/images/preparation/**', 'public/brand/canovia-wordmark.png', '.github/workflows/preparation-static.yml', 'docs/development/LOCAL_FIRST_PREVIEW*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -36,7 +36,12 @@ jobs:
           python3 scripts/ci/preparation_static_build.py --out "$RUNNER_TEMP/preparation-two"
           cmp "$RUNNER_TEMP/preparation-one.zip" "$RUNNER_TEMP/preparation-two.zip"
           python3 scripts/ci/preparation_static_build.py --profile C --out "$RUNNER_TEMP/preparation-C"
+      - name: Distribution source, ZIP and hostile-file boundaries
+        run: python3 -B scripts/ci/preparation_static_security_test.py
       - name: Isolated Chromium and WebKit (no server account)
+        env:
+          PREPARATION_VECTOR_PATH: ${{ runner.temp }}/vectors.json
+          PREPARATION_SCREENSHOTS: ${{ runner.temp }}/preparation-screenshots
         run: |
           npm install --prefix "$RUNNER_TEMP/static-browser" --no-save --package-lock=false --ignore-scripts playwright@1.56.1
           ln -s "$RUNNER_TEMP/static-browser/node_modules" node_modules
@@ -45,6 +50,13 @@ jobs:
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=webkit node tests/browser/preparation_static.mjs
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-C" BROWSER_ENGINE=chromium node tests/browser/preparation_static.mjs
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-C" BROWSER_ENGINE=webkit node tests/browser/preparation_static.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: preparation-synthetic-screenshots
+          path: ${{ runner.temp }}/preparation-screenshots
+          retention-days: 7
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: preparation-static-B-C-candidates
