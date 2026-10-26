@@ -954,3 +954,74 @@ Canovia全体では **Render B → Cloudflare Direct Upload → Amplify → S3/C
 本人が次に承認すべき最小事項は **「Welcomeを変更せず、専用Render Static Siteを採用候補として設計を確定する方針」**。この判断にサービス作成・実Origin採用・設定登録・deploy・課金・外部公開は含めない。続く各操作は具体的Source/設定/予算/停止票と実Safari結果を揃えた別判断。
 
 2026年12月1日は目標のまま。今回の仕様比較によるapp/schema改修は不要だが、残るcritical pathは費用/Origin候補の判断→継続中Safari差分受入→別承認された限定配備→実効headers/404/query/Cookie/CORS/cache/alias/停止受入→本人公開GO。Renderの初回作成自体がdeployを開始するので、公開前工程へ紛れ込ませない。日付達成を保証せず、CanonicalのPhase C/Dを先行版必須に混ぜない。**HOSTING_RECOMMENDED_NOT_ADOPTED / LIVE_HOSTING_NOT_RUN / SAFARI_ACCEPTANCE_PENDING / PRODUCTION_NO_GO_HOLD**。e858解除・実Aiven/Migration/Auth0/production/release/旧Web Resume/HTTP/Welcome更新は一切行わない。
+
+### Render Static Site配布準備 Phase 1（2026-10-27 JST、オフライン実装）
+
+PR #910の審査を受けた限定実装。基準main `9537f3af60bc7f714cf0fd2d946664adbd488a83`、#906–#910 MERGED、Issue #488の最新証拠を再確認。専用Static Siteは第一候補のまま、**正式採用・作成・設定登録・配備・Origin採用は未承認**。Welcome/旧Web/Canonical/Session/app/UI/storage schema/既存Cloudflare検証は変更しない。public roadmapの提供状態にも変化がないので更新しない。
+
+#### 実装した設定票・Preflight・Build境界
+
+`preparation_static_render.py` は既存builder/allowlist/manifest/ZIP検証を呼ぶオフラインadapter。新しい配布形式やRender API clientは作らない。full Source SHA・明示B/C・期待ZIP SHA256を必須入力とし、Git clean HEAD/Source・全25files・profile・全bytesを照合する。浅いcloneでも必要なHEAD tree/blobが揃えばよく、全履歴を必須としない。Git metadata/必要blobがない、dirty checkout、Python3.9未満、Git未導入、Source/hash不一致はBLOCK。実Renderでこれらを満たせるかはUNKNOWNのまま。
+
+- 生成するJSONは `PREPARATION_RENDER_OFFLINE_PLAN_V1` という**独自の審査票**。Render API/Blueprint入力ではなく、auto syncされない。Source/profile/ZIP hash、root/build/publish、Header path/name/value、routes空、Auto Deploy off、Preview generation off、依存install skip、env groupなし、domain空、Origin null/公開falseを固定する。
+- `--plan` は固定期待値との完全照合。重複JSON key、未知field、不正型、Header欠落/重複/変更/限定path、Rewrite/redirect、異Source/profile/hash、Auto Deploy/Preview有効化、Origin設定/公開承認trueを拒否。大小文字違い等もこの審査票では正規形不一致として拒否する。Render全設定parser/実設定の証明ではない。
+- `--stage` はcheckout**外**の既存でない `.render-static-B`（CならC）へ、ZIPを展開せずGitから再build→hash/全bytes検証→コピー→集合/bytes再検証。private親dirで使用する。Source checkout内出力・上書き・symlink出力・設定票との出力衝突を拒否。設定票/ZIP/toolは公開dirへ入れない。エラー時は固定 `PREPARATION_RENDER_BLOCK` / exit2、PASSを出さない。失敗時のローカル一時出力が残っても公開認可されない。
+- 成功出力は `offline_source_integrity=PASS` / `offline_render_plan=PASS` だけ。`render_build_environment=UNKNOWN`、`hosting=LIVE_VERIFICATION_REQUIRED`、`deployment=BLOCKED_ORIGIN_NOT_ADOPTED`、`release_approved=false`、`PRODUCTION_NO_GO_HOLD` を維持する。
+
+| Render候補項目 | Phase 1で固定した仕様 |
+|---|---|
+| Root Directory | repo root（空文字）。`static-welcome`/`preparation-local`を指定しない |
+| Publish Directory | `.render-static-B`（C候補は`.render-static-C`）。`.`/`public`/repo全体は禁止 |
+| Build Command | 設定票の `buildCommand`。`python3 -B scripts/ci/preparation_static_render.py --render-build --profile B --source-sha <full40> --artifact-sha256 <hex64>` |
+| 現在のBuild Commandの動作 | **必ずBLOCK/exit2、公開dirを作らない**。これは未採用Originの配備ゲートで、現状のままRenderへ登録/実行しない。公開可能なbuild wrapperへの変更はOrigin/費用/公開範囲の別採用審査後に限定PRで行う。環境変数やJSONで解除するスイッチはない |
+| 将来wrapperが再利用する処理 | 下記オフライン検証・Sourceからの一時build・ZIP hash確認・公開dirコピー。Render checkoutの汚れを無視したりGitなしで自己申告manifestを信用するfallbackは設けない |
+| Build tools/environment | Python3.9+/Git・必要HEAD blobs・cleanを要求。`SKIP_INSTALL_DEPS=true` 候補。Composer/npm/PHP/DB接続不要。実環境tool版/clone状態/自動生成fileは未確認 |
+| Security Headers | 既存builderの5headersを各 `path=/*` の別設定として出力。CSP/Referrer/nosniff/Permissions/no-store一致を検査。`_headers`も配布維持するがRender自動適用とみなさない |
+| 404/Rewrite | `routes=[]`、`404_NO_INDEX_REWRITE`。root `404.html`を固定bytesで検証。Renderでの未知pathの実404/status/body/headersは未検証 |
+| Auto Deploy/Preview | off/offを厳格照合。特定full SHAだけを後日の手動配備候補にする。GitHub CIからRenderへ接続するstep/token/hookはない |
+| Origin/alias | null/domain空、実HTTPSは未採用。別OriginのIDB共有なし、旧Session/Cookie/SW流用なし、Welcome導線追加も別工程 |
+
+独立clean checkoutでの再現例（**ローカルのみ**、SHA/hashはIssue #488の同一検証HEAD・同profileの証拠で置換。出力親は新しい私有一時dir）:
+
+```bash
+PREP_RENDER_TMP="$(mktemp -d -t canovia-render-review)"
+python3 -B scripts/ci/preparation_static_build.py --profile B --out "$PREP_RENDER_TMP/B"
+python3 -B scripts/ci/preparation_static_render.py --profile B \
+  --source-sha <検証HEAD全40桁> --artifact "$PREP_RENDER_TMP/B.zip" \
+  --artifact-sha256 <同HEADの期待B-ZIP-SHA256> \
+  --plan-out "$PREP_RENDER_TMP/B-plan.json" --stage "$PREP_RENDER_TMP/.render-static-B"
+python3 -B scripts/ci/preparation_static_render.py --profile B \
+  --source-sha <検証HEAD全40桁> --artifact "$PREP_RENDER_TMP/B.zip" \
+  --artifact-sha256 <同HEADの期待B-ZIP-SHA256> --plan "$PREP_RENDER_TMP/B-plan.json"
+```
+
+自分で算出したhashの一致だけではSource/配布採用・本人承認を証明しない。生成したbuildCommandを手元で実行してもexit2になることを負例CIで確認する。`--stage` の成功をRenderへのアップロード許可に読み替えない。
+
+#### CI・負例と証拠
+
+既存 `Preparation Static Local-first` workflowにadapter負例とB/C設定票生成・再検査・stageを追加。新規Render用10testsは、両profileのexact staging、危険設定22種、Header欠落/重複/改変7種、重複/不正JSON・FIFO/symlink、Source/profile/hash不一致、再hashした不正ZIP/余剰秘密・SW・設定file・404改変、実際のdirty checkout、Gitなし/Python不足、出力衝突/上書き、未採用Build Commandの非ゼロ終了/非生成、引数非漏えいを含む。既存配布負例12件とChromium/WebKit×B/Cを保持する。
+
+`preparation-render-offline-plans` ArtifactにB/C設定票とreportを7日保存（公開dirそのものはこのArtifactに含めない）。従来のB/C候補ZIP・合成画像Artifactも保持。最終PR HEAD・CI Run・ZIP hash・統合mainはIssue #488へ記録する。CI PASSは実Render/実Safari PASSではない。
+
+#### 作成前の費用・通知確認票（2026-10-27 JST、変更なし）
+
+[Static Sites](https://render.com/docs/static-sites)、[Headers](https://render.com/docs/static-site-headers)、[Build Pipeline](https://render.com/docs/build-pipeline)、[Outbound Bandwidth](https://render.com/docs/outbound-bandwidth)、[通知](https://render.com/docs/notifications)、[Pricing](https://render.com/pricing)の公式本文を再取得。Markdownが取得ツール非対応のためHTMLで確認した。Pricing本文では数値表を取得できず、そこで読めない現行plan月額/追加pipeline単価はUNKNOWN。推測で埋めない。
+
+| 項目 | 公式仕様 | 実My Workspaceの観測/未確認 |
+|---|---|---|
+| Static/plan | Static無料開始、帯域/分数はworkspace共通。Hobby/Pro/Scaleの帯域5GB/25GB/1TB、Starter分数500/1000/5000分 | 実workspace planはUNKNOWN。Webの`plan=free`/`buildPlan=starter`で推定しない |
+| 帯域単価/超過 | internet超過$0.15/GB。支払方法ありなら請求、なければworkspaceサービス停止となり得る | 使用量・残枠・支払方法の登録有無はUNKNOWN。カード番号等の秘密を取得しない |
+| Pipeline | 超過分自動購入はspend limit/支払方法に依存。上限到達/支払なしでは当月build停止。build120分/16GB disk上限 | 実残分/費用上限/追加分単価はUNKNOWN。pipeline capは帯域capを意味しない |
+| 既存サービスへの影響 | Site分離しても共通枠/障害の影響は残る。作成は初回deployを開始する | MCP読み取りでCanovia Suspended(user)、Welcome Auto Deploy/Preview off・root/build/publish不変。専用Siteは作成していない |
+| 通知 | email/Slackのworkspace default、service override。deploy等の通知が可能 | 既存対象serviceは `notifyOnFail=default`。実default/通知先/受信確認・料金通知条件はUNKNOWN。個人連絡先/秘密を記録しない |
+| 運用案 | owner/operatorがBilling使用量と通知受信・provider status/失敗deployを確認し、予算/残枠不明なら配備HOLD | 通知先・確認頻度・許容費用・停止責任者を本人が決定。通知/外形監視/課金設定を今回変更しない |
+
+MCPにはworkspace plan/請求/残枠/payment登録/spend limit/default通知先を読むtoolが見当たらず、list_workspaces/list_servicesの応答にも含まれないためUNKNOWN。`notifyOnFail=default`は通知到達の証明ではない。支払い削除やplan変更で既存serviceを止める操作は禁止。採用前の次工程で、秘密なしの管理画面読み取りにより確認する。
+
+#### 残る判断・Safari・12月1日
+
+本人がサービス作成前に決めることは、専用Render案の正式採用、独立Origin/全aliasとCookie境界、固定Source/profile/配布hash、実plan/残枠・費用許容・通知/停止責任、初回配備の公開範囲と別GO。現時点の安全なオフライン準備はCI/開発main統合まで進めるが、未解決UNKNOWNを解除しない。
+
+app/UI/schema/保存・Export/Importのbytesは不変なので、進行中の本人Safari差分受入を再開始させない。Safari保存/再訪/実ファイルExport・復元の受入と、新SHAのSource/ZIP照合は必要。採用後の実HTTPS/Headers/404/Rewrite/CORS/query/Cookie/cache/alias/停止・rollbackは別受入。WebKit CIを本人Safariへ昇格しない。
+
+12/1目標への影響: 設定票と誤配布防止をCI化し、後日の配布判断材料を具体化した。残るcritical pathは費用・Origin・本人Safari→限定wrapper/Origin変更の審査→別承認の作成/配備→実効security/運用受入→公開GO。Origin未採用BLOCKを弱めて日付に合わせない。Welcome更新、旧Web Resume/HTTP、Aiven/Canonical、Session/SW、Auth0、production/release、e858、有料契約、外部公開は一切操作せず **PRODUCTION_NO_GO_HOLD**。

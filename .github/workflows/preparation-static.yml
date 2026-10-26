@@ -40,6 +40,24 @@ jobs:
           python3 -B scripts/ci/preparation_static_build.py --verify-zip "$RUNNER_TEMP/preparation-C.zip" --profile C
       - name: Distribution source, ZIP and hostile-file boundaries
         run: python3 -B scripts/ci/preparation_static_security_test.py
+      - name: Offline Render plan, staged closure and publication HOLD
+        run: |
+          python3 -B scripts/ci/preparation_static_render_test.py
+          mkdir "$RUNNER_TEMP/render-review"
+          PREP_SOURCE_SHA="$(git rev-parse HEAD)"
+          for PREP_PROFILE in B C; do
+            PREP_ZIP="$RUNNER_TEMP/preparation-one.zip"
+            if [ "$PREP_PROFILE" = C ]; then PREP_ZIP="$RUNNER_TEMP/preparation-C.zip"; fi
+            PREP_ZIP_HASH="$(sha256sum "$PREP_ZIP" | cut -d ' ' -f 1)"
+            python3 -B scripts/ci/preparation_static_render.py --profile "$PREP_PROFILE" --source-sha "$PREP_SOURCE_SHA" --artifact "$PREP_ZIP" --artifact-sha256 "$PREP_ZIP_HASH" --plan-out "$RUNNER_TEMP/render-review/$PREP_PROFILE.json" --stage "$RUNNER_TEMP/render-review/.render-static-$PREP_PROFILE"
+            python3 -B scripts/ci/preparation_static_render.py --profile "$PREP_PROFILE" --source-sha "$PREP_SOURCE_SHA" --artifact "$PREP_ZIP" --artifact-sha256 "$PREP_ZIP_HASH" --plan "$RUNNER_TEMP/render-review/$PREP_PROFILE.json" > "$RUNNER_TEMP/render-review/$PREP_PROFILE-report.json"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preparation-render-offline-plans
+          path: ${{ runner.temp }}/render-review/*.json
+          retention-days: 7
+          if-no-files-found: error
       - name: Isolated Chromium and WebKit (no server account)
         env:
           PREPARATION_VECTOR_PATH: ${{ runner.temp }}/vectors.json
