@@ -15,16 +15,19 @@ from .private_binding import Block
 class ConnectedPeer:
     """Consume one preconnected TCP socket; no callback/factory injection."""
     def __init__(self,plan,raw):
-        self.plan=None;self.raw=raw;self.used=False
+        self.plan=None;self.raw=None;self._owned_raw=None;self.used=False
         try:
             if type(plan) is not OpenerCandidate or type(raw) is not socket.socket:raise Block()
+            # Acquire ownership only after both concrete types are accepted.
+            # Rejected values are not cleanup callbacks or owned resources.
+            self._owned_raw=raw;self.raw=raw
             self.plan=plan;self.fd=raw.fileno();self._check()
         except BaseException:
             self.close();raise Block() from None
 
     def _check(self):
         plan=self.plan;raw=self.raw
-        if (self.used or plan is None or raw is None or plan.peer is None
+        if (self.used or plan is None or raw is None or raw is not self._owned_raw or plan.peer is None
                 or plan.before or plan.verified or raw.fileno()!=self.fd or self.fd<0
                 or os.get_inheritable(self.fd) or raw.family!=plan.peer.family
                 or raw.getsockopt(socket.SOL_SOCKET,socket.SO_TYPE)!=socket.SOCK_STREAM
@@ -33,14 +36,15 @@ class ConnectedPeer:
 
     def take(self):
         try:
-            self._check();raw=self.raw;self.raw=None;self.plan=None;self.used=True
+            self._check();raw=self.raw;self.raw=None;self._owned_raw=None;self.plan=None;self.used=True
             return raw
         except BaseException:
             self.close();raise Block() from None
 
     def close(self):
-        self.used=True;raw=self.raw;self.raw=None;self.plan=None
+        self.used=True;raw=self._owned_raw;self.raw=None;self._owned_raw=None;self.plan=None
         if raw is not None:
+            if type(raw) is not socket.socket:raise Block()
             try:raw.close()
             except BaseException:raise Block() from None
 
