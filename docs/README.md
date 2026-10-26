@@ -1,5 +1,9 @@
 # Canovia documentation index (2026-10-13)
 
+## 2026-10-26 Local-first Preparation-only（開発候補・公開HOLD）
+
+- [既存先行公開戦略 §19](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#19-2026-10-26-local-first-preparation-only開発方針): 専用IndexedDBのBと保存なしC、固定static配布/通信境界、Mac Safariの最小受入票。Canonical/e858の安全ゲートは別に保持。Hosting/独立origin/実Safari/公開GOは未受入。
+
 ## 2026-10-25 Cutover / Recovery / Candidate preparation
 
 - [既存先行公開戦略 §15–16](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md): owned同一DB/Sessionの切替リハーサル、失敗時STOP、未採用候補/全差分inventory、後日のOwner操作票、全差分A–E分類と高リスク内容審査、監査方式比較とGate matrix。製品UI制限は許容済みだが、実writer/Session/DB安全性や公開GOではない。Recoveryは同節から既存正本を参照。**実環境未受入・HOLD継続。**

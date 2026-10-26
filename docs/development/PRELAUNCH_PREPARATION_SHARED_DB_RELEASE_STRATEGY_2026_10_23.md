@@ -714,3 +714,51 @@ Bは`canovia-preparation-v1`の専用DB/storeで保存し、旧local-previewのt
 backupは既存canonical/checksum primitiveを再利用しnode capだけ厳しくする。format `canovia.preparation.local`・schema1・bank版・source installation/UUIDを保持するがAccount本人性ではない。checksum不一致/異なる診断/同UUID異内容は上書きせず停止。preview→明示確認→同じraw/hashとrevisionでatomic merge、失敗時は旧state保持。Import receiptと既存record一致でも二重取込を拒否。checksumは改変不能性/暗号化を保証しない。
 
 Planは本人の手動入力/編集だけ。応答前に保存成功を表示せず、失敗時は入力を残す。Exportは非暗号化JSONの明示downloadで、ファイルの実保管・別保管からのImportは本人受入。将来のCanonical Importには別本人認証/所有権/同意/重複排除/削除取消保持が必要で、今回実装しない。
+
+### Phase3/4 — 固定配布物・通信境界・差分受入
+
+公開Sourceのclean checkout/full SHA/treeとGit blob目録からB/Cの固定allowlistを構築する。配布はHTML/CSS/ES modules/画像・`_headers`・manifestだけで、Laravel/PHP/.env/認証/管理コード/旧Service Worker/fixture/秘密は入れない。旧repositoryのCAS primitiveとbackup canonical/checksumだけを再利用し、診断bank/採点/FutureのPHP由来データはCIで固定Sourceと照合する。manifestの自己申告hashではなく、検証checkoutのGit bytes/allowlist/全ファイル集合と照合する。source/tree/flags、余剰・不足・改変、symlink/FIFO/hardlink/巨大ファイルを拒否し、既知の公開assetだけをメモリに読み込む。SHA/hashは真正なSource採用や本人認可ではない。
+
+ZIPはdeterministic/stored-only、regular file・相対パス・サイズ・重複なし・完全なallowlist/bytes一致を検証し、**検証器は展開しない**。`--verify-zip`はclean checkoutのHEADを期待Sourceとする。未知ZIPを解凍して配布ディレクトリに重ねない。Mac labは検証Sourceから新しい私有一時ディレクトリへ再構築するので展開先逸脱の入口を設けない。同一ユーザーの侵害やGit/OS全体の不正まで保証するものではない。
+
+loopback labは127.0.0.1限定、既知Host/一致Origin・GET/HEADだけ、未知route/query/encoding traversalを拒否。Cookie/Authorization付き要求、cross-site/opaque Originも拒否し、CORS/Set-Cookie/要求URLログを出さない。応答は全て固定errorと同じsecurity headers。CSPはscript/style/img selfのみ、connect/worker/object/form/base/frameは拒否。Fetch/XHR/WebSocket/Beaconのブラウザ実効負例を検証する。ページは既存SW controllerを検出すると保存開始前にSTOPし、他SWを解除しない。公開Originはnull・未採用、実HostingのHTTPS/CSP等の適用は未検証であり、このlabの証拠を本番へ昇格しない。
+
+Cookieはportで分離されない。labでも専用Safari profile（必要なら別OS user）を使い、既存Canovia/開発用Cookieがあるprofileで起動しない。旧DB namespaceを触らないことを合成で検証するが、最終公開は旧Canonicalと別の独立originを明示採用する必要がある。同じ端末内保存はsame scheme/host/port/profileに束縛され、別port/localhostと127.0.0.1の切替では復帰しない。SWを配布・登録せず、ネット不通での再起動や恒久保存を宣伝しない。配信事業者のIP等通常アクセス情報は残り得る。
+
+追加差分受入は、B/C×Chromium/WebKitの既存診断→結果→Future→Plan→明示Export/Importを拡張し、CSP/HTTP、固定配布/ZIP/source、旧namespace保持、未知保存版の非破壊STOP、SW拒否、保存不能BのSTOP/CのIDB非依存、Plan保存Quota・別タブ競合で入力/旧記録保持を確認する。133 PHP参照ケースを各engineでも照合する。Import後のメモ再編集試験で、textareaの保存内容がlabelの名前に混入する不備を再現し、for/idの明示ラベルへ最小修正した（見た目や保存形式は変更しない）。390pxの診断/グラフ/Future/Plan/データ画面は合成Screenshot Artifact（7日）として保存する。これはMac Safari受入・Hosting採用・外部公開GOではない。
+
+#### 管理Mac Safariの最小無接続受入票
+
+検証SourceはIssue #488に記録する**最終PR HEAD全40桁**（moving mainやSquash後の別SHAではない）、期待ZIP SHA256とCI Run IDを使用する。既存AP checkout/DB/Herd/Homebrew/global依存は変更しない。この手順はPython3.9以上・Gitだけを使い、Composer/PHP/Nodeの再installや実target/CA/パスワードは不要。
+
+```bash
+# Issue #488の検証HEADを控え、独立した一時checkoutだけで実施
+PREP_LAB_ROOT="$(mktemp -d -t canovia-preparation)"
+git clone --no-checkout https://github.com/1kz-ma1/Canovia-web.git "$PREP_LAB_ROOT/source"
+cd "$PREP_LAB_ROOT/source"
+git checkout --detach <検証HEAD全40桁>
+python3 --version
+git status --porcelain
+python3 -B scripts/ci/preparation_static_build.py --profile B --out "$PREP_LAB_ROOT/B"
+python3 -B scripts/ci/preparation_static_build.py --verify-zip "$PREP_LAB_ROOT/B.zip"
+shasum -a 256 "$PREP_LAB_ROOT/B.zip"
+# 期待hash一致、working tree cleanを確認。port使用中なら停止し、他プロセスをkillしない
+lsof -nP -iTCP:18798 -sTCP:LISTEN
+python3 -B scripts/ci/preparation_static_serve.py --directory "$PREP_LAB_ROOT/B" --port 18798
+```
+
+1. 専用の通常Safari profileで `http://127.0.0.1:18798/` を開く。合成内容のみ。30問の一部/Unknown保存→reload、8領域グラフと見直し、Future、任意Plan作成/編集を確認する。
+2. Safari終了/再起動後、**同じorigin/profile/port**で同じPlanへ復帰。JSON ExportがDownloads等に実在することを確認し、安全な別保管先へコピーする。初回ファイルは暗号化されない。
+3. 別の専用profileで同じlabへアクセス→Import previewでは未保存→確認後に同じPlan。二重/破損Importは拒否し既存記録を保持。通常profileへ戻ると元記録も保持する。
+4. 合成用のprofile/当該lab originだけのデータを意図的に消し、消失を確認。Exportなしでは復旧できない。保存したExportの明示Importで戻ることを確認する。既存AP/Canonical profileや他originのデータは消さない。
+5. 390px相当の幅/keyboardで操作し、失敗・未保存の表示を確認。local serverはCtrl-Cで終了し、Exportは本人の保存方針に従って保管する。使わないlab削除もこの一時ディレクトリだけとし、既存環境やExportを一括削除しない。
+
+STOP: SHA/hash/clean tree不一致、既存port使用、旧Cookie/SW拒否、保存/Import/復帰/表示不良、未知版・Quota・通信要求があれば中止。実secret/接続先/生Export/本人入力のScreenshotはGitHub/ChatGPTへ提出せず、固定Source/判定/件数/engine版と不具合分類だけ記録する。Macはこれまでのe858受入を再要求せず、今回の独立static配布/保存/UI差分だけ。iOS Native/WKWebViewは別ゲート。
+
+#### B/Cの公開審査条件（未達を成功扱いにしない）
+
+Bはコード/隔離CIの成功に加え、独立したHTTPS origin・実Hostingのheader/path/asset配置・Source/ZIP hashの採用、Mac Safariの保存/再訪/Export保管/消去受入、保存限界/privacy説明と運用責任、別の本人公開GOが必要。Hosting固有の`_headers`解釈は未採用で、ファイルを置くだけで適用済みとは扱わない。新たな費用や公開配備は別承認。
+
+Bの保存耐久性/対応Safari条件を満たせない場合は原因を記録し、別C成果物へ**本人判断で**縮小できる。CはIDBなし、同一画面内の診断/Plan/明示Export・Importのみ、reload/終了で消えることを明示し、保持を約束しない。CもHosting/Origin/Safari/公開GOは別に必要で、B失敗を暗黙のCへ変換しない。
+
+Canonical Account/Plan/DB・Session・旧Webは利用せず、既存e858監査/復元/Cutover/4BLOCKを維持する。静的成果物が完成してもCanonical統合や将来の本人同意付きImportは未完了。**PRODUCTION_NO_GO_HOLD**。
