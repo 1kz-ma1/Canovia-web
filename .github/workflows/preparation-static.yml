@@ -1,0 +1,50 @@
+name: Preparation Static Local-first
+on:
+  pull_request:
+    branches: [main]
+    paths: ['preparation-local/**', 'scripts/ci/preparation_static*', 'tests/browser/preparation_static.mjs', 'config/prelaunch_interest_diagnostic.php', 'config/canovia_public_roadmap.php', 'resources/css/preparation.css', 'public/images/preparation/**', 'public/brand/canovia-wordmark.png', '.github/workflows/preparation-static.yml', 'docs/development/LOCAL_FIRST_PREVIEW*']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - name: Pure PHP bank and scorer reference; no Laravel or DB
+        run: |
+          php scripts/ci/preparation_static_data.php --data > "$RUNNER_TEMP/data.mjs"
+          cmp preparation-local/src/data.mjs "$RUNNER_TEMP/data.mjs"
+          php scripts/ci/preparation_static_data.php --vectors > "$RUNNER_TEMP/vectors.json"
+      - name: Diagnostic schema and parity
+        env:
+          PREPARATION_VECTOR_PATH: ${{ runner.temp }}/vectors.json
+        run: node --test preparation-local/test/*.test.mjs
+      - name: Reproducible closed static candidate
+        run: |
+          python3 scripts/ci/preparation_static_build.py --out "$RUNNER_TEMP/preparation-one"
+          python3 scripts/ci/preparation_static_build.py --out "$RUNNER_TEMP/preparation-two"
+          cmp "$RUNNER_TEMP/preparation-one.zip" "$RUNNER_TEMP/preparation-two.zip"
+      - name: Isolated Chromium and WebKit (no server account)
+        run: |
+          npm install --prefix "$RUNNER_TEMP/static-browser" --no-save --package-lock=false --ignore-scripts playwright@1.56.1
+          ln -s "$RUNNER_TEMP/static-browser/node_modules" node_modules
+          "$RUNNER_TEMP/static-browser/node_modules/.bin/playwright" install --with-deps chromium webkit
+          PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=chromium node tests/browser/preparation_static.mjs
+          PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=webkit node tests/browser/preparation_static.mjs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preparation-static-C-candidate
+          path: ${{ runner.temp }}/preparation-one.zip
+          retention-days: 7
+      - run: test -z "$(git status --porcelain)"

@@ -693,3 +693,16 @@ Future PHP12 warningsはdiagnostic Run40252971155で全文を取得。全件 `ve
 RCはこの依存/警告差分の検証後の完全SHA/treeを**審査用案**として示し、候補正式採用/production/releaseを更新しない。§16の高リスク審査/94+20 migration/Recovery/Cutover/本人データ互換証拠は差分に影響しない部分を再利用。Source treeが動いたため古いB隔離sealを無条件に引き継がず、既存manifestの保守的なC降格を受け入れる。C全件の独立承認を意味しない。
 
 Phase1 private B認可起点、Launcher/Opener/Adapter/PrivateWireのlive結線は未実装で4公開BLOCK維持。§16.3とe858正本のcall graph/審査責任を再利用。Bの管理Mac人的監督はソフトウェア本人認証・耐rollback one-shotではない。外部独立reviewer（作者/本人/Codexと区別）の固定差分/配布物/runtime/対象scope/取消/期限/STOP/remote状態/事故責任の審査が必要で、未選任。DBA代替も同等のSource固定/最小権限/TLS-session/完全metadata/remote終了の独立証拠/安全停止・復旧とowner方式選定が必要、未採用。Phase1・Full17・TRIGGER完全可視性・DDL principal/binlog・backup/restore・Migration・本番配備は別ゲート。署名/P1/R1〜R6/fresh B2/正式採用を生成・代行しない。
+
+
+## 19. 2026-10-26 Local-first Preparation-only開発方針
+
+オーナーの新委任により、B: Local-firstを開発上の第一候補、C: 保存を保証しないStatic Previewをfallback候補とする。これは実装着手の判断で、外部公開・配備・Cへの正式切替のGOではない。Canonical A案/e858/独立監査/Backup/Writer Cutoverの未達は別トラックとして保持し、旧Web Suspended/Resume・HTTP禁止、実Aiven禁止、production/release不変更を維持する。
+
+配布対象は`preparation-local/`の必要な診断・グラフ・静的Future・任意Plan・端末内保存/再訪・明示Export/Importのみ。旧Study主体の`local-preview`全体を出荷せず、保存/backup primitiveを再利用する。Account/Login/Session/Canonical同期/AI/専門実行/投票/analytics/iOS native新機能は対象外。未来の本人認証・同意付きCanonical Importは未実装の別設計。
+
+Phase1は独立schemaと133 pure PHP対照ケース、静的entrypoint・診断/結果修正/Futureを、保存なしのmemory profileで先に検証する。BのIndexedDB/Plan/Exportは次Phase。現時点のC候補構築はC公開採用ではない。static builderは固定asset allowlistから再現可能zipを作り、Origin未採用/公開未承認を維持。配布物にPHP/.env/管理コード/旧JS/SWを含めず、loopback検証だけを許可する。
+
+Schema1は独立installation UUID/版/revision、診断回答・本人選択/希望、Plan、Import receipt。得点は固定bankから常に再計算し二重保存しない。UUID/checksumを本人認証へ昇格しない。未知schemaを推測変換/削除しない。保存/Import失敗・競合で既存stateを保持し、B保存不能を自動Cへ切り替えない。
+
+Chromium/WebKit CIは合成受入であり、Mac Safari/iPhone Web実機は別ゲート。WKWebViewは初回Web公開の必要条件へ追加しない。独立origin/headers/配布hash、保存消失/Export保管説明と実機受入、別公開GOが揃うまでPRODUCTION_NO_GO_HOLD。段階ごとのPR/SHA/CI/最終artifactはIssue #488へ記録する。
