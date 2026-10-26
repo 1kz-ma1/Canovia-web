@@ -8,6 +8,7 @@ from urllib.parse import urlsplit, unquote
 from preparation_static_build import HEADERS,verify_directory
 
 def serve(directory, port):
+    if type(port) is not int or not 1024<=port<=65535:raise ValueError('PORT_REJECTED')
     files=verify_directory(directory);payload={'/'+n:raw for n,raw in files.items() if n!='_headers'}
     payload['/']=payload['/index.html']
     class Handler(http.server.BaseHTTPRequestHandler):
@@ -29,8 +30,9 @@ def serve(directory, port):
             except ValueError:self.send_error(404);return
             host=self.headers.get_all('Host',[])
             if len(host)!=1 or host[0] not in (f'127.0.0.1:{port}',f'localhost:{port}'):self.send_error(421);return
-            if (self.headers.get('Origin') not in (None,'http://'+host[0]) or
-                self.headers.get('Sec-Fetch-Site')=='cross-site' or self.headers.get('Cookie') or self.headers.get('Authorization')):self.send_error(403);return
+            origins=self.headers.get_all('Origin',[])
+            if (len(origins)>1 or (origins and origins[0]!='http://'+host[0]) or
+                self.headers.get('Sec-Fetch-Site')=='cross-site' or self.headers.get_all('Cookie') or self.headers.get_all('Authorization')):self.send_error(403);return
             if u.scheme or u.netloc or '?' in self.path or '#' in self.path or path!=self.path or path not in payload:self.send_error(404);return
             raw=payload[path];ext=Path(path).suffix
             mime={'.mjs':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.html':'text/html'}.get(ext,'text/html')

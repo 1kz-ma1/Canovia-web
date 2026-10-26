@@ -13,8 +13,8 @@ export async function boundaries({browser,origin,stored}){
     ['/.env','GET',{},404],['/admin','GET',{},404],['/api','GET',{},404],['/sw.js','GET',{},404],['/_headers','GET',{},404],['/manifest.json','GET',{},404],
     ['/src/../index.html','GET',{},404],['/%2e%2e/.env','GET',{},404],['/%69ndex.html','GET',{},404],['/?SYNTHETIC_CANARY','GET',{},404],['/?','GET',{},404],
     ['/','POST',{},405],['/','PUT',{},405],['/','DELETE',{},405],['/','OPTIONS',{},405],['/','GET',{Host:'unowned.invalid'},421],
-    ['/','GET',{Origin:'http://unowned.invalid'},403],['/','GET',{Origin:'null'},403],['/','GET',{'Sec-Fetch-Site':'cross-site'},403],
-    ['/','GET',{Cookie:'synthetic_old_cookie=opaque'},403],['/','GET',{Authorization:'SYNTHETIC'},403]
+    ['/','GET',{Origin:'http://unowned.invalid'},403],['/','GET',{Origin:'null'},403],['/','GET',{Origin:[origin,'http://unowned.invalid']},403],['/','GET',{'Sec-Fetch-Site':'cross-site'},403],
+    ['/','GET',{Cookie:'synthetic_old_cookie=opaque'},403],['/','GET',{Authorization:'SYNTHETIC'},403],['/','GET',{Cookie:''},403]
   ]){
     const r=await request(path,method,headers);assert.equal(r.status,status,`${method} ${path}`);assert.equal(r.headers['content-security-policy'],csp);assert.equal(r.body,'LOCAL_FIXTURE_REQUEST_REJECTED');
   }

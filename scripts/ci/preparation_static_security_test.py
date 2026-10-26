@@ -92,6 +92,10 @@ class Distribution(unittest.TestCase):
                         warnings.simplefilter('ignore');z.writestr('index.html',b'duplicate')
             with self.subTest(mutation=mutation),self.assertRaises((ValueError,KeyError)):b.verify_archive(p)
         self.assertFalse((Path(self.temp.name)/'index.html').exists(),'Verifier never extracts')
+    def test_invalid_ports_rejected_before_any_fixture_access(self):
+        from preparation_static_serve import serve
+        for port in (-1,0,80,65536):
+            with self.subTest(port=port),self.assertRaisesRegex(ValueError,'PORT_REJECTED'):serve('/not-accessed',port)
     def test_cli_fixed_error_no_argument_leak(self):
         for script,marker in [('preparation_static_build.py','PREPARATION_BUILD_BLOCK'),('preparation_static_serve.py','PREPARATION_LAB_BLOCK')]:
             p=subprocess.run([sys.executable,'-B',str(b.ROOT/'scripts/ci'/script),'--secret=SYNTHETIC_CANARY'],capture_output=True,text=True)
