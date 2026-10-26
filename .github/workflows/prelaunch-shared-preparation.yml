@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tests/js/dependency-security.test.mjs'
       - 'app/Http/Controllers/PlanController.php'
       - 'app/Http/Controllers/HomeController.php'
       - 'app/Http/Controllers/CanoviaFutureController.php'
@@ -80,6 +83,10 @@ jobs:
           cache: npm
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci --ignore-scripts && npm run build
+      - name: Locked application dependencies must have no High or Critical advisory
+        run: npm audit --package-lock-only --audit-level=high
+      - name: Synthetic unsafe quoting and source-map inputs are rejected
+        run: node --test tests/js/dependency-security.test.mjs
       - run: cp .env.example .env
       - name: Owner replay and existing preparation/session contracts
         run: >-

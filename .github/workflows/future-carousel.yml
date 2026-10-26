@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tests/js/dependency-security.test.mjs'
       - '.github/workflows/future-carousel.yml'
       - 'app/Http/Controllers/CanoviaFutureController.php'
       - 'app/Services/PublicRoadmapProjectionService.php'
@@ -64,8 +67,12 @@ jobs:
           cache: npm
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci --ignore-scripts && npm run build
+      - name: Locked application dependencies must have no High or Critical advisory
+        run: npm audit --package-lock-only --audit-level=high
+      - name: Create empty synthetic dotenv input without importing credentials
+        run: python3 -c "import os; fd = os.open('.env', os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600); os.close(fd)"
       - name: Existing publication, voting and new carousel PHP regressions
-        run: php artisan test --compact tests/Feature/CanoviaFutureV407Test.php tests/Feature/CanoviaFutureCarouselTest.php
+        run: vendor/bin/phpunit --display-warnings --fail-on-warning tests/Feature/CanoviaFutureV407Test.php tests/Feature/CanoviaFutureCarouselTest.php
       - name: Install pinned test browser without changing lockfiles
         run: |
           npm install --prefix "$RUNNER_TEMP/future-browser" --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.56.1

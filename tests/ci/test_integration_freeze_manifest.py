@@ -22,6 +22,8 @@ class FreezeManifestTest(unittest.TestCase):
         examples = {
             'database/migrations/new.php': 'PRELAUNCH_REQUIRED',
             'app/Http/Controllers/AuthController.php': 'PRELAUNCH_REQUIRED',
+            'package.json': 'PRELAUNCH_REQUIRED',
+            'package-lock.json': 'PRELAUNCH_REQUIRED',
             'app/Services/PrivateFileLifecycleService.php': 'SECURITY_REVIEW_REQUIRED',
             'scripts/ops/integrated_release20_collect.py': 'SECURITY_REVIEW_REQUIRED',
             'scripts/ci/e858_phase1/owned_activation_fixture.py': 'SECURITY_REVIEW_REQUIRED',
