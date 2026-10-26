@@ -7,7 +7,7 @@ export function requireValue(value,code='INVALID_DATA'){if(!value)throw new Loca
 export const text=(s,max)=>typeof s==='string'&&s.length<=max&&!/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(s);
 export const instant=s=>typeof s==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/.test(s)&&Number.isFinite(Date.parse(s))&&new Date(s).toISOString()===s;
 export const date=s=>typeof s==='string'&&/^\d{4}-\d\d-\d\d$/.test(s)&&Number.isFinite(Date.parse(s+'T00:00:00Z'))&&new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
-export function keys(v,expected){requireValue(plain(v)&&Object.keys(v).sort().join()===expected.slice().sort().join());}
+export function keys(v,expected){requireValue(plain(v)&&Object.keys(v).length===expected.length&&expected.every(k=>Object.hasOwn(v,k)));}
 const versions={item_bank_version:bank.item_bank_version,scoring_version:bank.scoring_version,category_version:bank.category_version};
 export function emptyState(){return {schema_version:VERSION,...versions,installation_id:crypto.randomUUID(),revision:0,diagnosis:null,plans:[],import_receipts:[]};}
 export function record(state,values,now=new Date().toISOString()){return {id:crypto.randomUUID(),source_installation_id:state.installation_id,created_at:now,updated_at:now,...values};}
@@ -36,4 +36,12 @@ export function saveDiagnosis(s,answers,step){
   validateAnswers(answers);
   if(!s.diagnosis)s.diagnosis=record(s,{answers:{},step:1,confirmed_categories:[],requested_support:[]});
   s.diagnosis.answers=structuredClone(answers);s.diagnosis.step=step;s.diagnosis.updated_at=new Date().toISOString();
+}
+export function savePlan(s,values,id){
+  requireValue(typeof id==='string'&&UUID.test(id));
+  const clean={title:values.title.trim(),description:values.description,category:values.category,deadline:values.deadline||null};
+  const old=s.plans.find(p=>p.id===id);
+  if(old){Object.assign(old,clean);old.updated_at=new Date().toISOString();}
+  else{s.plans.push({...record(s,clean),id});}
+  validate(s);
 }
