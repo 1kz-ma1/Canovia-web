@@ -665,3 +665,27 @@ Owner提供 `Canovia_UI_Assets_Codex_20261026.zip` の `CODEX_REQUEST.md` を、
 差分検証は既存 `PrelaunchInterestSurfaceTest` と `preparation_interest_browser_smoke.mjs` を拡張し、keyboard/native radio、44px以上のtouch面、選択数、任意2群の全解除・点数不変、例文の明示入力/自動保存なし/上書き拒否、JSなしのUnknown保存を確認する。既存の途中保存・復帰・通信失敗・revision競合・再送・CSRF・他者Plan拒否・専門機能404・再ログイン同一IDを継続。既存Chromium/WebKit Artifactに390pxの5画面とdesktop質問/結果/Future/Planフォームを保存する。CIは実Safari/iPhone受入や本番GOではない。
 
 本人Mac差分は新しい固定Sourceの別clean checkout/既存§10ラボで、回答カードのtap/矢印focus、Unknown/進捗、結果と任意2群の解除、例文を使わない/選択/編集、Futureの絵と状態、390px相当を確認する。過去のCA/grants/旧94件/e858 Mac検査は再要求しない。正式なSafari受入報告は未取得として維持（ZIPの所感を完全な受入やcleanup証拠へ昇格しない）。実DB・Render・production/release・e8584公開BLOCK・固定SQL/Reference・PHP最低8.4.27・全安全HOLDは不変。
+
+## 18. 2026-10-26 公開P0セキュリティ差分（UI凍結）
+
+### 18.1 npm監査と到達性
+
+base `2c590c133007a3dd245a8e508183ba16c96995a6` のlockfileを `npm audit --package-lock-only --json` で再現し、Critical2/High2（脆弱パッケージ4、独立原因は3系統）を確認。既存の共有node_modulesの表示版をlockfile実測と混同しない。以下は公開npm/GitHub Advisoryの2026-10-26観測で、将来の未知脆弱性を保証しない。
+
+| Package / 導入元 | Advisory / 影響範囲・修正版 | 到達性 / 対応 |
+|---|---|---|
+| `shell-quote` 1.9.0（間接）、`concurrently` 9.2.4（直接dev） | [GHSA-pqg4-j6r4-53mv](https://github.com/advisories/GHSA-pqg4-j6r4-53mv) / CVE-2026-102422、shell-quote >=1.8.4 <1.11.0。コメントtoken後の攻撃者制御改行をquoteしshellへ渡すと注入可能。concurrentlyのCriticalは同じ原因の伝播で別RCE2件ではない | `composer dev` のローカル複数command起動。現在の固定commandに攻撃入力の接続は未検出だが、開発端末/CI用途と未知入力境界を理由に放置しない。upstreamのpatch `concurrently` **9.2.5**（shell-quote **1.12.0**）を採用。独自overrideなし |
+| `source-map-js` 1.2.1（間接：PostCSS/Tailwind/Vite CSS build） | [GHSA-68fv-2mgg-jv7q](https://github.com/advisories/GHSA-68fv-2mgg-jv7q) / CVE-2026-93749、>=1.0.0 <1.2.2、indexed source-mapのsection offsetでevent-loop DoS。修正1.2.2 | 細工したsource-mapを処理するbuild/開発経路。静的成果物へ脆弱consumer自体を配信するimportは未検出。PRやplugin/依存入力が信頼できないbuildを免責しない。lockを **1.2.2** へpatch更新 |
+| Vite 8.2.2（直接dev/build） | 8.2.xは8.2.3以下が対象、**8.2.4** が修正版。[GHSA-587h-7wmj-h5pm](https://github.com/advisories/GHSA-587h-7wmj-h5pm) / CVE-2026-112942（Windows launch-editor存在検査迂回/OS command注入の連鎖）、GHSA-698v-4r3x-3vcv、GHSA-r825-w8mm-5pxw（editor引数）、GHSA-9jrq-w75r-8gcw（custom middleware XSS）、[GHSA-rq7h-c2jc-7f22](https://github.com/advisories/GHSA-rq7h-c2jc-7f22) / CVE-2026-112946（非Windows・外部公開dev serverのfs allow迂回）、GHSA-vfpm-58rq-9qcg（fs先頭byte露出） | productionはVite dev serverを起動せず、Docker frontend stageでbuild→Nginx/PHPへ `public/build` を配信、`.dockerignore` がnode_modulesを除外。公開JSへeditor/dev server自体を埋め込むimportなし。Mac/LinuxはWindows固有chainの対象外でも、他のdev server問題と共有buildのため修正。**8.2.4** を直接固定し、8.3/9系への変更なし |
+
+`npm audit fix`、無条件major upgrade、audit除外/閾値緩和は行わない。直接2依存を正確版で指定し、間接source-mapのみ既存許容range内の更新。npmが既存optional WASIの不足6依存metadataを補完した差分もレビューし、実行用途/直接依存を追加しない。shared/future既存CIへlockfile変更のpath filterと `npm audit --package-lock-only --audit-level=high` を追加し、network/監査失敗やHigh/Criticalを失敗扱いにする。browser検証用Playwrightを追加する**前**に、採用対象のapplication lockfileを監査する。
+
+### 18.2 Live・警告・採用ゲート
+
+現Renderへのread-only connectorがないため現在Live SHA/image/digest/PHP/worker/設定はUNKNOWN。GitHub production ref15abは現在のRender稼働証明ではない。既存PHP Hotfix仕様・#899/#901の修正根拠を再利用し、旧Sourceのfloating PHPタグ、raw URL/Referer logging、無guardのreset mailをSource上の懸念とする。実PHPパッチ版・実Mailer・侵害有無は未確認。**実HTTP GETでもFree serviceをwakeし旧startup migrationを誘発し得る**ため、既存[Wake gate](PRELAUNCH_WEB_WAKE_PASSIVE_EVIDENCE_2026_10_15.md)を維持し、今回health/login/feedbackを実呼出ししない。DB/Session/運用変更を伴わないproviderのpassive確認と、必要ならowner判断による一時外部アクセス制限/安全なメンテナンス化を優先。未承認の停止やhotfix deployは行わない。
+
+Future PHP12 warningsは本文付きで再現し、既存2テストを `--display-warnings --fail-on-warning` へ強化する。単に隠して終了成功としない。原因・修正・最終SHA/CIは同節とIssue #488へ記録する。
+
+RCはこの依存/警告差分の検証後の完全SHA/treeを**審査用案**として示し、候補正式採用/production/releaseを更新しない。§16の高リスク審査/94+20 migration/Recovery/Cutover/本人データ互換証拠は差分に影響しない部分を再利用。Source treeが動いたため古いB隔離sealを無条件に引き継がず、既存manifestの保守的なC降格を受け入れる。C全件の独立承認を意味しない。
+
+Phase1 private B認可起点、Launcher/Opener/Adapter/PrivateWireのlive結線は未実装で4公開BLOCK維持。§16.3とe858正本のcall graph/審査責任を再利用。Bの管理Mac人的監督はソフトウェア本人認証・耐rollback one-shotではない。外部独立reviewer（作者/本人/Codexと区別）の固定差分/配布物/runtime/対象scope/取消/期限/STOP/remote状態/事故責任の審査が必要で、未選任。DBA代替も同等のSource固定/最小権限/TLS-session/完全metadata/remote終了の独立証拠/安全停止・復旧とowner方式選定が必要、未採用。Phase1・Full17・TRIGGER完全可視性・DDL principal/binlog・backup/restore・Migration・本番配備は別ゲート。署名/P1/R1〜R6/fresh B2/正式採用を生成・代行しない。

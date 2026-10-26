@@ -4,6 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'package.json'
+      - 'package-lock.json'
       - 'app/Http/Controllers/PlanController.php'
       - 'app/Http/Controllers/HomeController.php'
       - 'app/Http/Controllers/CanoviaFutureController.php'
@@ -80,6 +82,8 @@ jobs:
           cache: npm
       - run: composer install --no-interaction --prefer-dist --no-progress
       - run: npm ci --ignore-scripts && npm run build
+      - name: Locked application dependencies must have no High or Critical advisory
+        run: npm audit --package-lock-only --audit-level=high
       - run: cp .env.example .env
       - name: Owner replay and existing preparation/session contracts
         run: >-
