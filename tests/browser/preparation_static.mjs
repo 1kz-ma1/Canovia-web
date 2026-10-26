@@ -9,7 +9,8 @@ import {join} from 'node:path';
 const directory=process.env.PREPARATION_DIRECTORY;
 const meta=JSON.parse(await readFile(directory+'/manifest.json','utf8'));
 const probe=net.createServer();await new Promise(r=>probe.listen(0,'127.0.0.1',r));const port=probe.address().port;await new Promise(r=>probe.close(r));
-const origin=`http://127.0.0.1:${port}`,server=spawn('python3',['-B','scripts/ci/preparation_static_serve.py','--directory',directory,'--port',String(port)],{stdio:'ignore'});
+const origin=`http://127.0.0.1:${port}`,server=spawn('python3',['-B','scripts/ci/preparation_static_serve.py','--directory',directory,'--port',String(port)],{stdio:['ignore','pipe','pipe']});
+const serverOutput=[];for(const stream of [server.stdout,server.stderr])stream.on('data',b=>{assert.ok(serverOutput.reduce((n,v)=>n+v.length,0)+b.length<=65536);serverOutput.push(b);});
 let browser;const traffic=[],errors=[];
 const stored=meta.profile==='B';
 const shot=async(page,name)=>{if(process.env.PREPARATION_SCREENSHOTS){const dir=join(process.env.PREPARATION_SCREENSHOTS,(process.env.BROWSER_ENGINE||'chromium')+'-'+meta.profile);await mkdir(dir,{recursive:true});await page.screenshot({path:join(dir,name+'.png'),fullPage:true});}};
@@ -91,6 +92,10 @@ try{
   await ip.locator('#import-confirm').click();await ip.locator('#import-file:enabled').waitFor();
   await ip.getByText(stored?'Importしました。この端末で内容を確認し、改めてExportしてください。':'この画面にImportしました。再読み込みすると消えます。',{exact:true}).waitFor();
   assert.equal(await ip.evaluate(async()=>{const {repo}=await import('/src/app.mjs');return (await repo.read()).plans[0].id;}),planId);
+  await ip.getByRole('link',{name:'Plan',exact:true}).click();await ip.getByRole('button',{name:'Synthetic preparation plan updated',exact:true}).click();
+  assert.equal(await ip.getByLabel('現在地・計画のメモ',{exact:true}).inputValue(),'<img src="/leak" onerror="window.CANARY=1">');
+  assert.equal(await ip.locator('img[src="/leak"]').count(),0);assert.equal(await ip.evaluate(()=>window.CANARY),undefined);
+  await ip.getByRole('link',{name:'データを守る',exact:true}).click();await ip.locator('#import-file').waitFor();
   for(const [name,buffer] of [['duplicate.json',bytes],['corrupt.json',Buffer.from(bytes.toString().replace('Synthetic preparation plan updated','Modified plan'))],['huge.json',Buffer.alloc(2*1024*1024+1)]]){
     await ip.locator('#import-file').setInputFiles({name,mimeType:'application/json',buffer});
     await ip.locator('#import-preview').getByText(name==='duplicate.json'?'同じデータはImport済みです。二重取込は行いません。':'Importできません。形式・版・サイズ・破損・既存記録との衝突を確認してください。',{exact:true}).waitFor();
@@ -126,6 +131,7 @@ try{
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
   await boundaries({browser,origin,stored});
+  assert.equal(Buffer.concat(serverOutput).toString(),'','Local server must not log URLs/inputs/errors');
   assert.deepEqual(errors,[]);assert.ok(traffic.every(r=>new URL(r.url).origin===origin&&!new URL(r.url).search&&r.method==='GET'));
   console.log(JSON.stringify({engine:process.env.BROWSER_ENGINE||'chromium',profile:meta.profile,diagnosis_graph_review_future:true,plans_export_import:true,quota_abort_conflict:stored,process_restart:stored,storage_clear:stored,mobile_keyboard:true,asset_get_only:true,http_csp_origin_distribution:true,scoring_parity:133,device_verified:false,release_approved:false}));
 }catch(error){
