@@ -725,7 +725,7 @@ loopback labは127.0.0.1限定、既知Host/一致Origin・GET/HEADだけ、未�
 
 Cookieはportで分離されない。labでも専用Safari profile（必要なら別OS user）を使い、既存Canovia/開発用Cookieがあるprofileで起動しない。旧DB namespaceを触らないことを合成で検証するが、最終公開は旧Canonicalと別の独立originを明示採用する必要がある。同じ端末内保存はsame scheme/host/port/profileに束縛され、別port/localhostと127.0.0.1の切替では復帰しない。SWを配布・登録せず、ネット不通での再起動や恒久保存を宣伝しない。配信事業者のIP等通常アクセス情報は残り得る。
 
-追加差分受入は、B/C×Chromium/WebKitの既存診断→結果→Future→Plan→明示Export/Importを拡張し、CSP/HTTP、固定配布/ZIP/source、旧namespace保持、未知保存版の非破壊STOP、SW拒否、保存不能BのSTOP/CのIDB非依存、Plan保存Quota・別タブ競合で入力/旧記録保持を確認する。133 PHP参照ケースを各engineでも照合する。390pxの診断/グラフ/Future/Plan/データ画面は合成Screenshot Artifact（7日）として保存する。これはMac Safari受入・Hosting採用・外部公開GOではない。
+追加差分受入は、B/C×Chromium/WebKitの既存診断→結果→Future→Plan→明示Export/Importを拡張し、CSP/HTTP、固定配布/ZIP/source、旧namespace保持、未知保存版の非破壊STOP、SW拒否、保存不能BのSTOP/CのIDB非依存、Plan保存Quota・別タブ競合で入力/旧記録保持を確認する。133 PHP参照ケースを各engineでも照合する。Import後のメモ再編集試験で、textareaの保存内容がlabelの名前に混入する不備を再現し、for/idの明示ラベルへ最小修正した（見た目や保存形式は変更しない）。390pxの診断/グラフ/Future/Plan/データ画面は合成Screenshot Artifact（7日）として保存する。これはMac Safari受入・Hosting採用・外部公開GOではない。
 
 #### 管理Mac Safariの最小無接続受入票
 
