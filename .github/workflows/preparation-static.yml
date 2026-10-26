@@ -36,6 +36,8 @@ jobs:
           python3 scripts/ci/preparation_static_build.py --out "$RUNNER_TEMP/preparation-two"
           cmp "$RUNNER_TEMP/preparation-one.zip" "$RUNNER_TEMP/preparation-two.zip"
           python3 scripts/ci/preparation_static_build.py --profile C --out "$RUNNER_TEMP/preparation-C"
+          python3 -B scripts/ci/preparation_static_build.py --verify-zip "$RUNNER_TEMP/preparation-one.zip" --profile B
+          python3 -B scripts/ci/preparation_static_build.py --verify-zip "$RUNNER_TEMP/preparation-C.zip" --profile C
       - name: Distribution source, ZIP and hostile-file boundaries
         run: python3 -B scripts/ci/preparation_static_security_test.py
       - name: Isolated Chromium and WebKit (no server account)

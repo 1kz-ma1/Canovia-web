@@ -31,7 +31,7 @@ class Distribution(unittest.TestCase):
     def test_profiles_reproducible_and_source(self):
         for profile in ('B','C'):
             original=self.base/profile
-            self.assertEqual(b.verify_archive(str(original)+'.zip')['profile'],profile)
+            self.assertEqual(b.verify_archive(str(original)+'.zip',profile)['profile'],profile)
             files=b.verify_directory(original)
             self.assertNotIn('sw.js',files)
             self.assertFalse(any(n.endswith('.php') or n.startswith(('.','tests/','admin/')) for n in files))
@@ -96,6 +96,17 @@ class Distribution(unittest.TestCase):
         from preparation_static_serve import serve
         for port in (-1,0,80,65536):
             with self.subTest(port=port),self.assertRaisesRegex(ValueError,'PORT_REJECTED'):serve('/not-accessed',port)
+    def test_expected_profile_is_not_inferred_from_manifest(self):
+        for expected,actual in [('B','C'),('C','B')]:
+            with self.subTest(expected=expected),self.assertRaisesRegex(ValueError,'PROFILE_MISMATCH'):
+                b.verify_archive(self.base/(actual+'.zip'),expected)
+    def test_shared_header_and_static_404_contract(self):
+        files,_=b.candidate_files(b.clean_source(),'B')
+        self.assertEqual(b.hosting_contract(files)['provider_runtime'],'UNVERIFIED')
+        for raw in [files['_headers']+b'  Cache-Control: public\n',files['_headers'].replace(b"connect-src 'none'",b"connect-src *"),files['_headers'].replace(b'/*',b'https://not-adopted.invalid/*'),files['_headers'].replace(b'no-store',b'max-age=99999')]:
+            with self.subTest(header_case=raw[:10]),self.assertRaises(ValueError):b.hosting_contract(dict(files,**{'_headers':raw}))
+        for raw in (b'',b'<script src="./src/app.mjs"></script>',b'<form method="post"></form>'):
+            with self.subTest(missing=raw),self.assertRaises(ValueError):b.hosting_contract(dict(files,**{'404.html':raw}))
     def test_cli_fixed_error_no_argument_leak(self):
         for script,marker in [('preparation_static_build.py','PREPARATION_BUILD_BLOCK'),('preparation_static_serve.py','PREPARATION_LAB_BLOCK')]:
             p=subprocess.run([sys.executable,'-B',str(b.ROOT/'scripts/ci'/script),'--secret=SYNTHETIC_CANARY'],capture_output=True,text=True)

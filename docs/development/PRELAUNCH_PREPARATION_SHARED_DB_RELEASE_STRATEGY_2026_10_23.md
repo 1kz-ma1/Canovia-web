@@ -762,3 +762,95 @@ Bはコード/隔離CIの成功に加え、独立したHTTPS origin・実Hosting
 Bの保存耐久性/対応Safari条件を満たせない場合は原因を記録し、別C成果物へ**本人判断で**縮小できる。CはIDBなし、同一画面内の診断/Plan/明示Export・Importのみ、reload/終了で消えることを明示し、保持を約束しない。CもHosting/Origin/Safari/公開GOは別に必要で、B失敗を暗黙のCへ変換しない。
 
 Canonical Account/Plan/DB・Session・旧Webは利用せず、既存e858監査/復元/Cutover/4BLOCKを維持する。静的成果物が完成してもCanonical統合や将来の本人同意付きImportは未完了。**PRODUCTION_NO_GO_HOLD**。
+
+### Hosting採用前審査・運用（2026-10-26、§19追補）
+
+**Cloudflare Pagesのstatic Direct Uploadを第一推奨、Netlifyを比較候補**とする。推奨は正式採用/プロジェクト作成/Origin確定/公開GOではない。登録・設定・配備・請求変更は実行しない。B/Cとも`ADOPTED_ORIGIN=null`/`release_approved=false`、Canonical/e858と独立した公開HOLDを維持する。
+
+#### 公式根拠と取得限界
+
+確認日: **2026-10-26 JST**。両公式サイトの直接取得は環境proxy403で不可。Cloudflare公式文書の公開SourceとNetlify公式運営の公開技術referenceを固定commitで取得した。後者は元のdocs.netlify.com料金/契約の全文ではないので、取得できない細則/価格を推測せずUNKNOWNとする。公開資料中のdeployコマンドは資料として読んだだけで実行しない。これは外部skillのdeploy指示を採用する工程ではない。
+
+| ID | 公式資料URL（参照箇所） | 取得できた固定根拠 |
+|---|---|---|
+| CF-H | https://developers.cloudflare.com/pages/configuration/headers/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/headers.mdx): `_headers`はstatic用、Functionsには不適用、100rules/1行2000文字、複数一致は合成、`! `で削除可能 |
+| CF-S | https://developers.cloudflare.com/pages/configuration/serving-pages/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/serving-pages.mdx): root404なしはSPA fallback、HTML拡張子redirect、既定CORS `*`、ETag/304/圧縮/cache残留 |
+| CF-U | https://developers.cloudflare.com/pages/get-started/direct-upload/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/get-started/direct-upload.mdx): 既成assetをfolder/ZIPで手動upload可、Direct Upload→Git方式は同projectで切替不可、drag/drop1000files・25MiB/file、`_worker.js`も配布可能なので除外必須 |
+| CF-P | https://developers.cloudflare.com/pages/configuration/preview-deployments/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/preview-deployments.mdx): Previewは既定公開、Accessは別設定、noindexは認可ではない |
+| CF-G | https://developers.cloudflare.com/pages/configuration/git-integration/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/git-integration/index.mdx): Git連携はpush→build/deploy。main統合権限を公開権限に転用しない |
+| CF-R | https://developers.cloudflare.com/pages/configuration/rollbacks/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/rollbacks.mdx): 成功したproduction deploymentへ戻せる。previewはrollback対象外 |
+| CF-D | https://developers.cloudflare.com/pages/configuration/custom-domains/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/configuration/custom-domains.mdx): provider host/custom domainの採用・DNS/証明書は別工程 |
+| CF-L | https://developers.cloudflare.com/pages/platform/limits/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/platform/limits.mdx): Free500build/月・20000files・25MiB/file・100custom domains/project・account100project上限（この案で追加契約しない） |
+| CF-$ | https://developers.cloudflare.com/pages/functions/pricing/ | [公式Source](https://github.com/cloudflare/cloudflare-docs/blob/1342d903794faa50353ef9a53978aa375798fc34/src/content/docs/pages/functions/pricing.mdx): static requestsはFree/Paidともfree/unlimited。Functions/Workersは別quota/課金 |
+| NL-C | https://docs.netlify.com/manage/routing/headers/ / https://docs.netlify.com/manage/routing/redirects/overview/ | [Netlify公式技術reference](https://github.com/netlify/context-and-tools/blob/b9f53856d45aa2e8cf24721fd8a82e222deb323d/skills/netlify-config/SKILL.md): publish dirの`_headers`、storeのstaticだけ、headersはcontext別ではなくglobal、function/proxyは別。SPA200 rewriteは明示規則で、今回禁止 |
+| NL-D | https://docs.netlify.com/deploy/create-deploys/ / https://docs.netlify.com/deploy/manage-deploys/ | [Netlify公式技術reference](https://github.com/netlify/context-and-tools/blob/b9f53856d45aa2e8cf24721fd8a82e222deb323d/skills/netlify-deploy/SKILL.md): manual artifact/draft/Git-CD、auto publish lockとbuild停止は異なる、retryは古い固定Sourceでなく移動したHEADになり得る。失敗deployは元公開を置換しない |
+| NL-P | https://docs.netlify.com/manage/security/secure-access-to-sites/project-visibility/ | [Netlify公式技術reference](https://github.com/netlify/context-and-tools/blob/b9f53856d45aa2e8cf24721fd8a82e222deb323d/skills/netlify-access-control/SKILL.md): Public/Private/PasswordとPreview保護範囲はplan依存。Free/Personalで共通passwordは不可、privateはowner限定と記載。自動previewをprivateと推定しない |
+| NL-$ | https://www.netlify.com/pricing/ / https://docs.netlify.com/manage/accounts-and-billing/billing/billing-for-credit-based-plans/ | 直接本文取得不可。公式referenceでcredit-based Free/Personal/Proとauto-recharge/credit packsの存在は確認。**現在の月額・含まれるcredit数・静的帯域/requests/deploy単価・free枠到達時の停止/超過課金細則はUNKNOWN**。旧料金を現行として転記しない |
+
+資料中の数値は公開プラン仕様の観測で、契約・SLAや将来の料金保証ではない。USD表記/地域/税/為替が必要な有料機能・独自domain登録更新・既存サービス保管費は未見積で0円扱いしない。個人予算は記録しない。
+
+#### 採用前比較（未配備・全Live項目は未受入）
+
+| 評価項目 | Cloudflare Pages | Netlify | 残る公開前受入 |
+|---|---|---|---|
+| HTML/CSS/modules/画像 | CF-U/S、Laravel/build serverなしの既成static可 | NL-C/D、publish dirの既成static可 | MIME・圧縮・module import・実browser/header |
+| `_headers`/CSP/Referrer/Permissions | CF-H、既定headerをoverride/remove、Functions対象外 | NL-C、static対象、global/context非分離・server管理headerは制限 | 今回は両対応の単一`/*`・固定header subsetだけ。provider全構文parserの実装ではない |
+| HTTPS/TLS/独立Origin | provider host/custom domain（CF-D）、実証明書/redirect未確認 | provider host/custom domain、現行TLS設定細則UNKNOWN | 独立HTTPS origin採用・cert/redirect/旧Domain Cookie/SW不在を別確認。sibling subdomainだけでは親Domain Cookieを分離できない |
+| 未知path/404 | CF-S、root404がないとindexへfallback | NL-C、SPA rewriteは明示。native404/Pretty URLs等の現環境挙動は要実測 | script/formなしroot404を追加。`/api`/不存在module/encoded pathがindex200にならず、404+安全headerになること |
+| query/不正method/Host | Python labの拒否契約は移植されない。query付きindex200等を想定 | 同左。CDNの正規化/response codeはUNKNOWN | query付き200でもappが保存前STOPする合成試験。実method/Origin/Hostの正規化を確認。厳密なPython同等拒否が必須なら別設計/承認、動的機能を黙って追加しない |
+| CORS/Cookie/Authorization | CF-S、既定ACAO`*`はlabと異なる。Authorizationでcache挙動も変わる | NL-C、server管理header/親domain cookieに注意。既定CORS細則UNKNOWN | 配布物は全てpublic staticで個人dataなし。CORS`*`は本人認証ではなくCSP connect-none/無backendとは別。Set-Cookie/credentials許可なしを実測 |
+| Preview公開範囲 | CF-P、URLは既定公開/noindex。Access採用は別 | NL-P、planとvisibility/preview scope依存 | preview作成も公開操作。今回作らない。本番hostだけ受入してalias/古いdeploymentを放置しない |
+| GitHub自動公開 | CF-G、pushやPRで自動配布 | NL-D、Git-CDでpush/PRに連動。manual配布も次pushで置換され得る | 初回はGit未連携のmanual artifactを推奨。main squash≠deploy。build hooks/token/権限を勝手に作らない |
+| 固定artifact手動配備 | CF-U、ZIP/folderで可能。出力rootだけ、repo root不可 | NL-D、manual/draft可、publish dir/context/設定を限定 | fixed full SHA/tree/profile/ZIP、Functions/worker/redirect/plugin混入なし、実配布file照合。実uploadは別GO |
+| rollback/緊急停止 | CF-R、過去productionへ戻せるが古いpreview/cache/開いたtabは別 | NL-D、失敗buildは旧公開維持。bad publishedの停止/rollback/権限は現行UI/APIで別確認 | auto build/publish停止だけでは配信は止まらない。inert停止版/アクセス遮断等の具体策を採用後に承認。schema非互換なら古いappへ単純rollbackしない |
+| 無料枠/想定外費用 | CF-$ static free/unlimited、CF-L/Uのquota。Workers/Functions/R2等は除外 | NL-$ credit枠/料金/停止条件UNKNOWN、auto-rechargeや有料保護を0円扱いしない | accountの実plan/limits/請求通知を本人が採用前確認。新契約/課金変更なし |
+| 静的だけで成立するか | このB/C scopeはstaticだけ。DB/認証/Worker不要 | 同scopeはstaticだけ。Functions/Identity/Forms等不要 | 厳密HTTP拒否やprivate previewを追加要件にする場合、別安全/費用判断。今回の候補へ追加しない |
+
+第一推奨の理由は、既存static asset/`_headers`と直接uploadを使い、DB/Functionsなしで公開scopeを満たし、static料金の公式根拠を取得できたこと。自動Git-CD/関数/analyticsは採用しない。CFのSPA既定・CORS/cache・preview公開は明確な残留リスクで、**推奨をPASS/正式採用に変換しない**。Netlifyは代替候補だが、現行料金・保護plan条件とrouting/TLS/緊急停止の細則確認が先行条件。
+
+#### オフライン検査の差分と保証限界
+
+#908のbuilder/Source/tree/blob/ZIP検証を拡張し、新Frameworkは作らない。(1) root `404.html`を固定allowlist/manifestへ追加し、Cloudflare既定SPA fallbackへの具体的不足を修正 (2) ZIPの期待B/C profileを外から指定して一致確認（旧CLIの`--profile`がverifyでは無視されていた不備を修正）(3) 単一wildcard/一意header/行長/固定CSP/no-store/無script404のcommon subset検査を同じbuilderへ追加する。
+
+```bash
+# clean検証Sourceで実行。deployなし。B/Cを明示、戻り値のrelease_approvedはfalseのまま
+python3 -B scripts/ci/preparation_static_build.py --verify-zip <B候補.zip> --profile B
+python3 -B scripts/ci/preparation_static_build.py --verify-zip <C候補.zip> --profile C
+```
+
+extra PHP/.env/auth/functions/worker/redirect/test/秘密/不要assetは完全allowlist/bytes差異として拒否。これは承認Source自体に秘密がないことの汎用DLP証明ではなく、Source/依存/公開asset内容のレビューを置換しない。未知provider設定を追加して正当化せず、Functions/`_worker.js`/`_redirects`/`netlify.toml`/デプロイスクリプトを配布しない。`ADOPTED_ORIGIN=null`/`release_approved=false`維持、Preflight出力のPASSはoffline source/共通subsetだけで、HostingはLIVE_VERIFICATION_REQUIRED。
+
+browser差分試験はCDNを実装するものではない。route interceptionで**localhostのqueryにindex200が返る合成応答**を作り、appがIDB開始前にSTOPすることを確認する。`.invalid`のtest-only仮想HTTPS/preview originではproduct appが未採用としてSTOPし、別の合成probe DBでoriginごとに保存が分離されることを確認する。外部DNS/TLS/HTTPは発生させず、このtest originは配布物に含めない。実HTTPSの証明書/Hosting/CORS/cache/404/Headers受入ではない。既存CSP transport拒否/秘密非送信/Service Worker非包含/旧namespace保持/unknown schema非破壊を再利用。
+
+今回のproduction module/UI/storage schemaは#908から不変更で、本人が進めている#908のSafari診断・保存・Import受入を最初からやり直す必要はない。Source/ZIPは配布404/検査差分により新hashとなり、正式採用時に今回の固定Source/配布物とUI/storage bytesの一致・新404だけを照合する。Hosting未受入分は別に残す。
+
+#### 公開後の最小Operations（採用前の設計、今回実行なし）
+
+| 事象/担当 | 実施前条件・手順 | STOP/証拠/責任 |
+|---|---|---|
+| 新版準備・owner/operator | clean fixed Source/tree・明示B/C・再現ZIP・配布manifest・関連CI・旧schema/Export互換を確認。既存origin/profileを継続。別Origin移転を気軽なrenameにしない | SHA/tree/hash/差分/CI/承認時刻だけ公開記録。実origin採用/配備/公開は別owner GO |
+| 手動更新・owner/operator | 採用したproviderのupload先・独立origin・全alias/preview保護・auto build/publishなし・HTTPS/headersを固定確認。固定artifactだけ、repo全体をuploadしない | 失敗uploadは実配布状態を照合し旧版維持を確認。推測で公開成功/rollback成功にしない |
+| 更新失敗/rollback | 同一originで既知の安全なSourceに戻す候補を保管。DB schema/backup版が同じか確認し、unknown schemaは非破壊STOP。必要なら先にinert停止版へ | Web配布rollbackはIndexedDBを戻さない。古いappを開く/データ消去/`migrate:fresh`/強制downgradeは禁止。provider操作は別GO |
+| セキュリティ事故 | 自動公開経路を止めるだけでなく、全公開host/aliasesを対象にinert停止版またはproviderアクセス遮断を別承認で実施する案。侵害Source/hashを保存しfixed repairを審査 | cache/preview/open tab/取得済みassetは即回収できない。緊急停止で端末内dataを削除・回復できると約束しない。ownerが判断/連絡責任を持つ。今回停止機能やdeploy tokenを作らない |
+| cache/asset残留 | `Cache-Control:no-store`を期待し実Header確認、custom CDN cache ruleを追加しない。old moduleとnew indexの混在・304・stale tabを受入。必要なpurgeは別承認 | CF-Sでは旧assetが最大1週程度残る場合あり。no-storeは既に開いたtab/ダウンロード物の失効ではない |
+| schema/Export更新 | schema1/bank/scoring版を明示。unknown版/衝突/古いtabで旧data保持。変更が必要な時だけ別設計/互換fixture/明示preview確認 | 新版fileを古いappへImport強行せず、本人保管Exportを保持。自動Canonical import/クラウド同期を約束しない |
+| Safari保存消失・support | same origin/profile/private-mode/消去等の条件を聞き、本人保管Exportからの明示Importだけを案内 | 管理者は端末内dataを読めず、Exportなしの消去/端末変更を復旧できない。raw Export/回答/Plan/Cookie/storage dump/署名/端末個人情報は提出させない |
+| 不具合報告 | version/source短縮SHA・browser版・再現手順・固定error分類・合成再現だけ。必要Screenshotは本人情報を除去 | IssueへURL query/実Plan/診断内容を貼らない。ownerが公開ticketを確認し、漏えい時は削除依頼と本人対応を判断 |
+| analyticsなし監視 | 別承認後の公開static endpoint/response/hash/headerの軽量外形確認、provider稼働/失敗build/limits/請求通知、匿名化した手動ticketを最低限とする | ユーザー行動/保存成功/データの有無は収集しない。analytics/Beacon/tracker/外部monitor契約は今回追加なし。現在WebへのHTTP監視は行わない |
+| 費用/quota・owner | provider公式planを採用時と運用時に再確認。static以外の製品・独自domain・有料保護・auto rechargeは別費用として扱う | 無料quota到達/plan変更通知/費用不明はSTOPし追加公開や課金を自動継続しない。具体的個人予算額は公開記録しない |
+
+#### UX非実装レビュー（#908合成画像/UI sourceの再利用）
+
+#908の20枚Artifactの保存記録と、同じUI/storage blobに対応する既存390px合成画像・UIコードを確認する。環境proxyでArtifactの再取得は不可のため、実Artifactを再downloadして全画像を検査したとは記録しない。実Safariは本人受入中で未判定。
+
+- **新たな確定P0/P1はなし**（合成/Sourceで確認した範囲）。保存不能/Quota/unknown版は明示STOP、未保存入力は残す。診断は任意、Unknown/未回答を区別、Planは手動、Cのreload消失とExportなしの復旧不能を説明、Importはpreview/確認あり。これを実Safariの操作性保証に昇格しない。
+- **P2**: 5問ページ切替後のfocus/読み上げ案内、長い結果画面での次の導線、保存/Exportの初回理解を将来改善候補として記録。今回はUI変更や自動保存/新機能を追加しない。
+- 配布上の404不足とB/C取り違えは今回の安全修正として扱い、見た目の改善や新UX開発へ拡大しない。Safariで保存/Import不能等が判明すればP0/P1へ再分類し、Bの公開をHOLDする。
+
+#### 残る最小判断・公開前のLive受入
+
+本人の次の判断は**Cloudflare Pagesのstatic/manual方式を採用候補として選ぶか**。同時にdomain/全alias/previewの公開範囲・Git未連携・費用/通知/停止責任を決める（秘密の提出不要）。選定とプロジェクト作成/実Origin採用/配備/公開の各GOは分離する。未承認の現在は実際のOriginをSourceに設定しない。
+
+選定後の別承認工程: (1) originとprovider構成/費用採用 (2) fixed Source/artifact/CI＋継続中Safari差分受入の照合 (3) 最小配備・実HTTPS/全header/CORS/Cookie/Host/query/method/404/古いmodule/preview/停止方法確認 (4) 本人による公開可否。初回配備そのものが公開を伴い得るため、previewだから無承認で行えるとは解釈しない。機能が隠れたままかを含め、app未採用OriginのSTOPを解除する変更は別承認/レビューへ残す。
+
+12月1日のCritical Pathは、残る配布整合性→Hosting/Origin/公開範囲/費用の選定→本人Safari受入→別承認の配備と実効security/運用受入→公開GO。日付を理由に未検証をPASSにしない。Cへ縮小してもHosting/Origin/公開GOは残る。Canonical/e858/復元/旧WriterのHOLDは継続し、今回Local-first経路の成功で解除しない。**PRODUCTION_NO_GO_HOLD**。

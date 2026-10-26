@@ -2,7 +2,7 @@
 
 ## 2026-10-26 Local-first Preparation-only（開発候補・公開HOLD）
 
-- [既存先行公開戦略 §19](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#19-2026-10-26-local-first-preparation-only開発方針): 専用IndexedDBのBと保存なしC、固定static配布/通信境界、Mac Safariの最小受入票。Canonical/e858の安全ゲートは別に保持。Hosting/独立origin/実Safari/公開GOは未受入。
+- [既存先行公開戦略 §19](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#19-2026-10-26-local-first-preparation-only開発方針): 専用IndexedDBのBと保存なしC、固定static配布/通信境界、Mac Safariの最小受入票、Cloudflare Pages/Netlify採用前比較と公開後Operations。Hosting実効受入を合成PASSに昇格しない。Canonical/e858の安全ゲートは別に保持。Hosting/独立origin/実Safari/公開GOは未受入。
 
 ## 2026-10-25 Cutover / Recovery / Candidate preparation
 
