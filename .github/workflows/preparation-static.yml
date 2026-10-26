@@ -40,6 +40,8 @@ jobs:
           python3 -B scripts/ci/preparation_static_build.py --verify-zip "$RUNNER_TEMP/preparation-C.zip" --profile C
       - name: Distribution source, ZIP and hostile-file boundaries
         run: python3 -B scripts/ci/preparation_static_security_test.py
+      - name: Offline Render plan, staged closure and publication HOLD
+        run: python3 -B scripts/ci/preparation_static_render_test.py
       - name: Isolated Chromium and WebKit (no server account)
         env:
           PREPARATION_VECTOR_PATH: ${{ runner.temp }}/vectors.json
