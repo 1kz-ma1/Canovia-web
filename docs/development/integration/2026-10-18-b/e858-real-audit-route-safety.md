@@ -1369,3 +1369,13 @@ B方式を技術的第一候補として維持する。DBA代替は実在/同等
 `PrivateReview.check` の真正private認可起点、`LauncherCandidate.run`、`OpenerCandidate.open`、`Adapter.prepare`、`PrivateWire.connect` のLive結線は未実装、4公開BLOCKは不変。`Bridge.prepare` も閉じたまま。今回のcleanup差分をActivation完成/実接続GOとは扱わない。RC sourceは審査候補とe858監査definitionを別々に固定し、全migration/pending contract一致だけでRC全Sourceを監査済みへ昇格しない。正式RC/ref・tooling/artifact/runtime/private target・P1/R1〜R6・fresh Phase1と別Full17/TRIGGER/DDL/binlog/復旧/配備の判断を分離する。
 
 Issue #488へ、最終Source/tree・実装call graph・将来各BLOCKメソッドの入力/出力/副作用と変更前提・固定review artifact hash・既存証拠の再利用・限定独立reviewの役割/合否/未見積・本人判断・未実装/実環境未検証を集約する。今回の依頼はLive入口変更の承認ではなく、旧Web Suspended/Resume禁止/実HTTP禁止/実Aiven禁止/PRODUCTION_NO_GO_HOLDを維持する。
+
+### P-01 — archive外TLS handoffの所有権差分
+
+[固定審査パケットのP-01](https://github.com/1kz-ma1/Canovia-web/issues/488#issuecomment-6407434415)は、`VerifiedTLSHandoff`が型拒否したrawへ`close()`を呼ぶ不備。実Aiven到達性や本番侵害を示さない。#904と同じく、plan/raw/hostnameの具体型受領前はcaller所有、受領後は元socket参照を固定し、差替えを拒否する。socket subclass/任意TLS socket factoryも受け取らない。
+
+TLS固有の移譲は別に扱う：既存の同じSSLContextでnative wrap（handshakeはまだ行わない）→FDを受領したSSLSocketをhandoffが所有→同じ期限内でhandshake/既存identity検査→成功時だけcallerへ移譲する。失敗時にdetached rawとwrappedを両方closeしない。closeは所有するnative socketだけを処理し、失敗/FD残留は固定BLOCK、参照はcleanup用に保持しhandshake再開は拒否する。owned callerもfinallyでhandoff cleanupを行い、他の所有資源のcleanupを継続する。正常返却済みTLS socketはhandoff.closeで閉じない。
+
+既存TLS handoffテストの誤った「拒否時もclose」期待を修正し、fake/subclass拒否、元参照、native FD移譲、TLS/identity失敗、期限切れ/interrupt/再利用、close例外/no-opを含む18件を既存Linux/Mac matrixで検証する。単体のnative wrappingはAF_UNIX socketpairと合成mockで所有権だけを検査し、証明書の真正性は主張しない。実TLS/認証/Control/Dataは影響する既存owned MySQL8.0/8.4の回帰で別に検証する。OS/native closeの失敗やremote終了不明は引き続きHOLD。
+
+このモジュールとowned fixtureはreview bundle/pyzのSource closureに追加しない。固定#904/審査パケットのSHA/hashは履歴として保存し、新toolingではmanifestのtooling pinによりarchive hashが変わり得ることと、梱包Source bytesの変化を区別する。最終HEAD/CI/hash/包含関係はIssue #488へ追補する。将来Live TCBへ採用する際には、別Activation差分と同一socket/TLS/secret/cleanup/配布到達性の独立審査が必要。4公開BLOCK/SQL/Reference/caps/release/productionは不変、TECHNICAL_WORK_REMAINING / INDEPENDENT_REVIEW_PENDING / REAL_AIVEN_NOT_RUN / PRODUCTION_NO_GO_HOLD。

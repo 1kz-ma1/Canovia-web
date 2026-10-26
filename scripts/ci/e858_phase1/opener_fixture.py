@@ -178,9 +178,15 @@ class OwnedWire(Phase1DriverCandidate,old.FixtureWire):
     def close(self):
         try:return super().close()
         finally:
-            if getattr(self,'peer_handoff',None) is not None:self.peer_handoff.close()
-            if getattr(self,'producer',None) is not None:self.producer.close()
-            self.procedure=None
+            try:
+                if getattr(self,'tls_handoff',None) is not None:self.tls_handoff.close()
+            finally:
+                try:
+                    if getattr(self,'peer_handoff',None) is not None:self.peer_handoff.close()
+                finally:
+                    try:
+                        if getattr(self,'producer',None) is not None:self.producer.close()
+                    finally:self.procedure=None
 
 
 class OwnedBoundary(old.FixtureBoundary):
