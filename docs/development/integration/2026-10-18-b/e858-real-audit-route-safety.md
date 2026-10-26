@@ -1357,3 +1357,15 @@ authority, approval-shaped fixture, production connector, private input or sourc
 pin change is introduced. Existing Mac, Full94, MySQL and remote-observer evidence
 remains historical/isolated. A: TECHNICAL_WORK_REMAINING / REAL_AIVEN_NOT_RUN /
 PRODUCTION_NO_GO_HOLD.
+
+## 2026-10-26 B方式Activation審査・socket cleanup差分
+
+B方式を技術的第一候補として維持する。DBA代替は実在/同等性の証拠がなく未採用。独立署名Authority/耐rollback ledgerを必須条件へ戻さない。管理Macと本人の私的な実行判断はBの運用前提であり、TTY応答/JSON/bool/予約markerを本人認証・fresh GOへ昇格させない。独立審査担当・費用・日程は未確定で、本人/Codex自己レビューを代用しない。
+
+今回の具体的な閉じた不備は、`ConnectedPeer.__init__` が型検査前のrawを保持して拒否時に `close()` を呼び、`ProducerBinding.take_socket` もhandoff前の拒否入力へ `close()` を呼んでいたこと。socket属性の差替えでも、cleanup対象が元の所有socketから差し替わり得た。任意close callback実行と、未受領socketの予期しないcloseをUNIX socketpair/偽オブジェクトだけで再現（6ケース中5失敗）。実Target/認可/通信の再現や本番RCEを示すものではない。
+
+修正は、双方の具体型を確認後だけ所有権を受け取り、元のsocket参照を保持して差替えを拒否し、take時は所有権を移譲、close時は元の所有socketだけを処理すること。handoffが受け取る前はcallerがsocketを保持し、callerのfinallyが後始末を担当する（既存owned openerのexceptで確認）。close例外はBLOCKのまま。6負例/正常cleanupを既存Linux/macOS Python matrixへ追加し、影響する既存owned MySQL8.0/8.4 opener/Driver/Bridgeの回帰を再利用する。未変更の旧26/13 Mac入力・94→114 migration・独立復元の受入を再要求しない。
+
+`PrivateReview.check` の真正private認可起点、`LauncherCandidate.run`、`OpenerCandidate.open`、`Adapter.prepare`、`PrivateWire.connect` のLive結線は未実装、4公開BLOCKは不変。`Bridge.prepare` も閉じたまま。今回のcleanup差分をActivation完成/実接続GOとは扱わない。RC sourceは審査候補とe858監査definitionを別々に固定し、全migration/pending contract一致だけでRC全Sourceを監査済みへ昇格しない。正式RC/ref・tooling/artifact/runtime/private target・P1/R1〜R6・fresh Phase1と別Full17/TRIGGER/DDL/binlog/復旧/配備の判断を分離する。
+
+Issue #488へ、最終Source/tree・実装call graph・将来各BLOCKメソッドの入力/出力/副作用と変更前提・固定review artifact hash・既存証拠の再利用・限定独立reviewの役割/合否/未見積・本人判断・未実装/実環境未検証を集約する。今回の依頼はLive入口変更の承認ではなく、旧Web Suspended/Resume禁止/実HTTP禁止/実Aiven禁止/PRODUCTION_NO_GO_HOLDを維持する。

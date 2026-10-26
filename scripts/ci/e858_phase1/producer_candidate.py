@@ -81,7 +81,8 @@ class ProducerBinding:
         except BaseException:
             try:
                 if handoff is not None:handoff.close()
-                else:raw.close()
+                # Until ConnectedPeer accepts the concrete types the caller
+                # still owns raw. Never invoke methods of rejected inputs.
             except BaseException:
                 pass  # always BLOCK below; cleanup failure never preserves a trial
             self._abort();raise Block() from None
