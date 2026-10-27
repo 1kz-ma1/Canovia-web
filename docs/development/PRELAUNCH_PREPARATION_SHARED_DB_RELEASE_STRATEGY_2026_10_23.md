@@ -1331,3 +1331,47 @@ CLI `preparation_static_release_wrapper.py` の `RELEASE_AUTHORIZATION=None` と
 公開前の残る実受入: Dashboard Header/routes/envの実値、DNS target全文/権威DNS、TLS chain、GET/HEAD全25body・未知404・query/非GET/CORS/Set-Cookie/no-store/標準URL404、停止/復旧権限と伝播、Safari新HTTPS差分、最新費用残枠/帯域超過挙動/通知到達。これらは今回の合成PASSで解除しない。12/1目標に必要なオフライン作業を前進させるが、実受入日程・本人GOに依存し達成を保証しない。
 
 **B_OFFLINE_DEPLOY_PREPARATION / LIVE_RESPONSE_UNVERIFIED / RELEASE_AUTHORIZATION_NONE / SUCCESS_DEPLOY_NOT_RUN / PRODUCTION_NO_GO_HOLD**。Source/CI/全inventory/最終判定は循環を避けてIssue #488の最終統合証拠へ集約する。
+
+### 2026-10-27 — B公開Buildのソース限定有効化（実Render未許可）
+
+本人が「Profile B・選定Originの公開Build Wrapperについて、実装・全テスト/CI・差分レビュー・開発mainへのSquash統合まで」を今回明示承認した。これによりPR #915–#916の `RELEASE_AUTHORIZATION=None` は**過去Sourceの状態**となる。本追記が現行の認可境界。Render Build Command/Settings/Deploy、新Site、DNS/Proxy/Domain/証明書/課金、一般公開/案内、Welcome/旧Laravel/Canonical/Auth0/Aiven、production/release/e858への操作は承認していない。
+
+#### 認可・固定Source・検証
+
+- `preparation_static_release_wrapper.py` の `RELEASE_AUTHORIZATION` を、既存kind `PREPARATION_B_PUBLICATION_OWNER_APPROVAL_V1` / **profile B / `https://start.rpf-canovia.com` / release_approved true** のソースliteralだけに限定する。選定Originの定数を変更しただけでgrantが追随しない。起動時に完全なcanonical比較を行い、None・欠落・改変・B/C混同・数値1によるbool代用を拒否する。環境変数/JSON/CLIから認可を注入しない。
+- 認可後もfull Source SHA/tree/Neutral B ZIP SHA256、clean Git HEAD/metadata/blob、25 filesの再構成bytes、CSP/404/allowlist、symlink/hardlink/余剰/欠落/改ざん拒否、上書きなし・失敗時の一時出力削除は維持する。誤Origin・query/path/SWでIDB前STOPする既存app/保存schema/UIは変更しない。Cや旧Laravel/Canonicalを公開対象へ加えない。
+- **SourceのBuild認可とRenderでの実行許可は別**。成功CLIのlogは `source_build_authorized=true` とするが、検証receiptは `deployment_authorized=false` / `deployed_artifact=UNVERIFIED` / `provider_runtime=UNVERIFIED` / `PRODUCTION_NO_GO_HOLD` を保持する。公開候補manifestのrelease trueは候補bytesの仕様で、Render設定変更/Deploy/一般公開GOを付与しない。
+- Neutral builder、B/C ZIP、CF `_headers`、オフラインRender adapterは変更しない。NeutralのADOPTED_ORIGIN=null/release false、既存adapter `--render-build` 常時BLOCKを維持する。既存review CLIはcheckout外の独立再生成/照合だけ。実Renderの現Buildは **`python3 -c 'import sys; sys.exit(2)'`** のままであり、新Wrapperへの差替えは行わない。
+- 正常CLIを**使い捨てのローカルGit checkout 2個**で実行し、`.render-static-B` の25個のbytesと全inventoryを別々に再照合する。再実行による上書き、誤Source/tree/hash/C、Origin/JSON/Publish変更option、環境変数による昇格を負例化する。既存の改ざん/Link/生成途中失敗とChromium/WebKitの6構成、診断30問/Plan/Export/Import、CSP/Cookie/SW/保存負例を維持する。CI/ローカルでソースBuildが成功しても実Render HTTP/TLS/Safari受入のPASSにはしない。
+
+固定Build Commandの形式（**未登録・実Renderでは実行禁止**）:
+
+```text
+python3 -B scripts/ci/preparation_static_release_wrapper.py --profile B --source-sha <Squash後full Source SHA> --source-tree <同SourceのGit tree> --artifact-sha256 <同SourceのNeutral B ZIP SHA256>
+```
+
+Sourceの固定はソース自身の自己SHA literalではなく、**統合後Sourceを検証して作る外部操作票の引数と、Manual Deployで選ぶ同じcommit**の二重照合とする。Source/tree/ZIPの引数をmoving main/env/省略SHAへ置き換えない。将来mainが進んでも、固定Commandのまま異なるHEADでBuildすればBLOCKする。Source変更は別レビューと全CI→新SHA/tree/Neutral ZIP/公開inventory/操作票の再発行が必要。引数が一致することだけを新しいSourceへの本人承認と推定しない。
+
+PR #916のSource `8e4afa7cf93019d22506330d0502b72d7f680784`、Neutral hash `c8443c6f79e2e1b2337d1b53da2c82d089ad5d9ae5a84d07c6b91ed336a7d248`、公開inventory `d74d03c5b7549ae99f4d4dc9056f166d5844ee675739f60367013daf79f3e3a7` は歴史的証拠として保持。今回の新Sourceに流用しない。循環を避けるため、最終Squash main/tree・Build Command全文・新hash・全25file hash・生成日時・CI RunはIssue #488に固定する。§19直前の再生成コマンドを新固定Sourceのclean checkoutで実行し、Neutral ZIP/公開候補を2回生成して一致を確認する。最終Sourceの実CLI生成もローカルの専用checkout内だけで検証する。
+
+#### 初回成功Deployの本人操作票（まだ未承認）
+
+直前の配信差分表/停止票を維持し、Source認可PRの工程だけ今回完了対象へ更新する。全行を「期待値 / 実値 / 時刻 / 判定 / 非秘密証拠」で照合し、差異/UNKNOWNはSTOP。本人の新しい限定GOまでRender Settingsを保存しない。
+
+| 順序 | 本人が別承認する範囲と操作 | STOP・未許可境界 |
+|---|---|---|
+| 1 固定パケット/公開範囲 | Issue #488の新Source/tree/Neutral hash/公開inventory/25 files/固定Command/Source CIを確認。対象は `srv-dbg18iifngtc738cfr6g` / My Workspace `tea-d4vb3f6mcj7s73djkrqg` のみ | **初回成功Deploy時点でstartの25 assetsは第三者に取得可能**。未告知/noindex/Auto OFFを非公開保証にしない。今回のソース認可はこの公開範囲のGOではない |
+| 2 停止責任/費用 | 停止票の操作が当該Siteで可能か、担当権限と確認手段を本人が確認。最新帯域/Build残枠、支払有無、帯域超過課金/停止、$0 pipeline上限、障害・料金通知の到達を私有確認 | **停止手段未確認なら初回成功DeployはGOにしない**。古いusageやnotifyOnFail=defaultは現状証明にしない。課金/支払い設定変更を含めない |
+| 3 Settings読み戻し | repo/main、Root空、Publish `.render-static-B`、Auto off、Preview off、標準URLdisabled、Custom Domain startだけ、routes空、既存§19の5Header全値（各path `/*`）を照合。`SKIP_INSTALL_DEPS=true` 必須、env group/Canonical秘密なし | `_headers`自動適用を期待しない。Header/routes/env/custom domain実値はDashboardでの別確認が必要。書換えが必要なら差分を本人判断し、勝手に補正しない |
+| 4 Command変更/固定Deploy | 新しい限定GO後にだけ、Issue #488のCommand全文を対象Siteへ登録。Manual Deploy→**Deploy a specific commit** で同じfull SHAを1回実行 | **今回は変更/実行禁止**。保存がDeployを始めるUIなら保存自体を配備承認に含める。Deploy latest/Hook/Auto ON/新Site/C Previewは禁止。Git/Python3.9+/clean/blob/Publish残留条件が満たせなければ検証を弱めずSTOP |
+| 5 HTTP artifact/配信 | Deploy ID/sourceと、HTTP Content-Encodingを展開した全25個のbody SHA256を公開inventoryへ照合。HTTPS chain/hostname/有効期限、5Headers、未知404/scriptなし、no-store/再訪/圧縮/304、標準URL404を個別受入 | 未知pathのindex rewrite不可。`manifest.json`は公開fileでhash/JSON MIMEを確認。provider標準URLの拒否404へapp Headersを当然視しない。body不一致/余剰asset/不正aliasはSTOP |
+| 6 負例/本人Safari | query（空?含む）/不正path/別hostでapp非開始・IDB前STOP、CSPで外部fetch/XHR/beacon/WebSocket/Worker/埋め込み禁止、Cookie非発行・不要Cookie非送信、CORS/非GETを合成入力で確認。本人が新HTTPS Originで保存/再訪/終了再起動/Export/Import差分を確認 | 親Domain HttpOnly Cookieも初回requestへ送られ得る。WebKit intercept metadataのheader不在は非送信の証明でない。個人Plan/生Cookie/Backupを取得/記録しない。既存本人Safari成功を破棄せず、未実施差分は未受入のまま |
+| 7 停止/復旧/一般GO | 下記停止票の実効確認と費用/通知・実機受入を本人が総合判断。その後に別の一般公開GO | Welcome導線/正式app/Canonical Import/e858は別工程。初回限定成功配備と一般向け公開案内を一括扱いしない |
+
+事故時の第一候補は **対象Siteのstart Custom Domainだけを切断し、標準URLDisabledを維持する** 操作。最後のdomain除去後のpolicy/権限/伝播・実停止は未検証であり、確認不能なら別の遮断策を本人が決めるまで初回GOなし。実際の切断/停止/再接続は今回行わない。初回には切り戻せる過去の成功artifactがなく、**Buildをexit2へ戻す/失敗Deployを選ぶだけでは成功版の公開停止にならない**。DNS削除だけではキャッシュ/開いたtabを直ちに無効化できない。Static Site Suspendや有料Web Maintenanceの利用可否を推定しない。
+
+安全な成功artifactができた後のrollbackでもHeaders/routes/domainsは現設定のまま別照合。IndexedDBは削除/巻戻し/downgradeせず、Clear-Site-Data/強制Import/SW解除なしでデータを保持する。停止中にExportが必ず使えるとは約束せず、日常の別保管を案内する。再配備は問題Source/未知artifactを使わず、同じOriginと安全性・本人GOを確認する。
+
+main統合前後に、読み取り可能なRender一覧から**同repo/mainを監視するサービスのAuto/Preview off**を再確認する。異なるrepoのAuto Deploy ONを本repoのdeployと混同せず触れない。予期しない本repoのAuto Deploy ONやworkspace/owner差異があれば統合STOP。対象Siteの実Build exit2、off/off、標準URLdisabled、成功Deploy 0件を別read-onlyで確認する。
+
+未完了: 実Render Build環境/25 body/HTTPS/Header/Cookie/404/Cache/alias、停止権限/効果、最新費用・帯域/通知、本人Safari新HTTPS。今回はソースBuild有効化まで、**SOURCE_BUILD_B_ONLY_AUTHORIZED / RENDER_BUILD_STILL_EXIT2 / FIRST_DEPLOY_NOT_APPROVED / PRODUCTION_NO_GO_HOLD**。12/1の残るcritical pathはこの新固定パケットへの限定GO→実配備/実効受入→一般公開GOであり、未確認の停止/実機を日付だけでPASSにしない。

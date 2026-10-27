@@ -52,7 +52,7 @@ jobs:
             python3 -B scripts/ci/preparation_static_render.py --profile "$PREP_PROFILE" --source-sha "$PREP_SOURCE_SHA" --artifact "$PREP_ZIP" --artifact-sha256 "$PREP_ZIP_HASH" --plan-out "$RUNNER_TEMP/render-review/$PREP_PROFILE.json" --stage "$RUNNER_TEMP/render-review/.render-static-$PREP_PROFILE"
             python3 -B scripts/ci/preparation_static_render.py --profile "$PREP_PROFILE" --source-sha "$PREP_SOURCE_SHA" --artifact "$PREP_ZIP" --artifact-sha256 "$PREP_ZIP_HASH" --plan "$RUNNER_TEMP/render-review/$PREP_PROFILE.json" > "$RUNNER_TEMP/render-review/$PREP_PROFILE-report.json"
           done
-      - name: Dormant B release wrapper and fail-closed staging review
+      - name: Owner-authorized B source build in disposable checkouts and offline review
         run: |
           python3 -B scripts/ci/preparation_static_release_wrapper_test.py
           PREP_SOURCE_SHA="$(git rev-parse HEAD)"
