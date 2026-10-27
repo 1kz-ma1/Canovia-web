@@ -1246,3 +1246,88 @@ PR #912のSource `e2984ea88d976d3296b9b6413833ff6211b8fef9` / B ZIP SHA256 `796b
 Render connectorの`create_static_site`はAuto Deploy、branch、buildCommand、publishPath、env等の部分設定のみを受け取り、Preview OFF、全5Headers、custom domain、Render標準URL停止、404 routesを同一操作で保証できない。そのため**このconnectorで新Siteを即時作成しない**。Dashboard操作の場合もCreate自体が初回deployを始め得るため、まず失敗終了buildと現物表示を確認する別GO、続いてservice ID読取→Headersと404→custom domain/DNS/TLS→標準URL停止→B実配布という段階審査を維持。DNS変更・Build解除・Render作成/デプロイ・Welcome/Canonical/production変更なし。
 
 **B_WRAPPER_PREPARED_BUT_DORMANT / OWNER_RELEASE_APPROVAL_REQUIRED / PRODUCTION_NO_GO_HOLD**。
+
+### 2026-10-27 — Local-first B 初回成功Deploy直前の技術準備
+
+本追記が§19の現行操作票。過去の「Site未作成」「DNS未接続」は当時の記録として残す。今回の本人依頼はPlatformの静的配布準備・検証・開発main統合までで、実行Authorization/Render Build Commandの変更、成功Deploy、DNS/Proxy/課金変更、一般公開は許可しない。Future/保存schema/UI機能/Canonicalを拡張しない。
+
+#### インフラの読み取り証拠と未受入
+
+2026-10-27 read-only Render get_service/list_deploys: `My Workspace` / `tea-d4vb3f6mcj7s73djkrqg` の **canovia-preparation-start / srv-dbg18iifngtc738cfr6g**、repo `1kz-ma1/Canovia-web`、branch main、Root空、Publish `.render-static-B`、Auto Deploy off、Preview off、Render Subdomain disabled、Build `python3 -c 'import sys; sys.exit(2)'` と一致。Deployは `dep-dbg18iqfngtc738cfrs0` のbuild_failed 1件のみ、成功0件。今回これらを変更/再試行していない。
+
+Cloudflare CNAME start→canovia-preparation-start.onrender.com / DNS only / TTL Auto、およびRender custom domain `start.rpf-canovia.com` のVerified/証明書両方緑は**本人申告**。connectorにはHeader/routes/custom domain/環境変数のreadback機能がなく、Dashboard実値/HTTPS/証明書チェーン/到達性/停止効果は未受入。実hostへのHTTP/TLS・旧Web/healthは今回送らない。`notifyOnFail=default` は到達確認ではない。過去usage画面の残枠・$0 pipeline上限を現在残量/帯域支出上限/支払登録/通知到達の証明にしない。
+
+#### 4つの配布identityと検証経路
+
+| identity | 証拠・扱い |
+|---|---|
+| 固定Git Source | 外部操作票にfull40 SHAとtreeを固定。clean HEAD/commit/tree/blobを照合。自己コミットSHAをコードに埋め込まない。Git履歴全量は不要、必要blob/metadata不在はBLOCK |
+| Neutral B ZIP | 既存builderの決定的ZIP、25 files、`ADOPTED_ORIGIN=null`/release false。受領ZIPのentry/重複/bytes/profile検査とGit再生成ZIP hashの両方を照合 |
+| Origin適用レビュー候補 | Wrapperの合成Authorizationを**オフライン関数内だけ**で使い、settings/manifestを変換。固定SHA/tree/Neutral ZIP hashを別引数で照合。全25 filesをGit再構成の期待bytesと比較し、manifest改ざん後の再hashも拒否。公開manifestのrelease trueは候補内容の仕様で、実行許可ではない |
+| 実Render配備成果物 | 今回存在せずUNVERIFIED。将来の成功Deploy ID/sourceと、HTTP Content-Encodingを展開した25個のbody SHA256を候補receiptと照合して初めて同一性を受入。Git SHA/Deploy成功表示/manifest単体だけでは全body一致にならない |
+
+`preparation_static_release_review.py` はcheckout**外**の新規私有directoryだけに `.render-static-B/` と `review.json` を生成し、既存output/親symlink/上書きを拒否する。公開候補にreview.json/ZIP/設定票を追加しない。receiptは全25ファイル（manifest自身を含む）各SHA256、総bytes、`public_inventory_sha256=SHA256(canonical JSON of sorted filename→SHA256 map + LF)` を独立記録する。この値はZIP hashではない。manifest内の自己hashによる循環は作らない。recipeはsettings以外のapp/model/schema bytesを勝手に変えない。
+
+`stage_files` は入力集合/全bytesを検証し、同じworkspace内の一時dirへ排他的に書いて全bytesを再読、最後にrenameする。失敗時は最終Publishを作らず一時dirを削除し、既存Publishは上書きしない。symlink/hardlink/欠落/余剰dir/非空改ざん/再封印manifest/Source/tree/ZIP不一致を拒否する。並行悪意プロセスを許したworkspaceの隔離証明ではない。RenderはBuildごとのclean checkout・前回Publish/cache残留なしが必要で、削除fallbackで検証を弱めない。
+
+後日の再照合用**オフライン限定**コマンド（実際の固定SHAはIssue #488の最終証拠、または将来別承認後の新Sourceを使用）:
+
+```bash
+# 専用clean checkoutを検証対象full SHAへdetach済みで実施。元の作業treeをresetしない。
+PREP_SOURCE_SHA="$(git rev-parse HEAD)"
+PREP_SOURCE_TREE="$(git rev-parse 'HEAD^{tree}')"
+PREP_EVIDENCE_DIR="$(mktemp -d /tmp/canovia-B-evidence.XXXXXXXX)"
+python3 -B scripts/ci/preparation_static_build.py --out "$PREP_EVIDENCE_DIR/neutral-B" --profile B
+python3 -B scripts/ci/preparation_static_build.py --out "$PREP_EVIDENCE_DIR/repeat-B" --profile B
+cmp "$PREP_EVIDENCE_DIR/neutral-B.zip" "$PREP_EVIDENCE_DIR/repeat-B.zip"
+PREP_ZIP_HASH="$(sha256sum "$PREP_EVIDENCE_DIR/neutral-B.zip" | cut -d ' ' -f 1)"
+python3 -B scripts/ci/preparation_static_release_review.py --source-sha "$PREP_SOURCE_SHA" --source-tree "$PREP_SOURCE_TREE" --artifact-sha256 "$PREP_ZIP_HASH" --neutral-zip "$PREP_EVIDENCE_DIR/neutral-B.zip" --out "$PREP_EVIDENCE_DIR/public-review"
+python3 -B scripts/ci/preparation_static_release_review.py --source-sha "$PREP_SOURCE_SHA" --source-tree "$PREP_SOURCE_TREE" --artifact-sha256 "$PREP_ZIP_HASH" --neutral-zip "$PREP_EVIDENCE_DIR/neutral-B.zip" --verify-review "$PREP_EVIDENCE_DIR/public-review"
+```
+
+既存adapterの `customDomains=[]` / `adopted_origin=null` はNeutral配布のオフライン形式であり、作成済みSiteの実Custom Domain設定票ではない。実Domainをそこへ混ぜてPASSを得る操作はしない。Dashboard実値は下記本人操作票で別照合する。
+
+CLI `preparation_static_release_wrapper.py` の `RELEASE_AUTHORIZATION=None` と既存adapter `--render-build` 常時BLOCKは維持。review CLIやreceipt/env/flagsを実Build Commandに使って回避してはいけない。後日、本人の限定GO後に独立PRでソースAuthorizationを切替え、全差分・全required CI→Squash統合、その**後**のSource SHA/tree/Neutral hash/公開inventoryを再発行してBuild Commandを固定する。新SHAをそのSHA自身へcommitし直す循環は作らず、外部のIssue操作票に記録する。本PR/最終mainのレビューhashは将来の有効化Sourceのhashとして流用しない。
+
+#### Render配信差分と対処の分担
+
+公式 [Static Sites](https://render.com/docs/static-sites)、[Headers](https://render.com/docs/static-site-headers)、[Routing](https://render.com/docs/redirects-rewrites)、[Deploys](https://render.com/docs/deploys)、[Rollback](https://render.com/docs/rollbacks) を2026-10-27に本文確認（Markdown取得非対応時はHTML）。ローカルHTTPサーバーをRender実装の再現とは扱わない。
+
+| 項目 | 完了したオフライン対処 / 実配信での受入条件 |
+|---|---|
+| `_headers` | CF用の固定allowlistを保持。Renderの設定として自動適用しない。Renderでファイル自体が200でも非秘密の制御テキスト公開として記録。5Headerは上記§19の**全値**をDashboard各 `/*` へ別登録/照合。ブラウザ合成はCSPありでfetch送信前拒否、CSP欠落時は送信試行が生じる差分を計測 |
+| 404/Rewrite | Dashboard routes空。未知pathは実status404・app script非実行を要求。404.htmlの自動採用/brandingは公式本文で確証なし、generic404でもscript-freeならよい。`/404.html`直接GETの200と未知URL404を分ける。200 index fallback/未知path aliasは受入失敗。製品guardも `/` と `/index.html` 以外はIDB前STOP |
+| 公開ファイル | `/manifest.json` は意図した公開ファイルでJSON MIME/body hashを確認。neutral loopbackがmanifestを配信しない事実をRender404要件にしない。25ファイルすべて秘密・個人情報なしを内容レビュー。PHP/.env/旧Welcome/ZIP/receipt/fixture/SWは公開集合に存在しない |
+| query/HTTP method | CDNがquery付きGETへ200でも、`?`空queryを含めappはIDB前STOP。queryを解析/保存/通信しない。URL/queryはCDN等で観測され得るため個人データを入れない。GET/HEADのbody/status/型、POST/PUT/DELETE/OPTIONSは実受入で記録（4xx/405/501/静的bodyに留まり、API/状態変更/Cookie発行なし）。loopbackの一律405を保証しない |
+| Cookie/CORS | static BはCookie生成/Session使用なし。ただしHttpOnly親Domain Cookieもhostに照合され、JSから不可視なことを両engineで確認。Chromiumの合成request metadataでは送信headerを観測。WebKitのintercept metadataはCookie headerを観測できず、非送信の証明にしない（実送信はUNVERIFIED）。CSP/JSで送信阻止とはしない。親domain Cookie不使用・将来appのhost-only方針を保持。実Set-Cookie不在/対象hostへ秘密Cookie非送信を本人メタデータで確認。CORSはauth制御ではなく公開asset読み取り可否。ACAO `*` があっても認証/個人データなし、ACAC trueやOrigin反射による資格情報許可はSTOP |
+| Origin/SW/IDB | Neutralはloopbackだけ許可、Origin適用候補は選定HTTPS Origin**だけ**を許可しloopbackも拒否。旧canovia/app/onrender/Preview/HTTP・query・過去SW controller/登録残留（controllerなしを含む）/登録照会失敗はIDB前STOP。C版は公開Wrapperで拒否。start/appのsame-siteとIDB/SW same-originを区別。SW登録/解除/DB自動削除は追加しない |
+| cache/HTTPS | 各asset/404/圧縮表現/再訪で5Headersとno-storeの実効性を確認。CDNの内部保持/ETag/304を未検証PASSにしない。HTTP→HTTPS以外のredirectなし。標準onrender URL Disabledの実404は別項目（provider拒否404にappと同じHeaderを当然視しない）。TLS chain/hostname/有効期限/HTTPSでのみ実機保存を受入 |
+
+合成応答は実hostへのHTTP/DNSを一切使わずPlaywright route.fulfillで閉じる。Chromium/WebKit×Neutral B/Cの既存フロー/保存失敗/異常schema/Backup異常/通信禁止を維持し、Origin適用B×両engineで診断→Future→Plan編集/再読込→Export/別context Import、誤host/query/path/SWのIDB呼出0を追加。これは実Safari・実Render/TLSのPASSではない。本人Safari既存成功範囲は保持し、新Sourceのguard差分/HTTPS受入だけ残す。
+
+#### 次回限定初回成功Deployの本人操作票（全行未実行）
+
+各行を「期待値 / 実際値 / 時刻 / 判定 / 非秘密証拠」で記録。差異/UNKNOWNは次の行へ進めずSTOP。現在Buildはexit2のまま。
+
+| 順序 | 操作/照合 | 条件・境界 |
+|---|---|---|
+| 1 承認パケット固定 | 今回のオフライン証拠を本人確認。初回成功時にstartから25 assetsが第三者へ取得可能となる範囲、停止担当/権限、費用/通知、実受入範囲を明示承認 | 一般向け案内/Welcome変更/Canonical/app接続を含まない。未告知/noindexをアクセス制御としない |
+| 2 Authorization限定PR | 上記GO後にだけNone変更をレビューPRで実施。新Source/tree/neutral ZIP/公開receiptを2回再生成・全required CI・review完了 | ここでRender操作なし。最終mainの固定SHAとhashをIssue488へ記録。コード自身への自己SHA固定はしない |
+| 3 対象サービス読み戻し | **srv-dbg18iifngtc738cfr6gだけ**。repo/main、Root空、Publish.render-static-B、off/off、custom host唯一start、標準URLdisabled、routes空、全5Header値一致 | Header/routes/env実値はDashboard確認が必要。env group/秘密なし、候補SKIP_INSTALL_DEPS=true。他serviceを選択/変更しない |
+| 4 停止・費用の事前確認 | 下記停止票の操作が対象Siteで利用可能か、担当権限と確認手段を本人が確認。最新帯域/Build残枠、$0 pipeline上限、支払有無と帯域超過時課金/停止、通知宛先到達を私有確認 | 支払情報/メール/tokenをGitHubへ記録しない。停止手段が利用不能なら初回成功配信はSTOP。Paid Maintenance Modeを静的Siteに仮定しない |
+| 5 Build Command設定の別GO | 限定PR後の値で `python3 -B scripts/ci/preparation_static_release_wrapper.py --profile B --source-sha <full SHA> --source-tree <tree> --artifact-sha256 <neutral ZIP SHA256>` を照合して設定 | **今回設定禁止**。既存adapterやreview CLIを代用しない。設定保存がDeployを起こすUIなら、保存も初回配備承認に含む |
+| 6 固定commit手動Deploy | Manual Deploy → **Deploy a specific commit** に上記full SHA。同一Build CommandのSHA/tree/hashと照合して1回実行 | Deploy latest commit/Deploy Hook/Auto Deploy/Previewを使わない。Git/Python3.9+/clean/blob不足/Publish残留で失敗したら検証を弱めずSTOP。失敗理由の秘匿要否を確認して記録 |
+| 7 限定受入 | Deploy ID/source、全25body inventory、証明書、全5Header/404/query/非GET/CORS/Cookie/cache/alias、停止と復旧を下記票で確認。合成入力だけでSafari新HTTPS保存/終了再訪/Export/Import差分を本人確認 | 結果の範囲だけ実測証拠へ昇格。ユーザーのPlan/Export/生Cookieを採取しない。未受入の一般公開GOなし |
+
+#### 障害停止・rollback・公開後監視票
+
+1. **配信を止める操作と次Buildを止める操作は別**。Auto/Preview offを維持、進行中Deployを対象Siteだけキャンセル、次Buildをexit2へ戻しても、既存成功artifactは配信され続ける。[公式Deploy仕様](https://render.com/docs/deploys)上、失敗Buildは前の成功版を止めない。最初の成功後に失敗deployへ「rollback」はできない。
+2. 緊急時は本人が対象SiteのSettingsで **start.rpf-canovia.comのCustom Domainだけを削除/切断**する方法を事前承認・権限確認し、標準URLDisabledを維持する案を基本停止票とする。[公式Delete custom domain](https://api-docs.render.com/reference/delete-custom-domain)はservice IDと当該domainを指定できる。最後のdomain除去に伴う標準URLpolicy維持/反映時間・実host停止は未実測であり、UI/APIで成立しないならSTOPして別の遮断策を本人判断する。サービス自体の削除・他domain操作へ自動拡大しない。Suspend APIの存在だけでStatic Site対応/応答/伝播はPASSにしない。
+3. DNS CNAME削除は別の承認操作で、DNSキャッシュ/開いたtab/取得済みassetを直ちに無効化しない。Cloudflare Proxy ONへの切替やzone-wideルールを緊急手段として勝手に追加しない。完全停止はcustom host/標準URL/previewの新規取得で確認し、開いたtabや端末内記録は回収しない。
+4. **安全な成功版が既にある場合だけ**、Deploys→対象の成功Deploy→Rollbackで保持artifact/Source/inventory・Origin/保存schema互換を照合する。初回成功前は対象なし。保持artifact数/期間はWorkspace plan依存でUNKNOWN。Headers/routes/custom domainはrollbackされないので現設定票を別照合する。安全性未解決のSource/ZIP/Origin/Headers、異常schemaを黙って変換する版、未知artifact、動くmainを再配備しない。
+5. 復旧は同じstart HTTPS Originを保持し、同じbrowser/profileのIndexedDBを削除/巻戻し/downgradeしない。Clear-Site-Data/一括Cookie消去/SW解除/強制Importなし。利用者へExport別保管と復旧状況を説明し、停止中のExport機能が必ず使えるとは約束しない。安全な新Sourceと再配備/ドメイン再接続/TLS再確認は別GO。Canonicalへのデータ移行は別工程。
+6. 初回・各更新前後と毎月の請求期間更新時に、停止責任者がDeploy失敗/Render status、証明書期限/更新、Header・asset差分、帯域/Build消費/追加支出上限・請求/通知到達を確認する。no-storeで再訪にも通信増分、失敗Buildにも分数消費、第三者アクセスにも帯域消費がある。$0 pipeline上限を帯域のハード上限と扱わない。通知/費用/障害の不明点があれば一般公開をHOLDし、危険な再Deployや有料変更を自動実行しない。
+
+公開前の残る実受入: Dashboard Header/routes/envの実値、DNS target全文/権威DNS、TLS chain、GET/HEAD全25body・未知404・query/非GET/CORS/Set-Cookie/no-store/標準URL404、停止/復旧権限と伝播、Safari新HTTPS差分、最新費用残枠/帯域超過挙動/通知到達。これらは今回の合成PASSで解除しない。12/1目標に必要なオフライン作業を前進させるが、実受入日程・本人GOに依存し達成を保証しない。
+
+**B_OFFLINE_DEPLOY_PREPARATION / LIVE_RESPONSE_UNVERIFIED / RELEASE_AUTHORIZATION_NONE / SUCCESS_DEPLOY_NOT_RUN / PRODUCTION_NO_GO_HOLD**。Source/CI/全inventory/最終判定は循環を避けてIssue #488の最終統合証拠へ集約する。
