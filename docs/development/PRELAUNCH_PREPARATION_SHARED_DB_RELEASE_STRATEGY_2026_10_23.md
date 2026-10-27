@@ -1028,6 +1028,8 @@ app/UI/schema/保存・Export/Importのbytesは不変なので、進行中の本
 
 ### 公開Origin候補・最終設定パケット（2026-10-27 JST、承認前）
 
+> PR #912当時の審査記録。後続の「取得済みrpf-canovia.comへのOrigin設計更新」が現行候補を更新する。旧canovia.comは本人非所有と判明したため現行候補から除外し、この節のSource/hash/観測は歴史的証拠として保持する。
+
 基準main `e2984ea88d976d3296b9b6413833ff6211b8fef9` とPR #911/Issue #488を再確認。本追補は本人の次回判断に用いる審査パケットであり、Hosting/Originの正式採用・BLOCK解除・サービス作成・配備・DNS変更を許可しない。コード/設定の変更は不要と判断し、既存adapter・負例・browser CIを再利用する。過去の「Safari全体未受入」は、以下の**本人申告された成功経路だけ**を更新する。
 
 #### 本人Safari受入の更新（成功範囲限定）
@@ -1038,7 +1040,7 @@ app/UI/schema/保存・Export/Importのbytesは不変なので、進行中の本
 
 #### Origin・DNS・Cookie・SWの判断
 
-**`https://start.canovia.com` を条件付き設計候補として推奨するが、正式採用はHOLD**。所有権/DNS制御/競合なしとCookie分離を確認できなければ、同じcanovia.com配下の別subdomainへ逃がさず、別の所有確認済み登録可能ドメインを比較・選択する。
+**PR #912当時の旧候補: `https://start.canovia.com`（現行候補から除外）**。当時の条件付き評価は以下に保持する。所有権/DNS制御/競合なしとCookie分離を確認できなければ、同じcanovia.com配下の別subdomainへ逃がさず、別の所有確認済み登録可能ドメインを比較・選択する。
 
 | 調査対象 | ソース/公式仕様から確認できたこと | 未確認・採用条件 |
 |---|---|---|
@@ -1077,7 +1079,7 @@ AWS等へ移転しても同じHTTPS/host/port・browser/profileを保ち、TLS/S
 | Build Environment | 候補 `SKIP_INSTALL_DEPS=true`、env groupなし。Canonical/Session/秘密を渡さない |
 | Auto Deploy / Preview | off / generation off（After CI checks passやmanual previewも不可） |
 | 現在の実装上のOrigin | `adopted_origin=null`、`customDomains=[]`、`release_approved=false`。候補startをadapter設定票へ書き込むと拒否される |
-| 将来Custom Domain候補 | 正式採用された場合だけ `start.canovia.com` 1host。apex/www/wildcard/旧appを追加しない。現在の登録先/サービスID/CNAME targetは未存在・UNKNOWN |
+| PR #912当時のCustom Domain候補（失効） | 当時は `start.canovia.com` 1hostを提案。本人非所有のためこの値を登録しない。apex/www/wildcard/旧appを追加しない。現在の登録先/サービスID/CNAME targetは未存在・UNKNOWN |
 | 将来標準subdomain方針 | 専用Siteにcustom domain追加・検証後、Render Subdomain Disabledを候補とする。現adapterはこのfieldを持たず未知fieldとして拒否するため、登録可能な契約への反映は別wrapper PR。旧Welcome/Webの標準URLは触らない |
 | Redirect / Rewrite / 404 | routes空。hash routingなのでindexへのcatch-allなし。script/formなしroot404の固定bytes。Render既定HTTP→HTTPS以外のredirect/aliasを追加しない。未知pathの実404/status/headersは未検証 |
 | Cache / CORS / Cookie | 全path no-storeを別Header設定。既定CDN cache/304/圧縮/非GET/query/CORS/Set-Cookieは実受入待ち。loopbackのCookie/Auth拒否をRenderにも期待しない |
@@ -1148,3 +1150,75 @@ python3 -B scripts/ci/preparation_static_render.py --render-build --profile B --
 本人申告Safari成功経路とusage画面情報を新証拠として追加したが、**ORIGIN_CANDIDATE_NOT_ADOPTED / COOKIE_DNS_ACCEPTANCE_PENDING / LIVE_RENDER_NOT_RUN / PRODUCTION_NO_GO_HOLD**。e858のBLOCKを維持。次の最小判断はゲート1のためのDNS所有/競合とCookie境界の確認方針・候補Originの選択であり、ゲート2–5を一括承認しない。
 
 2026-12-01目標は維持。本人実機の基本成功経路は前進した一方、Cookie/DNS→ゲート1→wrapperの限定審査/新Source→初回公開範囲の別GO→実Render受入→一般公開GOが残るcritical path。未解決を日付でPASSへ変えず、既存Welcome・旧Web Suspended・Aiven/Canonical/Session・Auth0・production/release・課金に変更なし。今回、実hostへのHTTP/health、DNS変更、domain登録、サービス作成/設定/deploy、Origin BLOCK解除・一般公開は一切行わない。
+
+### 取得済みrpf-canovia.comへのOrigin設計更新（2026-10-27 JST、現行候補）
+
+基準main `a591109ee1eb9c279e6603ba8f06fee407626120`、PR #912/Issue #488/AGENTS.mdを再確認。**本節が上の旧候補・本人操作票のhost選択を更新する**。正式採用・Origin有効化・外部操作の承認ではない。重複正本を作らず、既存仕様だけを変更する。
+
+#### 本人決定・取得事実と確認範囲
+
+2026-10-27本人申告: Cloudflare Registrarで **rpf-canovia.comを購入済み**。管理画面表示は **Active、有効期限2027-10-27、自動更新ON**。取得を新たな本人事実として記録する。RP-FlywheelはCanoviaを含む将来製品群の上位ブランド。ドメイン取得費・請求/決済情報・連絡先・Registrar/account IDは取得/記録しない。自動更新を含む契約/設定は今回変更しない。
+
+| 役割 | 現行設計候補・状態 |
+|---|---|
+| 先行Local-first B | `https://start.rpf-canovia.com` — 先行版の現行正式採用**候補**、NOT_ADOPTED |
+| 将来Laravel正式版 | `https://app.rpf-canovia.com` — Future候補だけ、未接続・未有効化 |
+| 親ドメイン | `rpf-canovia.com` — 本人取得済み申告。apexの公開用途/サイト/redirectは未決、追加しない |
+| 旧canovia.com / start.canovia.com / app.canovia.com | **本人非所有。現行採用候補から除外**。旧Source/config例・観測・PR証拠だけを保持し、DNS制御や再取得をこの工程で要求しない |
+
+Cloudflareアカウント/Registrar/DNS zoneを読み取る専用connectorが利用可能toolに見当たらない。Sites plugin内部のCloudflare機能は本人のRegistrar/zoneへの権限ではなく転用しない。Dashboardへ認証した閲覧やAPI zone一覧/recordsの独立確認は未実施。秘密tokenの提出・新規plugin接続は要求しない。
+
+| 確認事項 | 現在の証拠/判定 |
+|---|---|
+| 取得/Active/期限/auto-renew | 上記本人画面申告。エージェントの管理画面独立検証ではない |
+| DNS zone status Active・assigned NSと権威NS一致・操作権限 | **UNKNOWN**。RegistrarのActive表示からzone Activeや個別record有効を推定しない |
+| apex/start/appの現record、wildcard、CAA、DNSSEC/DS、proxy/redirect/Workers競合 | **UNKNOWN**。新規購入でもrecord/storage履歴が空とは仮定しない |
+| 公開DNS照会 | OS resolverでrpf-canovia.com/start/appのDNSだけを照会し、全てgaierrorで取得不能。**DNS_LOOKUP_UNAVAILABLE**、NXDOMAIN/失効/購入失敗とは判定しない。HTTP/TLSなし |
+| Render紐付け/TLS/公開 | 新専用service未作成・未登録。**NOT_RUN / UNKNOWN**。本人取得申告をTLS/実公開PASSに拡張しない |
+
+公式 [Cloudflare Registrar](https://developers.cloudflare.com/registrar/get-started/register-domain/) はRegistrar利用中のCloudflare nameserver利用を要求する。将来AWS等へHostingを移す場合も、同じhostを維持してCloudflare DNSの接続先を切り替える設計が可能で、nameserver/Registrar移転を前提にしない。[Zone status](https://developers.cloudflare.com/dns/zone-setups/reference/domain-status/) はDNS zone側の状態である。公式本文確認は2026-10-27 JST。アカウント固有状態は上の未確認を維持する。
+
+#### Cookie・IndexedDB・SWの境界
+
+`rpf-canovia.com` は `canovia.com` と別の登録可能ドメイン。`start.rpf-canovia.com` は見た目の文字列末尾にcanovia.comを含むが、Cookieのdomain-matchは**DNSラベル境界**を必要とし、hyphenはdotではない。したがってDomain=canovia.com/.canovia.comや旧onrender hostのCookieは、この新hostに一致しない。CNAMEをどこへ向けてもbrowserの要求hostはstart.rpf-canovia.comであり、この関係は変わらない。[Cookie Domainの根拠](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)
+
+これは旧Cookieを新Originへ渡さない構造上の評価であり、実Cookie値/現Laravel設定/新domain上の保存Cookieが検証済みという意味ではない。旧canovia.comの所有/DNS/Cookie修正を新候補の採用条件として引きずらず、新rpf-canovia.com側のrecord・親Cookie・SW履歴を確認する。
+
+| 場所 | Cookie設計（未実装の将来方針） | storage/SW・正式版との接続 |
+|---|---|---|
+| start.rpf-canovia.com | 静的BはSession/Cookieを発行・利用しない。実配信でSet-Cookie不在と不要Cookie非送信を確認する | 専用IDB、SW非配布。既存controllerがあればIDB前STOP。他workerを解除しない |
+| app.rpf-canovia.com | Session/CSRF等は**host-only（Domain属性なし）を基本候補**とする。Secure/HttpOnly/SameSite・Pathを用途ごとに別審査。__Host- prefixも将来候補だが旧Cookie名の自動改名はしない | startとは別Origin/IDB/SW。旧LaravelのURL/Auth0/Session変更は別の正式版安全工程 |
+| apex/将来製品 | Domain=rpf-canovia.com（先頭dot含む）の共有Cookieを既定にしない。親Cookieを発行するとstartへも届き得るため別設計・同意/安全審査が必要 | RP-Flywheelのブランド共通化は共通Session/SSO/データ権限の承認ではない |
+
+startとappは同じregistrable domain/schemeではsame-siteになり得るが**same-originではない**。SameSiteだけで兄弟hostのCookie境界を守ったとみなさない。IndexedDB/SWはscheme/host/port（storageはprofileも）で分離し、親domain共有やdocument.domainで統合しない。別Origin間の継続は本人JSON Export/Importが基本で、将来Canonical Importは本人認証・同意・所有権・厳格検証・重複/衝突/atomic保存の別工程。旧webのCookie/DBを流用しない。将来同じHTTPS host/portをRender→AWSへ維持する場合はOrigin継続を狙えるが、TLS/asset/schema/SW/実機受入を別に行う。
+
+オフラインのDNS-label照合モデル5ケースで、旧canovia.com→新start不一致、rpf-canovia.com→start一致（将来リスク）、app/start相互のhost Domain不一致を確認した。これはモデル検査で、実browser Cookie/実DNS/TLSのPASSではない。製品コード/保存schema/既存preflightは変更不要と判断した。
+
+#### Render・Cloudflare接続の本人操作票（順序、全て未実行）
+
+公式 [Render Cloudflare DNS](https://render.com/docs/configure-cloudflare-dns)（Markdown取得不可のためHTML）、[Custom Domains](https://render.com/docs/custom-domains)、[Cloudflare proxy status](https://developers.cloudflare.com/dns/proxy-status/) を再確認。Renderの共通例のapex/wwwを本件へ丸写しせず、**startの単一CNAME・DNS only**を設計する。公式はRender証明書valid後のproxy化を任意とするが、本件は**検証後もDNS onlyを維持する候補**。proxy ONはcache/CORS/二重CDN等の新審査を要する。
+
+| 順序/承認 | 本人操作・期待値 | STOP・証拠 |
+|---|---|---|
+| 0. 読み取り確認 | Cloudflareでrpf-canovia.comのRegistrar表示と別にzone status、assigned NS/権威NS、DNS操作権限、start/app/apex record・wildcard・CAA/既存ruleを確認。期限/auto-renewも再確認だけ | 表示場所/時刻/判定だけ。token/決済/連絡先や全zone dumpを提出しない。zone Pending/競合/権限不明ならSTOP。NS/DS/DNSSECを勝手に変更しない |
+| 1. Hosting・Origin採用 | 専用Render・start.rpf-canovia.com一つの採用、Cookie方針・alias・費用/通知/停止責任を本人が決定 | 取得済みだけではゲート通過しない。apex/app/www/wildcardは先行配信対象へ追加しない |
+| 2. 公開可能Wrapper PR | 別承認後だけ、選択Origin/標準URL拒否・Source/profile/hash/allowlist・Headers/404/no-store・off/offを限定実装/レビュー/CI。停止用候補と初回公開範囲も準備 | 今回のADOPTED_ORIGIN=null/常時BLOCKを解除しない。変更後の固定SHA/ZIP/CIを新発行する |
+| 3. Render作成・初回試行のGO | 公開範囲を明示承認後、新専用Static Siteだけを作成。Root空/Publish .render-static-B、Auto Deploy off、Preview off、全5Header/routes空を票と照合。初回は承認済み失敗終了buildまたは審査済停止最小版に限定する案 | **Createは初回deployを開始**、標準URLは初期に外部到達し得る。Auto OFF/未告知/Origin STOPはasset非公開を保証しない。UIで安全な順序を作れなければSTOP。既存Welcome/Webは変更しない |
+| 4. Render Custom Domain | 新専用serviceのID/hostnameを読み戻し、Custom Domainsへ **start.rpf-canovia.com** だけを別承認範囲内で追加 | apex rpf-canovia.com/www/app/旧canovia.comを登録しない。CNAME targetは**新Siteの実際のonrender hostname**、未作成の今はUNKNOWN。既存Welcome/Web URLを借りない |
+| 5. DNS接続のGO | Cloudflareの **rpf-canovia.com zone** でType=CNAME、Name=start、Target=上記実hostname（scheme/pathなし）、Proxy=**DNS only（灰色雲/proxied=false）**、TTL=Auto候補を読み戻す | startの既存A/AAAA/CNAME等との競合は別承認で解消。全zoneのAAAA/CAAやapex/app/MX/TXTを一括変更しない。DNS変更は接続・公開範囲の変更として承認に含める |
+| 6. DNS/TLS確認 | 反映後、Renderの当該Custom DomainをVerifyし、domain verifiedと証明書issued/validを別々に確認。CAA制約等があれば対象範囲を再審査 | Pending/証明書不正/誤hostでSTOP。DNSだけでTLS完了にしない。proxy ONで回避しない。これは後日の実host検証で、今回はHTTP/TLSなし |
+| 7. 標準URL停止 | 少なくとも1custom domain追加後に設定可能という公式条件を満たし、主domain/TLS確認後に**新Siteだけ** Render Subdomain Disabledを読み戻す。後日標準URL404/新serviceへ非到達を受入 | custom domain追加だけでは標準URLは残る。CNAME targetがonrender hostnameでもHTTP Host/SNIはcustom hostなので、標準URL停止のためCNAMEを別先へ変えない。UI/更新順序が成立しなければSTOP |
+| 8. B本体の配備・実受入 | 全設定照合後、別GOされた新固定SourceでB本体を配信。新HTTPS/全Header/Cookie/404/query/CORS/cache/alias/停止・rollbackとSafari差分を合成入力で受入 | 初回成功配信もインターネットから到達可能な範囲を本人が判断。Cookie値/Plan/Exportを記録しない。旧Web HTTP/Resumeを受入に含めない |
+| 9. 一般公開GO | ゲート1–4（方式採用/Wrapper/作成配備/実受入）と未実施実機差分・通知/停止票の証拠を本人が確認して一般案内を判断 | Welcome導線追加、正式版app接続、Canonical Importはそれぞれ別差分/別GO。一般公開をドメイン購入から推定しない |
+
+DNS onlyは本人のCloudflare zoneのHTTP proxy/cache/HTTP analyticsを有効にする設定ではなく、当該hostのHTTPSはRender側の証明書を検証する。Cloudflare zone全体のSSL/TLS mode（Full/Flexible等）、Always Use HTTPS/Workers/Redirect/Page Rulesをこの接続票で変更しない。Cloudflare Registrarの利用とCloudflare PagesでのHosting採用は別物で、Render選定を変更しない。TLS発行やcacheの実効受入をスキップする理由にもならない。
+
+各行を「期待値/実設定/時刻/判定/非秘密証拠」で照合する。停止/rollbackはPR #912の票を新hostへ読み替え、標準URL停止だけでcustom hostも停止したと認定しない。Headers/routes/domainやIndexedDBはcode rollbackで戻らず、既存枠・停止用artifact/遮断権限を初回公開前に確認する。DNS only/proxy変更や新domain追加による公開範囲を別操作として扱う。
+
+#### Source証拠・残る承認
+
+PR #912のSource `e2984ea88d976d3296b9b6413833ff6211b8fef9` / B ZIP SHA256 `796b941d377f36e37f0210b9529bd68ddf10402b4cf786df967f0d418f5efc92` / Static CI `40430227332` は**当時の未採用候補の固定証拠**として不変更で保持する。旧originを有効化した成果物ではない。今回新しい配布物は生成せず、新文書SHAに旧hashを紐付け直さない。将来新Sourceで生成/公開可能wrapperを変更するときはSource/tree/profile/ZIP hash/設定票/関連CIを必ず再発行する。
+
+本人申告Safari成功範囲・usage画面の記録は維持し、取得済みdomainを理由に未実施負例/新HTTPS保存をPASSへ昇格しない。残る本人判断は **Hosting/新Originの正式採用 → 公開Wrapper限定PR → 作成/初回試行とDNS接続の公開範囲承認 → 実HTTPS/Header/Cookie/404/cache/停止受入 → 一般公開GO**。次の安全な確認はCloudflare zone/record/権限の読み取りであり、今回の文書統合はそれ以降の操作を承認しない。
+
+**OWNER_REPORTED_DOMAIN_ACQUIRED / ORIGIN_CANDIDATE_NOT_ADOPTED / DNS_TLS_ACCEPTANCE_PENDING / PRODUCTION_NO_GO_HOLD**。`ADOPTED_ORIGIN=null`、`release_approved=false`、Render常時BLOCKを維持。2026-12-01目標は維持するが、ドメイン取得と接続/公開成功を区別する。Render作成/設定/deploy、Cloudflare DNS変更/domain再購入、公開可能Build変更、Welcome更新、旧Laravel Resume/HTTP、Aiven/Canonical/Session/Auth0、production/release/e858、課金設定変更は一切なし。
