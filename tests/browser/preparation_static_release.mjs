@@ -39,12 +39,16 @@ try{
   assert.equal(await page.evaluate(()=>window.idbCalls),1);
   await page.getByRole('link',{name:'関心を見つける',exact:true}).first().click();
   for(let step=1;step<=6;step++){
-    for(const input of await page.locator(`[data-page="${step}"] input[value="3"]`).all())await input.check();
+    await page.locator(`[data-page="${step}"]`).waitFor({state:'visible'});
+    const inputs=await page.locator(`[data-page="${step}"] input[value="3"]`).all();
+    assert.equal(inputs.length,5);
+    for(const input of inputs)await input.check();
     if(step<6)await page.getByRole('button',{name:'次の5問',exact:true}).click();
   }
+  assert.equal(await page.locator('input[type=radio]:checked').count(),30);
   await page.locator('input[name=consent]').check();await page.getByRole('button',{name:'今の回答で結果を見る',exact:true}).click();
   await page.getByText('回答 30問 ／ わからない 0問 ／ 未回答 0問',{exact:true}).waitFor();assert.equal(await page.locator('meter').count(),8);
-  await page.getByRole('link',{name:'Canovia Future',exact:true}).click();assert.equal(await page.locator('article').count(),3);
+  await page.getByRole('link',{name:'Canovia Future',exact:true}).click();await page.getByRole('heading',{name:'Canovia Future',exact:true}).waitFor();assert.equal(await page.locator('article').count(),3);
   await page.getByRole('link',{name:'Plan',exact:true}).click();await page.getByLabel('目標',{exact:true}).fill('Synthetic bound Plan');
   await page.getByRole('button',{name:'Planを保存する',exact:true}).click();
   await page.getByRole('button',{name:'Synthetic bound Plan',exact:true}).click();await page.getByLabel('目標',{exact:true}).fill('Synthetic bound Plan edited');
