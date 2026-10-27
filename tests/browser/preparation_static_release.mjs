@@ -90,8 +90,16 @@ try{
   // test's interceptor STILL prevents external I/O. Dashboard Headers are a gate.
   const noHeaders=await model({securityHeaders:false});await noHeaders.page.goto(origin);await noHeaders.page.locator('#app h1').waitFor();
   await noHeaders.page.evaluate(()=>fetch('/forbidden-without-csp').catch(()=>{}));assert.equal(noHeaders.observed.unexpected,1);await noHeaders.context.close();
-  const parent=await model({parentCookie:true});await parent.page.goto(origin);await parent.page.locator('#app h1').waitFor();
-  assert.equal(parent.observed.parentCookieSent,true,'a parent HttpOnly cookie reaches initial static request');await parent.context.close();
+  const parent=await model({parentCookie:true});
+  const matchingCookies=await parent.context.cookies(origin);
+  assert.equal(matchingCookies.length,1,'parent-domain cookie is eligible for the selected child host');
+  assert.equal(matchingCookies[0].name,'SYNTHETIC_PARENT');assert.equal(matchingCookies[0].httpOnly,true);
+  await parent.page.goto(origin);await parent.page.locator('#app h1').waitFor();
+  assert.equal(await parent.page.evaluate(()=>document.cookie),'','HttpOnly cookie is invisible to application JS');
+  // WebKit's intercepted request metadata does not reliably expose the Cookie
+  // header. Absence here MUST NOT become a no-cookie transport guarantee.
+  if(process.env.BROWSER_ENGINE!=='webkit')assert.equal(parent.observed.parentCookieSent,true);
+  const cookieHeaderObserved=parent.observed.parentCookieSent;await parent.context.close();
   assert.equal(rejectedTransport,1,'only the intentional missing-CSP case attempted transport');
-  console.log(JSON.stringify({engine:process.env.BROWSER_ENGINE||'chromium',profile:'B',bound_origin_model:true,diagnosis_plan_backup:true,origin_query_path_sw_stop_before_idb:true,csp_difference_measured:true,parent_cookie_risk_measured:true,actual_http_requests:0,provider_runtime:'UNVERIFIED',device_verified:false,release_approved:false}));
+  console.log(JSON.stringify({engine:process.env.BROWSER_ENGINE||'chromium',profile:'B',bound_origin_model:true,diagnosis_plan_backup:true,origin_query_path_sw_stop_before_idb:true,csp_difference_measured:true,parent_cookie_scope_matched:true,parent_cookie_header_observed:cookieHeaderObserved,live_cookie_transport:'UNVERIFIED',actual_http_requests:0,provider_runtime:'UNVERIFIED',device_verified:false,release_approved:false}));
 }finally{await browser.close();}
