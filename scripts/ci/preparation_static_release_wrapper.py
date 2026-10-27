@@ -86,8 +86,8 @@ def verify_public_files(files, source, source_tree, artifact_hash, authorization
 
 
 def read_public_directory(directory):
-    root = Path(directory)
-    if root.is_symlink() or not root.is_dir():
+    root = Path(directory).absolute()
+    if root.resolve(strict=True) != root or not root.is_dir():
         raise ValueError('BAD_PUBLIC_DIRECTORY')
     files = {}
     for count, path in enumerate(root.rglob('*'), 1):

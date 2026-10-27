@@ -163,6 +163,21 @@ class DormantWrapper(unittest.TestCase):
                 with self.assertRaises((ValueError, OSError)):
                     w.verify_public_directory(dest, self.source, self.tree, self.neutral_hash, w.expected_approval())
 
+    def test_symlinked_workspace_parent_rejected_without_output(self):
+        files = self.valid_files()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            real = root / 'real'
+            real.mkdir()
+            alias = root / 'alias'
+            alias.symlink_to(real, target_is_directory=True)
+            with self.assertRaises(ValueError):
+                w.stage_files(alias, files, self.source, self.tree, self.neutral_hash, w.expected_approval())
+            self.assertEqual(list(real.iterdir()), [])
+            w.stage_files(real, files, self.source, self.tree, self.neutral_hash, w.expected_approval())
+            with self.assertRaisesRegex(ValueError, 'BAD_PUBLIC_DIRECTORY'):
+                w.verify_public_directory(alias / w.PUBLISH_DIR, self.source, self.tree, self.neutral_hash, w.expected_approval())
+
     def test_offline_receipt_reproducible_but_cannot_authorize_build(self):
         args = (self.source, self.tree, self.neutral_hash, self.root / 'neutral-B.zip')
         with tempfile.TemporaryDirectory() as temp:
