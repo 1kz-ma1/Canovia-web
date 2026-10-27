@@ -1025,3 +1025,126 @@ MCPにはworkspace plan/請求/残枠/payment登録/spend limit/default通知先
 app/UI/schema/保存・Export/Importのbytesは不変なので、進行中の本人Safari差分受入を再開始させない。Safari保存/再訪/実ファイルExport・復元の受入と、新SHAのSource/ZIP照合は必要。採用後の実HTTPS/Headers/404/Rewrite/CORS/query/Cookie/cache/alias/停止・rollbackは別受入。WebKit CIを本人Safariへ昇格しない。
 
 12/1目標への影響: 設定票と誤配布防止をCI化し、後日の配布判断材料を具体化した。残るcritical pathは費用・Origin・本人Safari→限定wrapper/Origin変更の審査→別承認の作成/配備→実効security/運用受入→公開GO。Origin未採用BLOCKを弱めて日付に合わせない。Welcome更新、旧Web Resume/HTTP、Aiven/Canonical、Session/SW、Auth0、production/release、e858、有料契約、外部公開は一切操作せず **PRODUCTION_NO_GO_HOLD**。
+
+### 公開Origin候補・最終設定パケット（2026-10-27 JST、承認前）
+
+基準main `e2984ea88d976d3296b9b6413833ff6211b8fef9` とPR #911/Issue #488を再確認。本追補は本人の次回判断に用いる審査パケットであり、Hosting/Originの正式採用・BLOCK解除・サービス作成・配備・DNS変更を許可しない。コード/設定の変更は不要と判断し、既存adapter・負例・browser CIを再利用する。過去の「Safari全体未受入」は、以下の**本人申告された成功経路だけ**を更新する。
+
+#### 本人Safari受入の更新（成功範囲限定）
+
+2026-10-27、本人申告: 通常の専用Safariプロファイルで静的アプリを表示し、診断→Plan作成を操作。Command+Qで完全終了し、同じOrigin・プロファイルで再起動後もPlanを保持。JSON Export/Importによる記録引継ぎも成功した。状態を **OWNER_REPORTED_SAFARI_POSITIVE_PATH_ACCEPTED** とする。個人Plan/Export/画面データは取得しない。
+
+申告からは検証Source SHA・Origin文字列・Safari/OS版・Export別媒体保管条件を確定できずUNKNOWN。今回固定するSourceで操作したと逆算しない。Quota/abort/競合/破損・重複Import/未知版/データ消去からの復元等の未申告負例、実Render HTTPS上での保存、全端末/恒久保存は未受入。CI合成負例と本人実機成功を別証拠として保持する。既存の成功経路を最初から再要求せず、採用Sourceとのasset差分照合と未実施差分だけを後日受け入れる。
+
+#### Origin・DNS・Cookie・SWの判断
+
+**`https://start.canovia.com` を条件付き設計候補として推奨するが、正式採用はHOLD**。所有権/DNS制御/競合なしとCookie分離を確認できなければ、同じcanovia.com配下の別subdomainへ逃がさず、別の所有確認済み登録可能ドメインを比較・選択する。
+
+| 調査対象 | ソース/公式仕様から確認できたこと | 未確認・採用条件 |
+|---|---|---|
+| 既存公開構成 | `.env.example` のcanonical候補は `https://app.canovia.com`。Welcome configは旧Render Webを宛先にし、既存DNS/TLS仕様には2026-10-15のapp DNS_UNVERIFIEDという日付付き証拠がある | 現在のapex/www/app/startの宛先・DNS所有/制御・wildcard/CAA/別provider routingはUNKNOWN。古いDNS観測を現在状態とみなさない |
+| GitHubのDNS仕様 | `PRELAUNCH_STATIC_PUBLIC_DNS_TLS_ACCEPTANCE_2026_10_15.md`、同readonly probe、`.env.example`/`config/canovia.php`/Welcome sourceを確認。startの既存割当・権威DNS zoneの正本は発見できなかった | repoで見つからないことは空き/所有権証明ではない。既存DNS/TLS probeも今回は起動しない |
+| 今回の名前解決 | DNS-over-HTTPS資料取得はツールで不可。OS resolverのDNS照会だけをcanovia.com/www/app/startへ実行したが全てgaierrorで取得不能。各hostへのHTTP/TLS接続なし | **DNS_LOOKUP_UNAVAILABLE**。NXDOMAIN/空き/ドメイン失効/全世界の障害と判定しない。所有/利用可否はUNKNOWN |
+| Laravel Session | `config/session.php`: cookie名 `pace-keeper-session`、path既定 `/`、domainは `env('SESSION_DOMAIN')`、secureはproduction既定true、HttpOnly既定true、SameSite既定lax。`.env.example`はSESSION_DOMAIN=null | 実env/config cache・過去ブラウザ保存CookieのDomain/Path/期限はUNKNOWN。templateのnullを実host-onlyの証拠にしない。Session以外のXSRF/他app/親domain Cookieも対象 |
+| 親Domain Cookie | Domain=canovia.com（先頭dot有無は同じ）なら条件に合うstartにも送られる。CNAME先がRenderでもbrowserの要求hostはstart | 独立Origin/HttpOnly/Secure/SameSite/CSP/no-storeでは最初のCookie送信を防げない。JSのOrigin STOPもHTTP後である。秘密CookieがCDNへ届かない境界を確認するまで採用HOLD |
+| Service Worker | Laravel sourceは `resources/js/instant-start.mjs` で `/sw.js` 登録（scope指定なし、root scope）。SW scopeはsame-origin内。別hostのapp/apex/旧Render SWはstartを制御しない | start自体の過去利用/SW残留はUNKNOWN。先行配布はSWなし、既存controllerがあればIDB前STOP。他SWを解除しない。旧Laravel native用解除コードも先行配布には含めない |
+| IndexedDB | scheme/host/portとbrowser/profileに束縛。startとapp/apex/onrenderは別DB。現在のBは専用namespace | Cookieのsite/domain境界と区別する。同domainでもhost違いを共有扱いしない。将来Laravelの自動Import/同Originを仮定しない |
+
+境界の根拠は [Cookie Domain/属性](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)、[SW same-origin制約](https://developer.mozilla.org/en-US/docs/Web/API/ServiceWorkerContainer/register)、[IndexedDB same-origin](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) の本文を確認。Cookieのsame-siteとstorageのsame-originを混同しない。
+
+Cookie判定の非秘密操作票: 旧Webを開かず、既に保管されたbrowser Cookieメタデータや許可済み設定記録からDomain/Path/Secure/HttpOnly/期限とhost-onlyの有無を本人がローカルで確認する。値/token/全Cookie dump/Planを提出しない。ローカル確認ができなければUNKNOWNで停止。既存envをhost-onlyへ変更しても過去Domain Cookieが消えるとは限らず、旧Cookieの失効/Canonical Session変更は別の安全工程。今回は変更・削除しない。新しい専用profileでCookieがないことだけを一般利用者の安全証明にしない。
+
+| Origin方式 | 利点 | 採用条件/負担 |
+|---|---|---|
+| start.canovia.com | ブランドと将来provider移転時のURL継続。appとはIDB/SW分離 | 親Domain Cookieの全体方針・DNS所有/競合を要確認。条件未達はHOLD |
+| 別の所有確認済み登録可能ドメイン上の専用host | canovia.comのDomain Cookieが一致せず、既存appのSession/SWから分離しやすい | 未所有domainの登録/購入は今回禁止。所有・TLS・更新費・名称は未確定。JSON Export/Importと将来Canonical Importは別工程 |
+| 新専用onrender URLを主Originにする | canovia.comのDomain Cookieが一致しない | 将来custom domain/AWSへ変更すると別OriginになりIDB継続が切れる。主Originとしては今回は推奨しない。作成直後のasset公開面としては別途考慮 |
+
+AWS等へ移転しても同じHTTPS/host/port・browser/profileを保ち、TLS/SW/asset/schema互換を受け入れれば通常IDB Originを維持できる。DNS移転はstorage移送ではなく、消去/別profileまで復元するものではない。別Originへ移す場合は本人Export/Importが必要。Canonical Importは本人認証・同意・所有権/厳格検証の別工程を保持する。
+
+#### B固定Source・登録候補パケット
+
+このパケットの**検証Sourceは下記e2984で固定**し、文書PRのHEAD/統合後mainと混同しない。#911の検証HEAD799708adと同treeでもmanifestのSource SHAが変わるので、ZIPは新しく再算出した。将来BLOCK解除wrapper/Origin設定を変更すればSource/ZIP/設定票/CIを全て再発行する必要があり、このhashのまま公開可能にはならない。
+
+| 項目 | 現在の検証値/本人が後日照合する候補 |
+|---|---|
+| Source SHA | `e2984ea88d976d3296b9b6413833ff6211b8fef9` |
+| Source tree | `c34e0a74539f647f04ed049606ba05d4e0e167e6` |
+| B ZIP SHA256 | `796b941d377f36e37f0210b9529bd68ddf10402b4cf786df967f0d418f5efc92` |
+| 閉じた公開集合 | 25files、manifest込み1,540,504 bytes、ZIP1,543,132 bytes。PHP/.env/旧JS/SW/fixture/adapter/設定票/ZIP自体をPublishに追加しない |
+| Root / Publish | repo root（空文字） / `.render-static-B`。`.`/`public`/Welcome rootを登録しない |
+| Git / Python | Python3.9+、Git metadata/HEAD tree/blob、clean checkout、full SHA一致。全履歴は不要だが実Render条件はUNKNOWN。欠落をfallbackで緩和しない |
+| Build Environment | 候補 `SKIP_INSTALL_DEPS=true`、env groupなし。Canonical/Session/秘密を渡さない |
+| Auto Deploy / Preview | off / generation off（After CI checks passやmanual previewも不可） |
+| 現在の実装上のOrigin | `adopted_origin=null`、`customDomains=[]`、`release_approved=false`。候補startをadapter設定票へ書き込むと拒否される |
+| 将来Custom Domain候補 | 正式採用された場合だけ `start.canovia.com` 1host。apex/www/wildcard/旧appを追加しない。現在の登録先/サービスID/CNAME targetは未存在・UNKNOWN |
+| 将来標準subdomain方針 | 専用Siteにcustom domain追加・検証後、Render Subdomain Disabledを候補とする。現adapterはこのfieldを持たず未知fieldとして拒否するため、登録可能な契約への反映は別wrapper PR。旧Welcome/Webの標準URLは触らない |
+| Redirect / Rewrite / 404 | routes空。hash routingなのでindexへのcatch-allなし。script/formなしroot404の固定bytes。Render既定HTTP→HTTPS以外のredirect/aliasを追加しない。未知pathの実404/status/headersは未検証 |
+| Cache / CORS / Cookie | 全path no-storeを別Header設定。既定CDN cache/304/圧縮/非GET/query/CORS/Set-Cookieは実受入待ち。loopbackのCookie/Auth拒否をRenderにも期待しない |
+
+現在の固定Build Command（**必ずexit2、実Renderへ登録・実行しない**）:
+
+```text
+python3 -B scripts/ci/preparation_static_render.py --render-build --profile B --source-sha e2984ea88d976d3296b9b6413833ff6211b8fef9 --artifact-sha256 796b941d377f36e37f0210b9529bd68ddf10402b4cf786df967f0d418f5efc92
+```
+
+全Security Headersの登録候補（各path `/*`、重複/部分path/余剰設定なし。`_headers`をRenderが自動処理するとは仮定しない）:
+
+| Name | Value |
+|---|---|
+| Content-Security-Policy | `default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'none'; worker-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'` |
+| Referrer-Policy | `no-referrer` |
+| X-Content-Type-Options | `nosniff` |
+| Permissions-Policy | `camera=(), microphone=(), geolocation=(), payment=()` |
+| Cache-Control | `no-store` |
+
+オフライン照合は独立clean checkoutを上記Sourceへdetachし、新しい私有一時dirで既存builder→adapter `--profile B --source-sha <上記SHA> --artifact <生成B.zip> --artifact-sha256 <上記hash> --plan-out <一時dir>/B-plan.json --stage <一時dir>/.render-static-B` を実行する。後日 `--plan <同設定票>` で再検査できる。設定票はRender API requestではなく、Dashboard設定の現物と照合する入力票。出力はoffline PASSだけ、実Render/Origin/配備はUNKNOWN/BLOCKを維持する。今回は2回の同Source生成ZIPのcmp一致、配布12tests・adapter10tests、設定票生成/stage/再検査を確認。既存browser試験のOrigin不一致IDB呼出0、profile/Source/hash/余剰asset/Header/Rewrite/Auto/Preview/未採用build負例を再利用し、製品コードの追加は不要。固定SourceのStatic CI Run/文書PR/統合SHAはIssue #488へ記録する。
+
+#### onrender・DNS・初回公開範囲の操作条件
+
+公式 [Custom Domains](https://render.com/docs/custom-domains) / [DNS Providers](https://render.com/docs/configure-other-dns) を2026-10-27 JSTに再確認（Markdown取得非対応のためHTML）。custom domainが少なくとも1件あれば標準subdomainを無効化でき、無効化後の標準URLは404・serviceへ到達しない。実際の新Siteでは未検証。custom domainを追加しただけでは標準URLは残る。実host停止とURLの非掲載を混同しない。
+
+- 本人操作時は、既存zoneのstartのA/AAAA/CNAME/TXT・wildcard、apexのNS/CAA、domain forwarding/proxy、既存Render紐付けを読み取り、競合・所有/権限を確認。取得不能/用途不明ならSTOP。新Siteから返る**実際の専用Render hostname**をCNAME候補targetにする。Welcome/旧Webのhostnameを流用しない。
+- DNS変更は別承認後、startの必要recordだけ。apex/www/app/全zoneのAAAAやCAAを一括変更しない。継承CAAがTLSを妨げる場合は全体影響を別審査。wildcard/apex方式は今回採用しない。DNS→TLS verified→標準subdomain Disabledを現物で読み戻す。CNAME先のhostnameとアクセス時のHTTP Host/SNIは区別する。
+- **新規作成は初回build/deployを開始し、標準URLは原則有効**。Auto Deploy OFFは初回deployを抑止せず、Origin STOP/noindex/未告知はassetの認可ではない。既知URLのHTML/JS/画像が第三者に取得され得る前提で判断する。
+- 推奨する後日手順は、最初は承認済みの失敗終了build/停止用最小成果物に限定し、B本体の初回成功配信より先にHeaders/Domain/標準URL停止を確認する方式。現在のBLOCK buildを用いた作成も今回は未承認。providerの初期error画面・URL露出・失敗build分数もゼロ/非公開と保証しない。停止用成果物を選ぶ場合は、別固定Source/hash・実効Header・公開範囲の審査を先に行う。
+- 作成画面でoff/Headers等を事前登録できる範囲、custom domain未検証状態での標準URL停止可否・TLS更新の順序は実操作未検証。UIがこの順序を満たさなければクリックを進めずSTOPし、本人が初回の公開範囲を再判断する。未知の新service URLを今回作ったり、試験配備で確かめたりしない。
+
+#### 本人操作票・承認ゲート（未実行）
+
+各票は「期待値 / 実際の読み戻し値 / 判定 / 確認時刻・非秘密証拠」を記録する。UNKNOWN/差異をPASSにせず、秘密/請求個人情報/生Cookie/Plan/ExportはGitHubへ置かない。
+
+| ゲート | 本人判断/操作票 | STOP条件・許可に含まれないこと |
+|---|---|---|
+| 1. Hosting・Origin正式採用 | 専用Render、候補host所有/DNS制御・競合なし、親Cookie/旧SW境界、全alias、費用/停止責任を確認し、採用hostを一つ選択 | UNKNOWNのまま採用しない。別登録ドメインなら新しい候補票が必要。作成・DNS変更・wrapper解除は含まない |
+| 2. 公開可能Wrapper限定PR | ゲート1後、選択Origin/標準URL拒否、Source/profile/hash/clean/allowlist、schema互換・停止候補をレビュー。承認された場合だけ限定実装→負例/CI→main | 現BLOCKをJSON/envで解除しない。変更後のSource/tree/ZIP/設定票/CIを再発行。本票のe2984/hashを流用しない |
+| 3. 作成・初回配備 | 新専用service名/ID・workspace確認、Root/Publish/Build/SHA/hash、Auto/Preview off、全5Header/routes、Domain/標準URL方針、初回に公衆が取得し得る範囲、失敗時停止票を本人が明示承認 | **Createボタンはdeploy開始**。作成だけの無公開操作とは扱わない。DNS/Domain/設定変更範囲も別途明示。既存Welcome/Web/DBへ触れない |
+| 4. 実配信の受入 | 新Siteだけを対象にHTTPS/TLS・主host/alias・Header全一致・Cookie非送信/Set-Cookie不在・未知404・query/非GET/CORS/cache/古いmodule・停止/rollbackを確認。合成入力で同Origin Safari保存/再訪/Export差分も確認 | 実Cookieを確認前に旧Cookieのあるprofileで候補hostを開かない。旧Web HTTPは含まない。raw headerのCookie値を提出しない。結果は実条件の範囲だけ |
+| 5. 一般公開GO | ゲート1–4と未実施実機項目、費用・通知、privacy/Export保管説明を本人が総合判断 | 未告知の配備も既に外部到達し得る。一般案内/Welcome導線変更は別差分・別GO。Canonical/e858は別HOLD |
+
+公開後の停止/rollback票（今は手順設計のみ）: owner/operatorを停止責任者として本人が指名し、連絡先は私有管理。事故時は新Siteへの更新・自動経路を止め、事前承認済みinert停止版の手動配信またはproviderが実際に提供する遮断を選ぶ。初回公開前に対応可否・必要権限・Source/hashを確定し、まだ存在しないSuspend機能や保持artifactを前提にしない。Auto Deploy OFFだけ/標準URL停止だけ/DNS削除だけでcustom domain配信停止と認定しない。全custom host・標準URL・previewを対象に状態を確認し、取得済みtab/cacheは即回収できないと説明する。
+
+[Render Rollback仕様](https://render.com/docs/rollbacks)ではbuild artifactは戻せてもstatic Headers/routes/custom domainsは現設定のまま。成功artifactの保持有無・互換schemaを先に確認し、コードと設定票を別々に照合/復旧する。IndexedDB/Exportは戻らない。初回には安全な旧deployがないため停止候補なしで一般公開しない。Clear-Site-Data/強制DB消去・downgradeは使わない。DNS/Origin切替や秘密Cookie露出が疑われれば新配備をHOLDし、旧Canonical Sessionへ手を出す工程は別判断とする。
+
+#### 費用・通知・使用量（本人画面申告、2026-10-27時点）
+
+| メーター | 本人が確認した表示 | 解釈の限界 |
+|---|---|---|
+| 通信量 | 738 MB / 5 GB | 残量は表示単位の単純計算で約4.26GB。月末予測・帯域hard capではない |
+| Build Pipeline | 295 / 500分 | 単純差205分。新Site/既存serviceのbuild・失敗buildが共有消費する |
+| Free Instance | 238.55 / 750時間 | 差511.45時間。Staticに常駐Laravelを作らないが、実課金メーターへの増分は未測定 |
+| サービス | 7 / 25 | 差18。新Staticの実カウント/他resource消費は作成前再確認 |
+| Custom Domain | 1 / 2 | 差1。start 1hostだけなら表示上は枠内の見込み。登録後の算定・別domain追加は未確認 |
+| Build Pipeline追加支出上限 | $0/月 | **本人画面申告のpipeline capだけ**。帯域の課金上限、実plan、支払い登録有無、通知受信を証明しない |
+
+公式 [Static Sites](https://render.com/docs/static-sites) はHobby/Pro/Scale custom domain枠2/15/25、枠超過1件$0.25/月と記載。今回の1/2表示を実plan契約の証明にしない。domain登録/更新費・支払い/請求情報は未取得・UNKNOWNで、記録しない。[Bandwidth](https://render.com/docs/outbound-bandwidth)のinternet超過$0.15/GBと支払い有無による超過請求/停止の分岐、[Pipeline](https://render.com/docs/build-pipeline)のcap到達時build停止は一般仕様。実際の請求適用・通知到達は別確認。
+
+新Siteの利用増分は、build回数×実Render所要分（現在UNKNOWN）と配信bytes×request数。全公開集合1.54MBを1,000回全取得する仮定なら圧縮/headers等を除き約1.54GBであり、実利用者数や転送量の保証ではない。no-store・bot・再読込・既存serviceの消費を見込む。StaticのためWeb常駐時間を増やす設計ではないが、実測前に全費用0とは認定しない。枠内でも失敗deployを無限に繰り返さず、cap$0では停止版の再buildも枠不足で困り得るため、既存artifact保持/遮断経路を作成前に決める。
+
+運用案: owner/operatorが月初に枠/plan/通知先・capを再確認し、公開中は週次と各更新前後に使用量/失敗build/既存service影響を確認。表示上限の80%で残月予測を見直し、90%・予算/通知不明・急増時は新配備/一般案内をHOLDして停止責任者が判断する案とする（本人の運用採用は未決、通知設定/自動監視は作成しない）。停止しても既発生請求や旧tabの通信は回収できない。pipeline capを帯域制限として説明せず、料金通知と障害通知の受信確認は秘密なしの判定だけを残す。
+
+#### 現在地と12月1日
+
+本人申告Safari成功経路とusage画面情報を新証拠として追加したが、**ORIGIN_CANDIDATE_NOT_ADOPTED / COOKIE_DNS_ACCEPTANCE_PENDING / LIVE_RENDER_NOT_RUN / PRODUCTION_NO_GO_HOLD**。e858のBLOCKを維持。次の最小判断はゲート1のためのDNS所有/競合とCookie境界の確認方針・候補Originの選択であり、ゲート2–5を一括承認しない。
+
+2026-12-01目標は維持。本人実機の基本成功経路は前進した一方、Cookie/DNS→ゲート1→wrapperの限定審査/新Source→初回公開範囲の別GO→実Render受入→一般公開GOが残るcritical path。未解決を日付でPASSへ変えず、既存Welcome・旧Web Suspended・Aiven/Canonical/Session・Auth0・production/release・課金に変更なし。今回、実hostへのHTTP/health、DNS変更、domain登録、サービス作成/設定/deploy、Origin BLOCK解除・一般公開は一切行わない。
