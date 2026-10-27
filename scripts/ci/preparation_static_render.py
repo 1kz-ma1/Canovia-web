@@ -11,6 +11,10 @@ import zipfile
 
 import preparation_static_build as b
 
+# Owner-selected public Origin, recorded in the OFFLINE review packet only.
+# The distributed app and Render build remain blocked until separate release gates.
+OWNER_SELECTED_ORIGIN = 'https://start.rpf-canovia.com'
+
 
 def plan_for(source, profile, artifact_hash):
     if not isinstance(source, str) or not re.fullmatch(r'[0-9a-f]{40}', source):
@@ -23,7 +27,8 @@ def plan_for(source, profile, artifact_hash):
                f' --profile {profile} --source-sha {source} --artifact-sha256 {artifact_hash}')
     # This is our review format, NOT a Render API request or auto-synced Blueprint.
     return dict(kind='PREPARATION_RENDER_OFFLINE_PLAN_V1', source_sha=source,
-                profile=profile, artifact_sha256=artifact_hash, adopted_origin=None,
+                profile=profile, artifact_sha256=artifact_hash,
+                owner_selected_origin=OWNER_SELECTED_ORIGIN, adopted_origin=None,
                 release_approved=False, rootDir='', buildCommand=command,
                 publishPath=f'.render-static-{profile}', autoDeployTrigger='off',
                 previews={'generation': 'off'}, routes=[],

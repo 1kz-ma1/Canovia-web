@@ -1222,3 +1222,16 @@ PR #912のSource `e2984ea88d976d3296b9b6413833ff6211b8fef9` / B ZIP SHA256 `796b
 本人申告Safari成功範囲・usage画面の記録は維持し、取得済みdomainを理由に未実施負例/新HTTPS保存をPASSへ昇格しない。残る本人判断は **Hosting/新Originの正式採用 → 公開Wrapper限定PR → 作成/初回試行とDNS接続の公開範囲承認 → 実HTTPS/Header/Cookie/404/cache/停止受入 → 一般公開GO**。次の安全な確認はCloudflare zone/record/権限の読み取りであり、今回の文書統合はそれ以降の操作を承認しない。
 
 **OWNER_REPORTED_DOMAIN_ACQUIRED / ORIGIN_CANDIDATE_NOT_ADOPTED / DNS_TLS_ACCEPTANCE_PENDING / PRODUCTION_NO_GO_HOLD**。`ADOPTED_ORIGIN=null`、`release_approved=false`、Render常時BLOCKを維持。2026-12-01目標は維持するが、ドメイン取得と接続/公開成功を区別する。Render作成/設定/deploy、Cloudflare DNS変更/domain再購入、公開可能Build変更、Welcome更新、旧Laravel Resume/HTTP、Aiven/Canonical/Session/Auth0、production/release/e858、課金設定変更は一切なし。
+
+
+### 2026-10-27 — 本人の正式Origin選定（公開・実行には未接続）
+
+**Owner decision:** Local-first Bの長期運用Originとして `https://start.rpf-canovia.com` を正式に選定し、Hosting方式は**既存Welcomeと分離した専用Render Static Site**（手動Deploy、Auto Deploy OFF、Preview OFF）とする。Cloudflare本人画面で `rpf-canovia.com` のDNS zoneはActive、Recordは未設定と申告済み。これらは本人申告であり、権威DNS/NS、CNAME実値、TLS/Render実測の独立検証ではない。
+
+- 現在のRenderオフライン審査票 `PREPARATION_RENDER_OFFLINE_PLAN_V1` に `owner_selected_origin=https://start.rpf-canovia.com` を厳格に固定する。異なるhost/schemeや改変・余剰fieldは拒否し、B/Cで同じ選定Originを参照する。Cを正式公開する判断ではない。
+- **区分**: `owner_selected_origin` は決裁された将来のURL、`adopted_origin=null` は配布物への実装・適用が未了という技術フラグ。現行生成 `src/settings.mjs` は `ADOPTED_ORIGIN=null`、manifestは `release_approved=false`、`--render-build` は常時exit2で非公開のまま。設定票の選定Originを足しただけではHTTP公開できない。
+- 公開可能なBuild Wrapper・runtime Origin bindingとその回帰テストは別の限定PRと必要な承認でのみ変更する。変更後のclean source SHA/tree、B ZIP SHA256、Render設定票、CIを改めて発行する。過去のe2984/PR#912のZIP hashを新Sourceへ紐付けない。
+- **外部作業は一切未承認**：Render新Site作成（初回Deployが走り得る）、DNS CNAME追加、Headers/Routes/Standard URL設定、Build実行、外部配信/課金、Welcome更新、旧Laravel Resume、Aiven、production/release、および一般公開GO。Cloudflare DNS上のstartレコードが未設定なので、現時点で公開URLの実DNS/TLS受入は未実施。
+- 次のOwnerゲート：新Site作成時の公開範囲と停止手段、支払方法/帯域費用・通知、実RenderのBuild環境・Headers・Cookie/404/cache/aliasの受入、独立Safari HTTPS保存/Export/Import。Custom Domain/TLS検証後の実配信を安全に進める順序を先に審査し、Auto Deploy OFFやnoindexを非公開保証としない。
+
+**HOSTING_ORIGIN_OWNER_SELECTED / RUNTIME_ORIGIN_NOT_BOUND / RENDER_BUILD_BLOCKED / LIVE_RENDER_NOT_RUN / PRODUCTION_NO_GO_HOLD**。
