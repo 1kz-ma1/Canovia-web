@@ -70,6 +70,11 @@ try{
   }
   const sw=await model({init:()=>Object.defineProperty(navigator,'serviceWorker',{value:{controller:{synthetic:true},getRegistrations(){throw Error('MUST_NOT_TOUCH_SW');}}})});
   await sw.page.goto(origin);await sw.page.getByText(stop,{exact:true}).waitFor();assert.equal(await sw.page.evaluate(()=>window.idbCalls),0);await sw.context.close();
+  for(const unavailable of [false,true]){
+    const registration=await model({init:()=>{const failed=location.hash==='#sw-api-failed';Object.defineProperty(navigator,'serviceWorker',{value:{controller:null,getRegistrations(){return failed?Promise.reject(Error('SYNTHETIC_SW_API_FAILURE')):Promise.resolve([{unregister(){throw Error('MUST_NOT_UNREGISTER');}}]);}});}});
+    await registration.page.goto(origin+(unavailable?'#sw-api-failed':''));await registration.page.getByText(stop,{exact:true}).waitFor();
+    assert.equal(await registration.page.evaluate(()=>window.idbCalls),0,'registered but not controlling SW also stops before IDB');await registration.context.close();
+  }
   // Missing CSP demonstrably loses the transport guarantee, even though this
   // test's interceptor STILL prevents external I/O. Dashboard Headers are a gate.
   const noHeaders=await model({securityHeaders:false});await noHeaders.page.goto(origin);await noHeaders.page.locator('#app h1').waitFor();

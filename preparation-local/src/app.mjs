@@ -54,6 +54,10 @@ try{
   const local=['127.0.0.1','localhost','[::1]'].includes(location.hostname)&&['http:','https:'].includes(location.protocol);
   const accepted=ADOPTED_ORIGIN===null?local:location.origin===ADOPTED_ORIGIN;
   if(!accepted||!['/','/index.html'].includes(location.pathname)||location.href.split('#')[0].includes('?')||navigator.serviceWorker?.controller)throw Error('ORIGIN_NOT_ACCEPTED');
+  if(navigator.serviceWorker){
+    try{if((await navigator.serviceWorker.getRegistrations()).length)throw Error('EXISTING_SW');}
+    catch{throw Error('ORIGIN_NOT_ACCEPTED');}
+  }
   repo=await Repository.open();state=validate(await repo.read());
   message.textContent='';
   document.querySelector('#storage-notice').textContent=PROFILE==='B'?'端末内保存です。消去・紛失で失う場合があります。定期的にExportを別保管してください。':'保存なしのPreviewです。入力は再読み込み・終了で消えます。';
