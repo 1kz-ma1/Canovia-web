@@ -77,7 +77,7 @@ jobs:
           # Keep Ubuntu's signed packages; avoid slow Azure mirror transfers.
           for PREP_APT_SOURCE in /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources; do
             if [ -f "$PREP_APT_SOURCE" ]; then
-              sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' "$PREP_APT_SOURCE"
+              sudo sed -i 's|azure[.]archive[.]ubuntu[.]com|archive.ubuntu.com|g' "$PREP_APT_SOURCE"
             fi
           done
           "$RUNNER_TEMP/static-browser/node_modules/.bin/playwright" install --with-deps chromium webkit
