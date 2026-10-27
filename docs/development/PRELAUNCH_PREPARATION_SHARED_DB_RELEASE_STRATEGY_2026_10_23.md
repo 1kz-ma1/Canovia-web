@@ -1235,3 +1235,14 @@ PR #912のSource `e2984ea88d976d3296b9b6413833ff6211b8fef9` / B ZIP SHA256 `796b
 - 次のOwnerゲート：新Site作成時の公開範囲と停止手段、支払方法/帯域費用・通知、実RenderのBuild環境・Headers・Cookie/404/cache/aliasの受入、独立Safari HTTPS保存/Export/Import。Custom Domain/TLS検証後の実配信を安全に進める順序を先に審査し、Auto Deploy OFFやnoindexを非公開保証としない。
 
 **HOSTING_ORIGIN_OWNER_SELECTED / RUNTIME_ORIGIN_NOT_BOUND / RENDER_BUILD_BLOCKED / LIVE_RENDER_NOT_RUN / PRODUCTION_NO_GO_HOLD**。
+
+
+### 2026-10-27 — 公開Wrapperの非稼働準備（実配備承認なし）
+
+専用Render Static Siteの初回配備前に、選定Origin `https://start.rpf-canovia.com` 向けの**レビュー用・非稼働**Build Wrapper `scripts/ci/preparation_static_release_wrapper.py` を追加する。ソースの直接HTTP配信やRender設定を変更しない。CIでは明示的な合成Authorizationだけで閉じた25ファイルの変換を検査するが、**実行CLIの `RELEASE_AUTHORIZATION=None` は不変**で、環境変数・CLIや既存planを指定しても `PREPARATION_RELEASE_BLOCK` / exit 2となる。既存のRender設定票が指す `--render-build` も常時BLOCKのまま。
+
+将来、別途本人が対象Source・ハッシュ、公開範囲、費用と停止手段、RenderのHeader/Custom Domain/標準URLとTLSの順序を承認したときのみ、独立したレビューPRでソースコード内Authorizationを切替え、`buildCommand` を再審査し、新固定Source/ZIP SHAと全CIを再発行する。Authorizationだけを変更しても、既存Render設定票が直接公開可能になるわけではない。
+
+Render connectorの`create_static_site`はAuto Deploy、branch、buildCommand、publishPath、env等の部分設定のみを受け取り、Preview OFF、全5Headers、custom domain、Render標準URL停止、404 routesを同一操作で保証できない。そのため**このconnectorで新Siteを即時作成しない**。Dashboard操作の場合もCreate自体が初回deployを始め得るため、まず失敗終了buildと現物表示を確認する別GO、続いてservice ID読取→Headersと404→custom domain/DNS/TLS→標準URL停止→B実配布という段階審査を維持。DNS変更・Build解除・Render作成/デプロイ・Welcome/Canonical/production変更なし。
+
+**B_WRAPPER_PREPARED_BUT_DORMANT / OWNER_RELEASE_APPROVAL_REQUIRED / PRODUCTION_NO_GO_HOLD**。
