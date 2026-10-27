@@ -1,4 +1,4 @@
-"""Synthetic offline review of the dormant Render publication wrapper."""
+"""Source-only B build activation, isolated CLI builds, and offline boundaries."""
 import json
 import os
 from pathlib import Path
@@ -13,7 +13,7 @@ import preparation_static_release_wrapper as w
 import preparation_static_release_review as review
 
 
-class DormantWrapper(unittest.TestCase):
+class AuthorizedSourceWrapper(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = tempfile.TemporaryDirectory(prefix='preparation-release-review-')
@@ -30,18 +30,80 @@ class DormantWrapper(unittest.TestCase):
         return w.approved_public_files(self.source, 'B', self.neutral_hash,
                                        w.expected_approval(), self.tree)
 
-    def test_default_cli_remains_blocked_even_with_env_overrides(self):
+    def clone_checkout(self, name):
+        target = self.root / name
+        subprocess.run(['git', 'clone', '--shared', '--no-checkout', str(b.ROOT), str(target)],
+                       check=True, capture_output=True)
+        subprocess.run(['git', 'checkout', '--detach', self.source], cwd=target,
+                       check=True, capture_output=True)
+        return target
+
+    def command(self, checkout, **overrides):
+        pins = dict(source_sha=self.source, source_tree=self.tree,
+                    profile='B', artifact_sha256=self.neutral_hash)
+        pins.update(overrides)
+        return [sys.executable, '-B', str(checkout / 'scripts/ci' / Path(w.__file__).name)] + [
+            v for key, value in pins.items() for v in ('--' + key.replace('_', '-'), value)]
+
+    def test_missing_or_changed_source_authorization_cannot_be_elevated_by_env(self):
         with patch.dict(os.environ, {'ADOPTED_ORIGIN': w.OWNER_SELECTED_ORIGIN,
                                       'RELEASE_APPROVED': 'true',
                                       'PREPARATION_RELEASE_AUTHORIZATION': 'true'}):
-            command = [sys.executable, '-B', str(Path(w.__file__)),
-                       '--source-sha', self.source, '--profile', 'B',
-                       '--artifact-sha256', self.neutral_hash]
-            result = subprocess.run(command, cwd=b.ROOT, capture_output=True, text=True)
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(result.stdout, '')
-        self.assertEqual(result.stderr, 'PREPARATION_RELEASE_BLOCK\n')
+            for authorization in (None, {}, dict(w.expected_approval(), profile='C'),
+                                  dict(w.expected_approval(), origin='https://app.rpf-canovia.com'),
+                                  dict(w.expected_approval(), release_approved=1)):
+                with patch.object(w, 'RELEASE_AUTHORIZATION', authorization), self.assertRaisesRegex(
+                        ValueError, 'OWNER_RELEASE_APPROVAL_REQUIRED'):
+                    w.main()
         self.assertFalse((b.ROOT / w.PUBLISH_DIR).exists())
+
+    def test_literal_authorization_has_only_owner_approved_b_origin(self):
+        self.assertEqual(w.RELEASE_AUTHORIZATION, {
+            'kind': 'PREPARATION_B_PUBLICATION_OWNER_APPROVAL_V1',
+            'origin': 'https://start.rpf-canovia.com', 'profile': 'B', 'release_approved': True})
+        with patch.object(w, 'OWNER_SELECTED_ORIGIN', 'https://app.rpf-canovia.com'):
+            with self.assertRaisesRegex(ValueError, 'OWNER_RELEASE_APPROVAL_REQUIRED'):
+                w.main()
+
+    def test_real_cli_builds_two_isolated_checkouts_reproducibly_without_overwrite(self):
+        expected = w.verify_public_files(self.valid_files(), self.source, self.tree,
+                                         self.neutral_hash, w.expected_approval())
+        for name in ('cli-one', 'cli-two'):
+            checkout = self.clone_checkout(name)
+            result = subprocess.run(self.command(checkout), cwd=checkout, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stderr, '')
+            logged = json.loads(result.stdout)
+            self.assertIs(logged.pop('source_build_authorized'), True)
+            self.assertEqual(logged, expected)
+            destination = checkout / w.PUBLISH_DIR
+            self.assertEqual(w.verify_public_directory(destination, self.source, self.tree,
+                                                       self.neutral_hash, w.expected_approval()), expected)
+            self.assertEqual({p.name for p in checkout.glob('.preparation-release-stage-*')}, set())
+            second = subprocess.run(self.command(checkout), cwd=checkout, capture_output=True, text=True)
+            self.assertEqual(second.returncode, 2)
+            self.assertEqual(second.stdout, '')
+            self.assertEqual(second.stderr, 'PREPARATION_RELEASE_BLOCK\n')
+            self.assertEqual(w.read_public_directory(destination), self.valid_files())
+
+    def test_cli_rejects_all_wrong_pins_profiles_and_unverified_options(self):
+        checkout = self.clone_checkout('cli-negative')
+        commands = [self.command(checkout, **change) for change in (
+            {'source_sha': '0' * 40}, {'source_sha': self.source[:8]},
+            {'source_tree': '0' * 40}, {'artifact_sha256': '0' * 64}, {'profile': 'C'})]
+        commands += [self.command(checkout) + [key, 'SYNTHETIC_DO_NOT_LOG'] for key in (
+            '--origin', '--authorization', '--plan', '--publish-directory')]
+        with patch.dict(os.environ, {'ADOPTED_ORIGIN': 'https://app.rpf-canovia.com',
+                                      'RELEASE_APPROVED': 'true',
+                                      'PREPARATION_RELEASE_AUTHORIZATION': 'SYNTHETIC_DO_NOT_LOG'}):
+            for command in commands:
+                with self.subTest(command=command):
+                    result = subprocess.run(command, cwd=checkout, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 2)
+                    self.assertEqual(result.stdout, '')
+                    self.assertEqual(result.stderr, 'PREPARATION_RELEASE_BLOCK\n')
+                    self.assertFalse((checkout / w.PUBLISH_DIR).exists())
+                    self.assertEqual(list(checkout.glob('.preparation-release-stage-*')), [])
 
     def test_exact_review_assets_have_only_owner_selected_origin(self):
         files = self.valid_files()
@@ -178,7 +240,7 @@ class DormantWrapper(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'BAD_PUBLIC_DIRECTORY'):
                 w.verify_public_directory(alias / w.PUBLISH_DIR, self.source, self.tree, self.neutral_hash, w.expected_approval())
 
-    def test_offline_receipt_reproducible_but_cannot_authorize_build(self):
+    def test_offline_receipt_reproducible_but_cannot_authorize_deployment(self):
         args = (self.source, self.tree, self.neutral_hash, self.root / 'neutral-B.zip')
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / 'review'
@@ -188,7 +250,7 @@ class DormantWrapper(unittest.TestCase):
             self.assertNotEqual(receipt['neutral_zip_sha256'], receipt['public_inventory_sha256'])
             self.assertFalse(receipt['deployment_authorized'])
             self.assertEqual(receipt['deployed_artifact'], 'UNVERIFIED')
-            self.assertIsNone(w.RELEASE_AUTHORIZATION)
+            self.assertEqual(w.RELEASE_AUTHORIZATION, w.expected_approval())
             other = Path(temp) / 'repeat'
             self.assertEqual(receipt, review.review(*args, other))
             with self.assertRaises(ValueError):

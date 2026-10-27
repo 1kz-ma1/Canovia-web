@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dormant Render publication wrapper. No live build without a code-reviewed approval."""
+"""Owner-authorized B source build. Render deployment requires a separate owner GO."""
 import argparse
 import json
 from pathlib import Path
@@ -12,9 +12,15 @@ import zipfile
 import preparation_static_build as b
 from preparation_static_render import OWNER_SELECTED_ORIGIN
 
-# Deliberately hard-coded. Environment variables, Render settings, or CLI flags
-# must never grant publication. A future reviewed PR and owner GO are required.
-RELEASE_AUTHORIZATION = None
+# Owner authorized this source-only activation on 2026-10-27. Keep the grant
+# literal and narrowly scoped; it must not follow an env/JSON/CLI/Origin change.
+# This is NOT authorization to change Render settings or trigger a deploy.
+RELEASE_AUTHORIZATION = {
+    'kind': 'PREPARATION_B_PUBLICATION_OWNER_APPROVAL_V1',
+    'origin': 'https://start.rpf-canovia.com',
+    'profile': 'B',
+    'release_approved': True,
+}
 APPROVAL_KIND = 'PREPARATION_B_PUBLICATION_OWNER_APPROVAL_V1'
 PUBLISH_DIR = '.render-static-B'
 
@@ -140,7 +146,7 @@ def stage_files(workspace, files, source, source_tree, artifact_hash, authorizat
 
 def main():
     # Authorization is deliberately checked before any file output or build.
-    if RELEASE_AUTHORIZATION is None:
+    if b.canonical_manifest(RELEASE_AUTHORIZATION) != b.canonical_manifest(expected_approval()):
         raise ValueError('OWNER_RELEASE_APPROVAL_REQUIRED')
     class Parser(argparse.ArgumentParser):
         def error(self, message):
@@ -157,7 +163,7 @@ def main():
                                   args.artifact_sha256, RELEASE_AUTHORIZATION)
     stage_files(b.ROOT, files, args.source_sha, args.source_tree,
                 args.artifact_sha256, RELEASE_AUTHORIZATION)
-    print(json.dumps(receipt))
+    print(json.dumps(dict(receipt, source_build_authorized=True)))
 
 
 if __name__ == '__main__':
