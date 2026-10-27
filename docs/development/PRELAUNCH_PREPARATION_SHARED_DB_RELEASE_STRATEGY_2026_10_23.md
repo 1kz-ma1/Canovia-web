@@ -1375,3 +1375,5 @@ PR #916のSource `8e4afa7cf93019d22506330d0502b72d7f680784`、Neutral hash `c844
 main統合前後に、読み取り可能なRender一覧から**同repo/mainを監視するサービスのAuto/Preview off**を再確認する。異なるrepoのAuto Deploy ONを本repoのdeployと混同せず触れない。予期しない本repoのAuto Deploy ONやworkspace/owner差異があれば統合STOP。対象Siteの実Build exit2、off/off、標準URLdisabled、成功Deploy 0件を別read-onlyで確認する。
 
 未完了: 実Render Build環境/25 body/HTTPS/Header/Cookie/404/Cache/alias、停止権限/効果、最新費用・帯域/通知、本人Safari新HTTPS。今回はソースBuild有効化まで、**SOURCE_BUILD_B_ONLY_AUTHORIZED / RENDER_BUILD_STILL_EXIT2 / FIRST_DEPLOY_NOT_APPROVED / PRODUCTION_NO_GO_HOLD**。12/1の残るcritical pathはこの新固定パケットへの限定GO→実配備/実効受入→一般公開GOであり、未確認の停止/実機を日付だけでPASSにしない。
+
+CIの初回runはAzure Ubuntu mirrorの依存取得が長時間続き、ブラウザ試験前にcancelして同じHEADを再実行した。取得遅延へのCI限定対処として、既存Ubuntu sources内のazure.archive.ubuntu.comだけを公式archive.ubuntu.comへ置換する。署名検証・package・Playwright版・全テストは維持し、Render build環境/設定とは分離する。最終HEADで全required CI成功を再確認してから統合する。
