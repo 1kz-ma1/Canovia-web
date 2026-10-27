@@ -1285,6 +1285,8 @@ python3 -B scripts/ci/preparation_static_release_review.py --source-sha "$PREP_S
 python3 -B scripts/ci/preparation_static_release_review.py --source-sha "$PREP_SOURCE_SHA" --source-tree "$PREP_SOURCE_TREE" --artifact-sha256 "$PREP_ZIP_HASH" --neutral-zip "$PREP_EVIDENCE_DIR/neutral-B.zip" --verify-review "$PREP_EVIDENCE_DIR/public-review"
 ```
 
+既存adapterの `customDomains=[]` / `adopted_origin=null` はNeutral配布のオフライン形式であり、作成済みSiteの実Custom Domain設定票ではない。実Domainをそこへ混ぜてPASSを得る操作はしない。Dashboard実値は下記本人操作票で別照合する。
+
 CLI `preparation_static_release_wrapper.py` の `RELEASE_AUTHORIZATION=None` と既存adapter `--render-build` 常時BLOCKは維持。review CLIやreceipt/env/flagsを実Build Commandに使って回避してはいけない。後日、本人の限定GO後に独立PRでソースAuthorizationを切替え、全差分・全required CI→Squash統合、その**後**のSource SHA/tree/Neutral hash/公開inventoryを再発行してBuild Commandを固定する。新SHAをそのSHA自身へcommitし直す循環は作らず、外部のIssue操作票に記録する。本PR/最終mainのレビューhashは将来の有効化Sourceのhashとして流用しない。
 
 #### Render配信差分と対処の分担

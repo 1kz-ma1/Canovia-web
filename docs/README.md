@@ -2,7 +2,7 @@
 
 ## 2026-10-26 Local-first Preparation-only（開発候補・公開HOLD）
 
-- [既存先行公開戦略 §19](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#19-2026-10-26-local-first-preparation-only開発方針): 専用IndexedDBのBと保存なしC、固定static配布/通信境界、Mac Safariの最小受入票、Render専用Static Site第一推奨（未採用）、Welcome/Laravel構成・Cloudflare/AWS費用比較、段階移行と公開後Operations、Render Phase 1の固定SHA/ZIP設定票・オフラインstage/負例CI・作成前費用確認票。Hosting実効受入を合成PASSに昇格しない。Canonical/e858の安全ゲートは別に保持。2026-10-27本人申告のSafari基本操作・再起動保持・Export/Importは成功範囲限定で記録。取得済みrpf-canovia.com（本人申告）に合わせ、現行候補はstart.rpf-canovia.com／将来app.rpf-canovia.com。旧canovia.comは非所有で除外。Cookie/DNS・固定Source設定パケットと5承認ゲートを§19へ集約。実Hosting/Origin/未実施実機項目/公開GOは未受入。
+- [既存先行公開戦略 §19](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#19-2026-10-26-local-first-preparation-only開発方針): 専用IndexedDBのBと保存なしC、固定static配布/通信境界、Mac Safariの最小受入票、専用Render Static Site・start.rpf-canovia.comを本人が方式/長期Originとして選定（実配信未受入）、Welcome/Laravel構成・Cloudflare/AWS費用比較、段階移行と公開後Operations、Render Phase 1の固定SHA/ZIP設定票・オフラインstage/負例CI・作成前費用確認票。Hosting実効受入を合成PASSに昇格しない。Canonical/e858の安全ゲートは別に保持。2026-10-27本人申告のSafari基本操作・再起動保持・Export/Importは成功範囲限定で記録。取得済みrpf-canovia.com（本人申告）に合わせ、選定Originはstart.rpf-canovia.com／将来候補app.rpf-canovia.com。旧canovia.comは非所有で除外。Cookie/DNS・固定Source設定パケットと5承認ゲートを§19へ集約。初回成功Deploy前のSource/tree・Neutral ZIP・Origin適用候補の独立hash/全25files検証、負例CI、本人操作/停止票も同節に集約。新専用Siteのoff/off・標準URLdisabled・Build exit2はread-only確認、成功Deployなし。実HTTPS/未実施実機項目/公開GOは未受入。
 
 ## 2026-10-25 Cutover / Recovery / Candidate preparation
 
