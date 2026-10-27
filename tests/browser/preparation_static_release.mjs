@@ -23,7 +23,8 @@ async function model({securityHeaders=true,parentCookie=false,init}={}){
     if(url.pathname.startsWith('/forbidden')){observed.unexpected++;rejectedTransport++;return route.abort();}
     const requestHeaders=await request.allHeaders();
     if((requestHeaders.cookie||'').includes('SYNTHETIC_PARENT='))observed.parentCookieSent=true;
-    const raw=files[url.pathname]||files['/index.html'];
+    // Also model a nested legacy alias whose relative assets still resolve.
+    const raw=files[url.pathname]||files[url.pathname.replace(/^\/legacy\//,'/')]||files['/index.html'];
     const type=url.pathname.endsWith('.mjs')?'text/javascript':url.pathname.endsWith('.css')?'text/css':url.pathname.endsWith('.webp')?'image/webp':url.pathname.endsWith('.png')?'image/png':url.pathname.endsWith('.json')?'application/json':'text/html';
     return route.fulfill({status:200,body:raw,headers:{...(securityHeaders?headers:{}),'content-type':type,'access-control-allow-origin':'*'}});
   });
@@ -71,7 +72,13 @@ try{
   const sw=await model({init:()=>Object.defineProperty(navigator,'serviceWorker',{value:{controller:{synthetic:true},getRegistrations(){throw Error('MUST_NOT_TOUCH_SW');}}})});
   await sw.page.goto(origin);await sw.page.getByText(stop,{exact:true}).waitFor();assert.equal(await sw.page.evaluate(()=>window.idbCalls),0);await sw.context.close();
   for(const unavailable of [false,true]){
-    const registration=await model({init:()=>{const failed=location.hash==='#sw-api-failed';Object.defineProperty(navigator,'serviceWorker',{value:{controller:null,getRegistrations(){return failed?Promise.reject(Error('SYNTHETIC_SW_API_FAILURE')):Promise.resolve([{unregister(){throw Error('MUST_NOT_UNREGISTER');}}]);}});}});
+    const registration=await model({init:()=>{
+      const failed=location.hash==='#sw-api-failed';
+      Object.defineProperty(navigator,'serviceWorker',{value:{
+        controller:null,
+        getRegistrations(){return failed?Promise.reject(Error('SYNTHETIC_SW_API_FAILURE')):Promise.resolve([{unregister(){throw Error('MUST_NOT_UNREGISTER');}}]);}
+      }});
+    }});
     await registration.page.goto(origin+(unavailable?'#sw-api-failed':''));await registration.page.getByText(stop,{exact:true}).waitFor();
     assert.equal(await registration.page.evaluate(()=>window.idbCalls),0,'registered but not controlling SW also stops before IDB');await registration.context.close();
   }
