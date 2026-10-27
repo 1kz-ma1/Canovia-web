@@ -58,6 +58,20 @@ class RenderPreparation(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.prepare(profile, stage=stage)
 
+    def test_owner_selected_origin_is_review_only(self):
+        for profile in ('B', 'C'):
+            plan = r.plan_for(self.source, profile, self.hashes[profile])
+            self.assertEqual(plan['owner_selected_origin'], 'https://start.rpf-canovia.com')
+            self.assertIsNone(plan['adopted_origin'])
+            self.assertFalse(plan['release_approved'])
+            self.assertEqual(plan['autoDeployTrigger'], 'off')
+            self.assertEqual(plan['previews']['generation'], 'off')
+            for wrong in ('https://start.canovia.com', 'https://app.rpf-canovia.com',
+                          'https://preview.rpf-canovia.com', 'http://start.rpf-canovia.com', None):
+                with self.subTest(profile=profile, wrong=wrong), self.assertRaises(ValueError):
+                    r.verify_plan(dict(plan, owner_selected_origin=wrong), self.source,
+                                  profile, self.hashes[profile])
+
     def test_unsafe_settings_no_outputs(self):
         mutations = [
             ('autoDeployTrigger', 'commit'), ('autoDeployTrigger', 'after_ci_checks_pass'),
@@ -69,6 +83,7 @@ class RenderPreparation(unittest.TestCase):
             ('buildEnvironment', {'SKIP_INSTALL_DEPS': 'false'}),
             ('envGroups', ['canonical']), ('customDomains', ['unadopted.invalid']),
             ('adopted_origin', 'https://unadopted.invalid'), ('release_approved', True),
+            ('owner_selected_origin', 'https://start.canovia.com'),
             ('release_approved', 0), ('provider_runtime', 'PASS'), ('extra', True),
             ('source_sha', '0' * 40), ('artifact_sha256', '0' * 64), ('profile', 'C'),
         ]
