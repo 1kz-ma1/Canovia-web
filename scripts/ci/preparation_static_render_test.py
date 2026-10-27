@@ -169,11 +169,12 @@ class RenderPreparation(unittest.TestCase):
         command = shlex.split(plan['buildCommand'])
         # Use the current interpreter; the command itself has only pinned safe tokens.
         command[0] = sys.executable
-        with patch.dict(os.environ, {'ADOPTED_ORIGIN': 'https://unadopted.invalid', 'RELEASE_APPROVED': 'true'}):
-            result = subprocess.run(command, cwd=b.ROOT, capture_output=True, text=True)
-        self.assertEqual(result.returncode, 2)
-        self.assertEqual(result.stdout, '')
-        self.assertEqual(result.stderr, 'PREPARATION_RENDER_BLOCK\n')
+        for origin in (r.OWNER_SELECTED_ORIGIN, 'https://unadopted.invalid'):
+            with self.subTest(origin=origin), patch.dict(os.environ, {'ADOPTED_ORIGIN': origin, 'RELEASE_APPROVED': 'true'}):
+                result = subprocess.run(command, cwd=b.ROOT, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(result.stdout, '')
+            self.assertEqual(result.stderr, 'PREPARATION_RENDER_BLOCK\n')
         self.assertFalse((b.ROOT / plan['publishPath']).exists())
 
     def test_cli_no_argument_leak(self):
