@@ -130,8 +130,8 @@ function requestRender(view, id) {
         });
     } else focusScreen();
 }
-function heading(kicker, title, description) {
-    return `<div class="screen-heading"><p class="eyebrow">${kicker}</p><h1 aria-label="${h(title)}">${title
+function heading(kicker, title, description, extra = "") {
+    return `<div class="screen-heading ${h(extra)}"><p class="eyebrow">${kicker}</p><h1 aria-label="${h(title)}">${title
         .split("、")
         .map(
             (part, i) =>
@@ -179,10 +179,11 @@ function diagnosis() {
         heading(
             "DISCOVER · 関心を見つける",
             "30問で関心を見つける",
-            "日常の選び方から、今の関心を整理します。正解はありません。迷ったら「わからない」でも大丈夫。",
+            "日常の選び方から、今の関心を整理します。",
+            "diagnosis-heading",
         ) +
-        `<details class="explanation"><summary>この診断について</summary><p>回答は任意です。能力・達成度・性格を判定する検査ではなく、心理学的な妥当性は未検証です。「わからない」と未回答は肯定・否定として採点しません。</p></details>
-  <form method="post" id="diagnosis-form"><div class="diagnosis-progress"><div><span class="eyebrow">あなたのペースで</span><strong id="question-progress"></strong></div><progress max="30" value="${Object.keys(answers).length}" aria-label="選択済みの質問数"></progress><div class="page-steps" aria-label="質問のページ">${Array.from({ length: 6 }, (_, i) => `<button type="button" data-step="${i + 1}" aria-label="質問 ${i * 5 + 1}〜${i * 5 + 5}へ" ${i + 1 === step ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div></div>
+        `<p class="scale-help" id="answer-scale-help">中央は「判断できない」。未回答・中立点とは別です。</p><details class="explanation diagnosis-instructions"><summary>回答のしかた・診断について</summary><p>左の緑が「あてはまる」、右の紫が「あてはまらない」。大きい円ほど強い回答です。中央の「わからない」は判断できない場合の独立した回答で、0点や中立点として採点しません。回答は任意です。能力・達成度・性格を判定する検査ではなく、心理学的な妥当性は未検証です。未回答も肯定・否定として採点しません。</p></details>
+  <form method="post" id="diagnosis-form"><div class="diagnosis-progress"><div><strong id="question-progress"></strong><span class="subtle">回答は任意</span></div><progress max="30" value="${Object.keys(answers).length}" aria-label="選択済みの質問数"></progress><div class="page-steps" aria-label="質問のページ">${Array.from({ length: 6 }, (_, i) => `<button type="button" data-step="${i + 1}" aria-label="質問 ${i * 5 + 1}〜${i * 5 + 5}へ" ${i + 1 === step ? 'aria-current="step"' : ""}>${i + 1}</button>`).join("")}</div></div>
   <label class="consent-row"><input type="checkbox" name="consent" required ${state.diagnosis ? "checked" : ""}><span>${stored ? "回答・結果と自分の修正をこの端末に保存することに同意します。クラウド保存ではありません。" : "入力はこの画面だけに反映され、再読み込み・終了で失われることを確認しました。"}</span></label>
   ${Array.from(
       { length: 6 },
@@ -193,20 +194,20 @@ function diagnosis() {
               .slice(page * 5, page * 5 + 5)
               .map(
                   ([id, item]) =>
-                      `<fieldset class="question-card card"><legend><span class="question-number">QUESTION ${id.slice(1)}</span>${h(item.text)}</legend><div class="answer-grid">${[
-                          ["0", "あてはまらない"],
-                          ["1", "あまりあてはまらない"],
-                          ["2", "ややあてはまる"],
-                          ["3", "あてはまる"],
-                          ["unknown", "わからない"],
+                      `<fieldset class="question-card card"><legend><span class="question-number">QUESTION ${id.slice(1)}</span>${h(item.text)}</legend><div class="response-scale">${[
+                          ["3", "あてはまる", "positive", "large"],
+                          ["2", "ややあてはまる", "positive", "medium"],
+                          ["unknown", "わからない", "neutral", "small"],
+                          ["1", "あまりあてはまらない", "negative", "medium"],
+                          ["0", "あてはまらない", "negative", "large"],
                       ]
                           .map(
-                              ([value, label]) =>
-                                  `<label class="answer ${value === "unknown" ? "answer-unknown" : ""}"><input type="radio" name="${id}" value="${value}" ${String(answers[id]) === value ? "checked" : ""}><span>${label}</span></label>`,
+                              ([value, label, tone, size]) =>
+                                  `<label class="scale-choice scale-${tone} scale-${size}" title="${label}"><input type="radio" name="${id}" value="${value}" ${value === "unknown" ? 'aria-describedby="answer-scale-help"' : ""} ${String(answers[id]) === value ? "checked" : ""}><span class="scale-circle" aria-hidden="true">${icon("check")}</span><span class="scale-option-text">${label}</span></label>`,
                           )
                           .join(
                               "",
-                          )}</div><div class="question-bottom"><span data-answer-state="${id}" class="subtle">${Object.hasOwn(answers, id) ? "選択済み" : "未回答"}</span><button class="button-text" type="button" data-unanswer="${id}" aria-label="質問 ${id.slice(1)}を未回答に戻す">未回答に戻す</button></div></fieldset>`,
+                          )}</div><div class="scale-labels" aria-hidden="true"><span class="scale-label-positive">あてはまる</span><span class="scale-label-neutral">わからない</span><span class="scale-label-negative">あてはまらない</span></div><div class="question-bottom"><span data-answer-state="${id}" class="subtle">${Object.hasOwn(answers, id) ? "選択済み" : "未回答"}</span><button class="button-text" type="button" data-unanswer="${id}" aria-label="質問 ${id.slice(1)}を未回答に戻す">未回答に戻す</button></div></fieldset>`,
               )
               .join("")}</section>`,
   ).join("")}

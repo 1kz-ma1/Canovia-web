@@ -123,6 +123,96 @@ try {
     state = await read();
     assert.deepEqual(state.diagnosis.answers, { Q02: 0, Q06: 3 });
     assert.equal(state.diagnosis.step, 3);
+    // Circle order is deliberately independent from numerical/scoring order.
+    await page.locator('[data-step="1"]').click();
+    await saved();
+    const options = [
+        ["3", "あてはまる"],
+        ["2", "ややあてはまる"],
+        ["unknown", "わからない"],
+        ["1", "あまりあてはまらない"],
+        ["0", "あてはまらない"],
+    ];
+    for (const [value, label] of options) {
+        const question = page.locator(".question-card").first();
+        const radio = question.getByRole("radio", { name: label, exact: true });
+        assert.equal(await radio.getAttribute("value"), value);
+        await radio.locator("..").click();
+        assert.equal(await question.locator("input:checked").count(), 1);
+        assert.ok(await radio.isChecked());
+        const fills = await question.locator("input").evaluateAll((inputs) =>
+            inputs.map((input) => {
+                const style = getComputedStyle(input.nextElementSibling);
+                return {
+                    checked: input.checked,
+                    bg: style.backgroundColor,
+                    border: style.borderTopColor,
+                    animation: style.animationName,
+                };
+            }),
+        );
+        assert.ok(
+            fills.every((v) =>
+                v.checked
+                    ? v.bg === v.border && v.animation === "scale-select"
+                    : v.bg === "rgba(0, 0, 0, 0)",
+            ),
+        );
+
+        assert.equal(
+            await question
+                .locator("input:checked + .scale-circle .icon")
+                .evaluate((el) => getComputedStyle(el).opacity),
+            "1",
+        );
+        assert.equal(
+            await question
+                .locator("input:not(:checked) + .scale-circle .icon")
+                .evaluateAll((els) =>
+                    els.every((el) => getComputedStyle(el).opacity === "0"),
+                ),
+            true,
+        );
+        await page.locator("button[value=save]").click();
+        await saved();
+        assert.equal(
+            (await read()).diagnosis.answers.Q01,
+            value === "unknown" ? value : Number(value),
+        );
+        await page.reload();
+        await page.locator("#diagnosis-form").waitFor();
+        assert.ok(
+            await page.locator(`input[name=Q01][value="${value}"]`).isChecked(),
+        );
+    }
+    await page.locator("input[name=Q01][value=unknown]").check();
+    await page.locator("button[value=save]").click();
+    await saved();
+    assert.equal((await read()).diagnosis.answers.Q01, "unknown");
+    await page.locator("[data-unanswer=Q01]").click();
+    await page.locator("button[value=save]").click();
+    await saved();
+    assert.equal(Object.hasOwn((await read()).diagnosis.answers, "Q01"), false);
+    await page.locator('input[name=Q01][value="3"]').focus();
+    await page.keyboard.press("Space");
+    await page.keyboard.press("ArrowRight");
+    assert.ok(await page.locator('input[name=Q01][value="2"]').isChecked());
+    await page.keyboard.press("ArrowRight");
+    assert.ok(await page.locator("input[name=Q01][value=unknown]").isChecked());
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.locator('input[name=Q01][value="3"]').check();
+    assert.equal(
+        await page
+            .locator("input[name=Q01]:checked + .scale-circle")
+            .evaluate((el) => getComputedStyle(el).animationName),
+        "none",
+    );
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    await page.locator("#next").click();
+    await saved();
+    await page.locator("#previous").click();
+    await saved();
+    assert.ok(await page.locator('input[name=Q01][value="3"]').isChecked());
     await nav("home");
     assert.ok(
         await page
@@ -249,6 +339,66 @@ try {
                     .getAttribute("aria-current"),
                 "page",
             );
+            if (route === "diagnosis") {
+                const rows = await page
+                    .locator("[data-page]:not([hidden]) .response-scale")
+                    .evaluateAll((els) =>
+                        els.map((row) =>
+                            [...row.querySelectorAll("input")].map((input) => {
+                                const r = input.getBoundingClientRect(),
+                                    circle =
+                                        input.nextElementSibling.getBoundingClientRect(),
+                                    style = getComputedStyle(input);
+                                return {
+                                    value: input.value,
+                                    x: r.x,
+                                    y: r.y,
+                                    width: r.width,
+                                    height: r.height,
+                                    circle: circle.width,
+                                    display: style.display,
+                                    visibility: style.visibility,
+                                };
+                            }),
+                        ),
+                    );
+                assert.equal(rows.length, 5);
+                for (const row of rows) {
+                    assert.deepEqual(
+                        row.map((v) => v.value),
+                        ["3", "2", "unknown", "1", "0"],
+                    );
+                    assert.deepEqual(
+                        row.map((v) => v.circle),
+                        [44, 32, 22, 32, 44],
+                    );
+                    assert.ok(
+                        row.every(
+                            (v) =>
+                                v.width >= 44 &&
+                                v.height >= 44 &&
+                                v.display !== "none" &&
+                                v.visibility !== "hidden",
+                        ),
+                    );
+                    assert.ok(row.every((v) => Math.abs(v.y - row[0].y) < 1));
+                    assert.ok(
+                        row
+                            .slice(1)
+                            .every((v, i) => v.x >= row[i].x + row[i].width),
+                    );
+                }
+                if (width === 390) {
+                    const row = rows[0];
+                    const navTop = await page
+                        .locator(".app-nav")
+                        .evaluate((el) => el.getBoundingClientRect().top);
+                    assert.ok(
+                        row[0].y + row[0].height < navTop,
+                        "First answer row is above bottom navigation at 390x844",
+                    );
+                }
+            }
             if (process.env.AXE_SOURCE && width === 390) {
                 await page.evaluate(
                     await readFile(process.env.AXE_SOURCE, "utf8"),
@@ -283,6 +433,9 @@ try {
             engine: process.env.BROWSER_ENGINE || "chromium",
             consent_and_page_restoration: "PASS",
             unknown_zero_unanswered: "PASS",
+            circle_order_values_44px_and_single_row: "PASS",
+            all_five_values_saved_and_reloaded: "PASS",
+            radio_arrows_and_reduced_motion: "PASS",
             dirty_switch_and_commit_guard: "PASS",
             open_page_offline_save_export: "PASS",
             widths: [320, 375, 390, 430, 1280],
