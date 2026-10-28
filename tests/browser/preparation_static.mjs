@@ -48,6 +48,7 @@ try{
   assert.equal(await page.locator('input[type=radio]:checked').count(),30,'ALL_ANSWERS_BEFORE_RESULT');
   await page.getByRole('button',{name:'今の回答で結果を見る',exact:true}).click();
   await page.getByText('回答 30問 ／ わからない 0問 ／ 未回答 0問',{exact:true}).waitFor();
+  await page.getByText('8つの分野が同じ得点で並んでいます。',{exact:true}).waitFor();
   assert.equal(await page.locator('meter').count(),8);await shot(page,'02-graph-390');
   assert.equal(await page.locator('meter').evaluateAll(m=>m.reduce((n,v)=>n+Number(v.value),0)),100);
   await page.locator('input[name=confirmed][value=ST]').check();

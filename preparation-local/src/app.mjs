@@ -233,9 +233,9 @@ function result() {
         };
     const ready = Object.entries(r.categories)
         .filter(([, v]) => v.share_percent !== null)
-        .sort((a, b) => b[1].share_percent - a[1].share_percent);
+        .sort((a, b) => b[1].score - a[1].score);
     const high = ready
-        .filter(([, v]) => v.share_percent === ready[0]?.[1].share_percent)
+        .filter(([, v]) => v.score === ready[0]?.[1].score)
         .map(([, v]) => v.label);
     const choice = (field, selected) =>
         Object.entries(bank.categories)
@@ -250,7 +250,7 @@ function result() {
             "関心のふりかえり",
             "今の回答から見た、相対的な関心のバランスです。能力・達成度・適性の判定ではありません。",
         ) +
-        `<section class="result-summary"><span class="icon-bubble">${icon("spark")}</span><div><h2>${high.length && r.status === "ready" ? "今、目を向けていること" : "もう少し、ゆっくり見つけよう"}</h2><p>${high.length && r.status === "ready" ? h(high.join("・")) : "答えられる質問から、少しずつ。"}</p></div></section>
+        `<section class="result-summary"><span class="icon-bubble">${icon("spark")}</span><div><h2>${high.length && r.status === "ready" ? "今、目を向けていること" : "もう少し、ゆっくり見つけよう"}</h2><p>${high.length && r.status === "ready" ? h(high.length > 3 ? `${high.length}つの分野が同じ得点で並んでいます。` : high.join("・")) : "答えられる質問から、少しずつ。"}</p></div></section>
   <section class="card"><div class="section-title"><h2>関心のバランス</h2><span class="pill">今回の回答</span></div><p id="result-counts" class="result-counts">回答 ${r.answered_count}問 ／ わからない ${r.unknown_count}問 ／ 未回答 ${r.unanswered_count}問</p><p class="subtle">${labels[r.status] || "割合は回答できた分野の間でのバランスです。低い値は苦手という意味ではありません。結果に合わせる必要はありません。"}</p><ul class="chart-list">${Object.entries(
       r.categories,
   )
@@ -260,7 +260,7 @@ function result() {
       )
       .join(
           "",
-      )}</ul><details class="explanation"><summary>割合の出し方</summary><p>0〜3点を分野ごとに集計し、複数分野の設問は半分ずつ配分します。unknownと未回答は分母から除き、基本3問中2問以上の回答がある分野で割合を配分します。心理尺度ではありません。</p></details><a class="text-link" href="#diagnosis">回答を見直す・再計算する ${icon("arrow")}</a></section>
+      )}</ul><details class="explanation"><summary>割合の出し方</summary><p>0〜3点を分野ごとに集計し、複数分野の設問は半分ずつ配分します。unknownと未回答は分母から除き、基本3問中2問以上の回答がある分野で割合を配分します。表示上の丸めにより、同点でも1%の差が出ることがあります。心理尺度ではありません。</p></details><a class="text-link" href="#diagnosis">回答を見直す・再計算する ${icon("arrow")}</a></section>
   <form method="post" id="review-form" class="card section-space"><h2>自分の感覚も、大切に。</h2><p>グラフと違っても大丈夫。選んだ関心は、点数とは別に残します。</p><fieldset><legend>自分で選ぶ、今の関心（任意）</legend><div class="interest-grid">${choice("confirmed", state.diagnosis.confirmed_categories)}</div></fieldset><details class="explanation"><summary>準備したいことも残す（任意）</summary><fieldset><legend>準備したいこと（任意）</legend><p class="subtle">希望を端末に記録するだけで、送信・投票や機能提供を意味しません。</p><div class="interest-grid">${choice("support", state.diagnosis.requested_support)}</div></fieldset></details><button class="button button-secondary" type="submit">関心・希望を${stored ? "保存" : "反映"}する</button></form>
   <section class="next-step section-space"><p class="eyebrow">気づきから、一歩へ</p><h2>やってみたいことを、言葉に。</h2><p>結果はヒントのひとつ。目標と、まず試すことは自分で決められます。</p>${link("plans", "自分の目標・Planへ")}<a class="text-link" href="#future">Canovia Futureを見る ${icon("arrow")}</a></section>
   <details class="explanation danger-zone"><summary>診断の記録を管理する</summary><p>診断だけを削除できます。Planは保持します。</p><button class="button button-danger" id="delete-diagnosis" type="button">診断の記録を削除する</button></details>`
