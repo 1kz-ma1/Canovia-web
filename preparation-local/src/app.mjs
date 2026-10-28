@@ -39,14 +39,14 @@ export async function act(mutate,view,planId=editing){
 function requestRender(view,id){
   if(busy){notice('保存処理中です。完了するまでお待ちください。',true);return;}
   if(dirty&&!confirm('まだ保存・反映していない入力を破棄して移動しますか？'))return;
-  dirty=false;render(view,id);focusScreen();
+  dirty=false;render(view,id);if(view==='plans'){const editor=root.querySelector('#plan-form h2');editor.tabIndex=-1;editor.focus({preventScroll:true});root.querySelector('#plan-form').scrollIntoView({block:'start',behavior:'instant'});}else focusScreen();
 }
-function heading(kicker,title,description){return `<div class="screen-heading"><p class="eyebrow">${kicker}</p><h1>${title}</h1><p class="lead">${description}</p></div>`;}
+function heading(kicker,title,description){return `<div class="screen-heading"><p class="eyebrow">${kicker}</p><h1 aria-label="${h(title)}">${title.split("、").map((part,i)=>`<span>${h(part)}${i===0&&title.includes("、")?"、":""}</span>`).join("")}</h1><p class="lead">${description}</p></div>`;}
 function home(){
   const n=count(),plans=newest(),started=!!state.diagnosis;
   const title=plans.length?'あなたの一歩が、ここに。':started?(n===30?'気づきを、次の一歩に。':'途中から、続けてみよう。'):'自分の関心から、次の準備へ。';
   const action=plans.length?link('plans','Planをひらく'):started&&n===30?link('plans','自分のPlanを作る'):link('diagnosis',started?'診断の続きをひらく':'関心を見つける');
-  return `<section class="home-hero"><div class="orbit" aria-hidden="true">${icon('spark')}</div><p class="eyebrow">あなたの、これから。</p><h1>${title}</h1><p>関心を見つけて、目標を考える。<br>小さな準備を、自分のペースで。</p>${action}<a class="hero-link" href="#${started?'result':'plans'}">${started?'今の結果をふりかえる':'診断を使わずPlanを作る'}</a></section>
+  return `<section class="home-hero"><div class="orbit" aria-hidden="true">${icon('spark')}</div><p class="eyebrow">あなたの、これから。</p><h1 aria-label="${h(title)}">${title.split("、").map((part,i)=>`<span>${h(part)}${i===0&&title.includes("、")?"、":""}</span>`).join("")}</h1><p>関心を見つけて、目標を考える。<br>小さな準備を、自分のペースで。</p>${action}<a class="hero-link" href="#${started?'result':'plans'}">${started?'今の結果をふりかえる':'診断を使わずPlanを作る'}</a></section>
   <section class="section-space"><div class="section-title"><h2>いまの準備</h2><span class="subtle">${stored?'この端末の記録':'この画面の入力'}</span></div><div class="overview-grid"><a class="overview-card" href="#${started?'result':'diagnosis'}">${icon('spark')}<span>関心の診断<strong>${started?`${n}<small> / 30問を選択済み</small>`:'まだ記録なし'}</strong></span>${icon('arrow')}</a><a class="overview-card" href="#plans">${icon('plan')}<span>自分のPlan<strong>${plans.length}<small>件${stored?'を保存':'を入力'}</small></strong></span>${icon('arrow')}</a></div></section>
   ${plans.length?`<section class="section-space"><div class="section-title"><h2>最近のPlan</h2><a href="#plans">すべて見る</a></div><a class="recent-plan card" href="#plans" data-open-plan="${plans[0].id}"><span class="pill">${h(plans[0].category||'自分の目標')}</span><h3>${h(plans[0].title)}</h3><p class="line-clamp">${h(plans[0].description||'メモはまだありません。編集から次の一歩を残せます。')}</p><div class="card-bottom"><time datetime="${plans[0].updated_at}">${dateLabel(plans[0].updated_at)}に更新</time>${icon('arrow')}</div></a></section>`:`<section class="card invitation section-space"><span class="icon-bubble">${icon('plan')}</span><h2>まずは、小さな目標から。</h2><p>「ちょっと気になる」を、言葉にしてみる。<br>診断なしでも、目標と計画を残せます。</p><a class="text-link" href="#plans">自分の目標・Planへ ${icon('arrow')}</a></section>`}
   <section class="section-space"><h2>Canoviaで、できること</h2><ol class="path-list"><li><span>01</span><div><h3>関心を見つける</h3><p>日常の選び方から、今の自分をふりかえる。</p></div></li><li><span>02</span><div><h3>気づきを、自分の言葉に</h3><p>結果と自分の感覚を、どちらも大切に。</p></div></li><li><span>03</span><div><h3>次の一歩をPlanに残す</h3><p>目標と、まず試したいことを書いておく。</p></div></li></ol></section>
@@ -109,7 +109,7 @@ function bindDiagnosis(){
     form.querySelectorAll('[data-answer-state]').forEach(el=>{el.textContent=form.querySelector(`input[name="${el.dataset.answerState}"]:checked`)?'選択済み':'未回答';});
   };
   const answers=()=>{const values=new FormData(form),out={};for(const id of Object.keys(bank.items)){const v=values.get(id);if(v!==null)out[id]=v==='unknown'?v:Number(v);}return out;};
-  const move=async next=>{if(!form.reportValidity())return;const values=answers();if(await act(s=>saveDiagnosis(s,values,next),'diagnosis'))focusScreen();};
+  const move=async next=>{if(!form.reportValidity())return;const values=answers();if(await act(s=>saveDiagnosis(s,values,next),'diagnosis')){const legend=root.querySelector('[data-page]:not([hidden]) legend');legend.tabIndex=-1;legend.focus({preventScroll:true});legend.scrollIntoView({block:'start',behavior:'instant'});}};
   root.querySelector('#previous').onclick=()=>move(step-1);root.querySelector('#next').onclick=()=>move(step+1);
   form.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>move(Number(b.dataset.step)));
   form.onchange=update;
@@ -133,10 +133,11 @@ try{
   }
   repo=await Repository.open();state=validate(await repo.read());
   message.textContent='';
+  document.querySelector('.local-badge').textContent=stored?'端末内':'保存なし';
   document.querySelector('#storage-notice').textContent=stored?'この端末に保存 · クラウド同期なし':'保存なしのPreview · 再読み込み・終了で入力が消えます';
   repo.onchange=()=>notice('別のタブで変更されました。入力を控えてから再読み込みしてください。',true);render();
 }catch(e){
   const text=errors[e.message]||(e.message==='ORIGIN_NOT_ACCEPTED'?'この配信先・配信処理は未採用です。記録を書き換えず終了しました。':'保存領域を開けませんでした。記録を削除せず、設定や対応する版を確認してください。');
-  notice(text,true);root.innerHTML=`<section class="card empty-state"><h1>記録を開けませんでした</h1><p>データの削除や別の保存方式への切替は行っていません。設定と対応する版を確認してください。</p><button class="button button-secondary" id="retry-load" type="button">画面を再読み込み</button></section>`;
-  root.querySelector('#retry-load').onclick=()=>location.reload();
+  notice(text,true);root.innerHTML='';const errorPanel=document.querySelector('#startup-error');errorPanel.hidden=false;errorPanel.innerHTML=`<section class="card empty-state"><h1>記録を開けませんでした</h1><p>データの削除や別の保存方式への切替は行っていません。設定と対応する版を確認してください。</p><button class="button button-secondary" id="retry-load" type="button">画面を再読み込み</button></section>`;
+  errorPanel.querySelector('#retry-load').onclick=()=>location.reload();
 }
