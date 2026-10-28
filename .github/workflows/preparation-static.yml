@@ -2,7 +2,7 @@ name: Preparation Static Local-first
 on:
   pull_request:
     branches: [main]
-    paths: ['preparation-local/**', 'local-preview/src/repository.mjs', 'local-preview/src/backup.mjs', 'scripts/ci/preparation_static*', 'tests/browser/preparation_static*.mjs', 'config/prelaunch_interest_diagnostic.php', 'config/canovia_public_roadmap.php', 'resources/css/preparation.css', 'public/images/preparation/**', 'public/brand/canovia-wordmark.png', '.github/workflows/preparation-static.yml', 'docs/development/LOCAL_FIRST_PREVIEW*']
+    paths: ['preparation-local/**', 'local-preview/src/repository.mjs', 'local-preview/src/backup.mjs', 'scripts/ci/preparation_static*', 'tests/browser/preparation_static*.mjs', 'tests/browser/preparation_mobile_ui.mjs', 'config/prelaunch_interest_diagnostic.php', 'config/canovia_public_roadmap.php', 'resources/css/preparation.css', 'public/images/preparation/**', 'public/brand/canovia-wordmark.png', '.github/workflows/preparation-static.yml', 'docs/development/LOCAL_FIRST_PREVIEW*']
   workflow_dispatch:
 permissions:
   contents: read
@@ -85,6 +85,8 @@ jobs:
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=webkit node tests/browser/preparation_static.mjs
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-C" BROWSER_ENGINE=chromium node tests/browser/preparation_static.mjs
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-C" BROWSER_ENGINE=webkit node tests/browser/preparation_static.mjs
+          PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=chromium node tests/browser/preparation_mobile_ui.mjs
+          PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=webkit node tests/browser/preparation_mobile_ui.mjs
           BROWSER_ENGINE=chromium node tests/browser/preparation_static_release.mjs
           BROWSER_ENGINE=webkit node tests/browser/preparation_static_release.mjs
       - uses: actions/upload-artifact@v4
