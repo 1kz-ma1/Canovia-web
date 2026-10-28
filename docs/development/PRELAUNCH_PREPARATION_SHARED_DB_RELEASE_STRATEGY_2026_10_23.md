@@ -1454,3 +1454,39 @@ Linux / system Chromium `154.0.8037.57` / Playwright `1.56.1`。fixtureは合成
 同SourceのNeutral ZIP SHA256：B `595b3bb1e3a0c08c5574243e3dad00c5ebb9a4f855c508d00eb633e1ceb20b97`、C `79e170a5f651eb82e0be4d9d12f808bb8f4569597c407d9b89024463f997f748`。文書/画像のみの後続HEADのZIP値ではない。前項のf8d514b8 hash、既存固定Web/iOS pinや公開Buildパケットは当時の証拠として保持し、差し替えない。
 
 [円形UIの全6状態・320/390・5問全体・直前カードとの比較](../reviews/local-b-ui/README.md#円形スケールへの更新) を本人レビューに用いる。最初の4画面比較の診断Afterも更新し、直前カードを `circle-before-390.png` として保持。本人には円の大小/色、肯定左・否定右の方向、中央の独立した意味が伝わるかを画像で判断してもらう。実機操作は今回依頼しない。**Draft維持・main未統合・`PRODUCTION_NO_GO_HOLD` / `release_approved=false`**。read-access単独FAIL、Release/公開の既存未解決ゲートも維持する。
+
+### 2026-10-28 UI-2：OP世界観とホーム体験（PR #918継続・Draft）
+
+本人は円形5択UIの**デザインを承認済み**。保存値 `3→2→unknown→1→0` を含む描画/操作を再設計しない。この承認をSafari/iOS受入・Release/公開承認へ拡張しない。UI-2はCanovia-webのHomeだけを対象とし、独立worktree `Canovia-local-b-home-ui2` / local branch `feature/local-b-home-ui2` から、同PR #918のremote `feature/local-b-mobile-experience` へfast-forwardで追記する。
+
+OPの本人提示コンセプト「**すべての一歩が、未来につながる。**」を初回Homeの見出しへ採用し、小さな光が3本のレールで中心へ集まる静的SVGを添える。明るいcanvas・紺のhero・藍の操作色は維持。図案は装飾（aria-hidden/focus不可）で、animation/自動記録/通信は追加しない。既存の円形UI・保存schema・IndexedDB・JSON・採点・CSP・外部依存は変更しない。OP/Remotion project、iOS再生/SKIP、iOS #20/#22、固定HTML/pin/hashには触れない。
+
+**理念と現在の提供範囲を別に示す**。heroを「Canoviaが目指す未来」、入口を「先行版で、いまできること」と分け、初回の主要選択肢を「30問で関心を整理」と「診断なしで目標・Planを書く」の2つにする。下段のFutureカードは「将来構想」と明示し、AI支援/自動記録/外部サービス連携は先行版で未提供と説明する。これらを起動可能な機能として表示しない。公開roadmapのstatusは更新しない（本UIは未統合/未提供の候補のため）。
+
+| 実データから導く状態 | Homeの主操作 / 副操作 | 初回向け説明 |
+| --- | --- | --- |
+| 診断記録なし・Planなし | 30問の診断 / 診断なしでPlan | 上記2入口、保存範囲の短い説明、閉じた任意のBackupガイド。modal/同意強制なし |
+| 診断記録あり・選択数0〜29・Planなし | 前回の診断ページへ続ける / 診断なしでPlan | 初回ガイドは出さず、実際の選択数を表示 |
+| 30問選択済み・Planなし | 結果をふりかえる / 自分のPlan | unknownも選択数に含む。30選択を採点材料充足や能力判定完了とは表現しない |
+| Planあり（診断有無を問わない） | 最新更新Planをひらく / 関心の診断 | 実件数・最近のPlanを表示。過去に別Planのeditorを開いていても、Home主操作は表示対象の最新Planを明示指定 |
+
+状態は既存の診断/Planから算出するだけで、新しい初回flag/保存項目や個人の行動履歴を作らない。Home表示・320/390のlayout検査・装飾描画の前後で全state/revision/時刻が変わらないことを確認。Cは「入力したPlan」「この画面だけのPreview」と区別し、reloadで消える既存仕様を保持する。
+
+#### UI-2ローカル検証証拠
+
+製品/テストSource **`3c2d46e0baa794feb69b0319dc7fe59cd31003cb`**。Linux Chromium 154 / Playwright 1.56.1。前候補30bda7b5比の製品差分は `preparation-local/src/app.mjs`（Home）/`style.css`（Home専用）の2件。診断描画・bindDiagnosis・円形CSSをbyte比較し一致。採点/data/model/Repository/backup/codec/Headers/配布・公開wrapperもbyte不変、24asset中22asset hash一致。見出し変更に追随する既存4試験の期待値は新しい全文へ厳密更新し、境界/FAIL判定を削除しない。
+
+| 判定 | 根拠・範囲 |
+| --- | --- |
+| PASS | 新 `tests/browser/preparation_static_home.mjs` を既存B/C browser回帰から呼び出す。実UI操作で初回→Plan入口（診断非作成）→2回答/前回ページ→30問→結果→Plan保存を検証。各状態320/390で2入口がnavより上・44px以上・横overflowなし、レールanimation 0、初回ガイドは初回だけ |
+| PASS | 2件の合成Planで最新更新Planを選び、以前開いたeditorよりHome主操作の指定Planが優先される。B reloadで2件保持、C reloadで0件/初回へ戻る。Home描画前後で全stateが同一 |
+| PASS | 主要4 Home状態×B/Cをaxe-core 4.11.0対象WCAG2 A/AA・2.1 AA tagsで検査、検出違反0。既存mobile UI試験の主要5画面・320/375/390/430/1280・Space/矢印/Reduce Motion・円形値/混在JSON往復もPASS。VoiceOver実受入の証明ではない |
+| PASS | B/Cの30問・採点133参照・結果・Plan編集・JSON実download/preview/confirm・quota/abort/conflict保持・B browser process再起動・C非保存・Origin/CSP/SW/404/no-store等の既存回帰 |
+| PASS | core5＋backup5、配布security12＋Render offline計画11、B二重生成ZIP一致とB/C ZIP検証。PHP参照133ケースは同日生成済み・不変のbank/scorerに対応するものを再利用 |
+| PASS（Web限定） | 旧30bda7b5の実UIで作った専用の合成「2回答/step2」profileと「診断なし/Plan1件」profileをbrowser終了後に同一loopback Originで新Homeへ再開。**全state/ID/revision/時刻が完全一致**。DB clear/migrationなし。iOS default store upgradeの証明にはしない |
+| PASS（限定） | 読み込み済み画面でoffline Plan保存/Exportの既存試験を維持。cold offline起動/reloadを保証せずSWを追加しない |
+| NOT_RUN / NOT_TESTED | GitHub Actions（無料枠を尊重し全commit `[skip ci]`、dispatch/re-run/課金変更なし）。新HomeのSafari/WebKit/WKWebView/VoiceOver/実機、実Render、最終OP映像との色/カット接続・OP終了/SKIP→Homeは未検証。再生/遷移callbacks自体を今回は実装しない |
+
+新Neutral ZIP SHA256はB `488512fa65c5d72ac2ec6f1cbae7a64dcd983041bc70916e9bf6e210e990abaa` / C `4fa591200c4726ab4ab12f10d0929679d06e5bb92ea155a3b9a3b4466e30248d`、各25file（manifest含む）・Origin null・release false。これは同Sourceのオフライン候補で、文書/画像のみの後続HEADのZIP値やiOS/公開パケットの置換値ではない。旧Source/hashの証拠は保持する。
+
+[Homeの3状態・320/390 Before/After・診断済み・desktop](../reviews/local-b-ui/README.md#ui-2op世界観とホーム体験) は実アプリ/合成データの画面証拠。OP映像は別sessionで制作中であり、提示されたコンセプトからHomeの静的図案を実装した。最終映像のasset/Remotionにはアクセス・変更していない。本人の最終判断は **レールの控えめさ/OPとの調和、理念と現機能の区別、初回と既存利用の優先順位**。実機操作は今回は依頼しない。**Draft維持・main未統合・`PRODUCTION_NO_GO_HOLD` / `release_approved=false`**、既存read-access単独FAILやRelease/一般公開の未解決ゲートは維持する。
