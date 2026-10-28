@@ -222,6 +222,63 @@ try {
     await page.locator("#previous").click();
     await saved();
     assert.ok(await page.locator('input[name=Q01][value="3"]').isChecked());
+    // Preserve the complete visual-to-value mapping through the actual JSON UI.
+    const mixed = { Q01: 3, Q02: 2, Q03: "unknown", Q04: 1, Q05: 0, Q06: 3 };
+    for (const [id, value] of Object.entries(mixed).slice(0, 5))
+        await page.locator(`input[name=${id}][value="${value}"]`).check();
+    await page.locator("button[value=save]").click();
+    await saved();
+    assert.deepEqual((await read()).diagnosis.answers, mixed);
+    await nav("data");
+    const exportEvent = page.waitForEvent("download");
+    await page.locator("#export").click();
+    const mixedBytes = await readFile(await (await exportEvent).path());
+    const isolated = await browser.newContext();
+    await isolated.route("**/*", (r) =>
+        new URL(r.request().url()).origin === origin ? r.continue() : r.abort(),
+    );
+    const imported = await isolated.newPage();
+    await imported.goto(origin + "/#data");
+    await imported.locator("#import-file").waitFor();
+    await imported
+        .locator("#import-file")
+        .setInputFiles({
+            name: "synthetic-circle-values.json",
+            mimeType: "application/json",
+            buffer: mixedBytes,
+        });
+    await imported.locator("#import-confirm").waitFor();
+    assert.equal(
+        await imported.evaluate(async () => {
+            const { repo } = await import("/src/app.mjs");
+            return (await repo.read()).diagnosis;
+        }),
+        null,
+        "Preview never writes mixed values",
+    );
+    await imported.locator("#import-confirm").click();
+    await imported
+        .getByText(
+            "Importしました。この端末で内容を確認し、改めてExportしてください。",
+            { exact: true },
+        )
+        .waitFor();
+    assert.deepEqual(
+        await imported.evaluate(async () => {
+            const { repo } = await import("/src/app.mjs");
+            return (await repo.read()).diagnosis.answers;
+        }),
+        mixed,
+    );
+    await imported.locator("[data-nav=diagnosis]").click();
+    await imported.locator("#diagnosis-form").waitFor();
+    for (const [id, value] of Object.entries(mixed).slice(0, 5))
+        assert.ok(
+            await imported
+                .locator(`input[name=${id}][value="${value}"]`)
+                .isChecked(),
+        );
+    await isolated.close();
     await nav("home");
     assert.ok(
         await page
@@ -349,6 +406,16 @@ try {
                 "page",
             );
             if (route === "diagnosis") {
+                await page.mouse.move(0, 0);
+                await page
+                    .locator("[data-page]:not([hidden]) .scale-circle")
+                    .evaluateAll((els) =>
+                        Promise.all(
+                            els.flatMap((el) =>
+                                el.getAnimations().map((a) => a.finished),
+                            ),
+                        ),
+                    );
                 const rows = await page
                     .locator("[data-page]:not([hidden]) .response-scale")
                     .evaluateAll((els) =>
@@ -444,6 +511,7 @@ try {
             unknown_zero_unanswered: "PASS",
             circle_order_values_44px_and_single_row: "PASS",
             all_five_values_saved_and_reloaded: "PASS",
+            mixed_circle_values_json_roundtrip: "PASS",
             radio_arrows_and_reduced_motion: "PASS",
             dirty_switch_and_commit_guard: "PASS",
             open_page_offline_save_export: "PASS",
