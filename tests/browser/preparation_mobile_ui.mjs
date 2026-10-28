@@ -22,8 +22,8 @@ try{
   const errors=[],external=[];context.on('page',p=>p.on('pageerror',e=>errors.push(e.message)));
   await context.route('**/*',r=>{if(new URL(r.request().url()).origin===origin)return r.continue();external.push(r.request().url());return r.abort();});
   const page=await context.newPage(),read=()=>page.evaluate(async()=>{const {repo}=await import('/src/app.mjs');return repo.read();});
-  const nav=async route=>{await page.locator(`[data-nav="${route}"]`).click();await page.locator('#app h1').waitFor();};
-  const saved=()=>page.getByText('この端末に保存しました。',{exact:true}).waitFor();
+  const nav=async route=>{await page.locator(`[data-nav="${route}"]`).click();await page.locator(`[data-nav="${route}"][aria-current=page]`).waitFor();};
+  const saved=async()=>{await page.getByText('この端末に保存しました。',{exact:true}).waitFor();await page.locator('#app[aria-busy=false]').waitFor();};
   await page.goto(origin);await page.locator('#app h1').waitFor();
   assert.equal(await page.locator('#app h1').getAttribute('aria-label'),'自分の関心から、次の準備へ。');
   await nav('diagnosis');await page.locator('input[name=Q01][value=unknown]').focus();await page.keyboard.press('Space');
@@ -57,7 +57,7 @@ try{
   // Hold the real transaction before commit: navigation must not discard inputs or claim success.
   await page.evaluate(async()=>{const {repo}=await import('/src/app.mjs');const change=repo.change.bind(repo);repo.change=async(...args)=>{await new Promise(r=>window.finishSyntheticSave=r);return change(...args);};});
   await page.getByLabel('目標',{exact:true}).fill('Synthetic mobile Plan edited');await page.locator('#plan-form button[type=submit]').click();
-  await nav('home');assert.equal(new URL(page.url()).hash,'#plans');assert.equal((await read()).plans[0].title,'Synthetic mobile Plan');
+  await page.locator('[data-nav=home]').click();await page.getByText('保存処理中です。完了するまでお待ちください。',{exact:true}).waitFor();assert.equal(new URL(page.url()).hash,'#plans');assert.equal((await read()).plans[0].title,'Synthetic mobile Plan');
   assert.equal(await page.locator('#app').getAttribute('aria-busy'),'true');
   await page.evaluate(()=>window.finishSyntheticSave());await saved();assert.equal((await read()).plans[0].id,planId);
   await page.reload();await page.locator('#plan-form').waitFor();assert.equal(await page.getByLabel('目標',{exact:true}).inputValue(),'Synthetic mobile Plan edited');
