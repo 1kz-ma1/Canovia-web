@@ -1388,14 +1388,14 @@ CIの初回runはAzure Ubuntu mirrorの依存取得が長時間続き、ブラ�
 | --- | --- |
 | Home：案内とリンク中心で、保存済みPlanや診断の続きが入口で分からない | 未開始・途中・30問選択済み・Planありを実データで分岐。最近更新したPlanと実件数を表示。診断を使わないPlan作成も維持 |
 | 診断：radio中心で進捗/移動/保存の関係が弱い | 6ページ×5問は維持。進捗・大きな選択タイル・ページ番号・前後移動・途中保存。**同意がある場合だけ、ページ移動時にも保存してから進む**。unknown/0/未回答を区別し、未回答への戻し操作も明示 |
-| 結果：数値/大きい分野画像と次操作が離れる | 8分野のmeter・材料不足・回答内訳を整理。任意の関心修正/希望は採点とは別に保持し、Planへの導線を設置。能力/性格/妥当性の断定なし |
+| 結果：数値/大きい分野画像と次操作が離れる | 8分野のmeter・材料不足・回答内訳を整理。要約の同点判定は丸め前のscoreを使い、表示上の13%/12%を関心の差と解釈しない（30問同点の負例を追加）。任意の関心修正/希望は採点とは別に保持し、Planへの導線を設置。能力/性格/妥当性の断定なし |
 | Plan：一覧と入力の優先順位、保存済み/編集中が曖昧 | 空状態では入力を先に表示、既存Planでは一覧から編集にフォーカス。最新Planの再表示、保存済み/未保存表示、未保存切替の確認、transaction完了後だけ成功を表示。目標/メモ/分野/目標日は同じschema |
 | Future/データ：構想と利用可能機能、ファイル検証と保存確定の区別が弱い | Futureを構想/開発中/検証中に区分し、現在の機能を説明。Export/Importを別カードにし、平文・別保管・検証後も未保存・本人確認後のみImportを明示 |
 | 共通：上部リンク中心、空/起動失敗の説明や操作継続が弱い | mobile下部4項目nav、データ管理はheader。loading/empty/error/STOP/retry、aria-current/aria-busy/live通知、画面見出しへのfocus、reduced-motion、小幅320pxを追加 |
 
 変更の中心は `preparation-local/index.html`, `style.css`, `src/app.mjs`, `plan-ui.mjs`, `backup-ui.mjs`。scoring/data/model、BのRepository、memory Repository、backup/codec、allowlist/manifest/ZIP生成、Headers、公開Build wrapperは**byte変更なし**。診断の保存タイミングと未保存入力の扱いはUI側の意図的変更であり、単なる配色変更とは扱わない。削除・Importの確認、quota/conflict時の入力・既存記録保持を既存回帰で検証する。Future公開roadmapのstatusは更新しない（未統合・未提供の候補のため）。
 
-#### ローカル検証証拠（製品/テストSource `867817d9dc7c6cff272f2360b50f59ccc407a77b`）
+#### ローカル検証証拠（製品/テストSource `f8d514b88d5b038133e712ba458126541948099f`）
 
 Linux / system Chromium `154.0.8037.57` / Playwright `1.56.1`。fixtureは合成データ専用127.0.0.1、全HTTPに既存CSPを設定し、別Originのrequestは拒否。実ユーザーデータ/外部公開サーバー/実サービスへアクセスしない。
 
@@ -1407,10 +1407,10 @@ Linux / system Chromium `154.0.8037.57` / Playwright `1.56.1`。fixtureは合成
 | PASS（限定） | 全moduleを読み込んだ同じ開いた画面をofflineにし、Plan編集/IndexedDB保存/JSON downloadを確認。Webのcold offline起動/reloadは保証せず、SW/Cache-Control変更で見かけの保証を追加しない |
 | PASS（限定） | axe-core 4.11.0（検証専用、製品依存に含めない）でhome/diagnosis/plans/future/dataと別の30問回答済みresultをWCAG2 A/AA・2.1 AA tagsで検査、検出違反0。手動VoiceOver/WCAG全適合の証明にはしない |
 | PASS | `preparation_static_security_test.py` 12件、`preparation_static_render_test.py` 11件。既存browser境界回帰でCSP通信API/OriginのIDB前STOP/SW拒否/404/no-store/Cookie/asset閉包等の合成・loopback範囲を確認。実Render/全通信不存在のPASSにはしない |
-| PASS（Web・同一Origin限定） | **旧ed6の実UI**で専用Chromium persistent profileに合成30回答＋Planを保存しbrowserを終了。同じ127.0.0.1 Origin・profileで867817d9の新UIを開き、`repo.read()`全stateのJSONを比較して完全一致（schema/ID/timestamp/revisionも同じ）。以後の画面撮影はその合成データのみ。DB migration/clearを行わない |
+| PASS（Web・同一Origin限定） | **旧ed6の実UI**で専用Chromium persistent profileに合成30回答＋Planを保存しbrowserを終了。同じ127.0.0.1 Origin・profileでf8d514b8の新UIを開き、`repo.read()`全stateのJSONを比較して完全一致（schema/ID/timestamp/revisionも同じ）。以後の画面撮影はその合成データのみ。DB migration/clearを行わない |
 | NOT_TESTED | 新UIのSafari/WebKit/iPhone/WKWebView、Dynamic Type/VoiceOver、実iOS upgrade default store、native Files UI、実Render。既存の旧UI本人受入やiOS #21のPASSは新UIへ拡張しない。read-access単独FAIL/全DNS・UDP未観測等の既存ゲートも未解決のまま |
 | NOT_RUN | GitHub Actions。本人申告の無料枠消費済み・11/1 reset予定を尊重し、全push commitに `[skip ci]`、手動dispatch/re-run/課金変更なし。ローカルPASSをrequired CI成功と読み替えない |
 
-同SourceのNeutral B ZIP SHA256は `d221ebbb5b23b3a71bd23562c9786bf6fa864e0acfd79b0cf86663e23fcda2b6`、Cは `bdb784e33c8b499ae0f5199424bacbbe092bf5a3b75c2756d24331f29359b2dc`。両25file・Origin null・release false。**これは新UIのオフライン候補の証拠で、旧固定Source/公開Buildパケット/iOS hashの差替え指示ではない**。文書/画像のみの後続commitはSource SHA/ZIPを変えるため、このhashをそのHEADのZIP値と記載しない。
+同SourceのNeutral B ZIP SHA256は `96df35a77290eb57379f7bc752627b4be93ae2d720d1dc447887e8e9ba0b2ddb`、Cは `643ffb7e4f2cedba745071159c329286c874bb16761a9b861a8d1a9edf66f5eb`。両25file（manifest含む）・Origin null・release false。旧Bとのhash比較で24asset中UIの5件のみ変更、他19件は一致。Sourceを含むmanifestも再発行される。Bの2回生成ZIP一致・B/C ZIP検証もPASS。**これは新UIのオフライン候補の証拠で、旧固定Source/公開Buildパケット/iOS hashの差替え指示ではない**。文書/画像のみの後続commitはSource SHA/ZIPを変えるため、このhashをそのHEADのZIP値と記載しない。
 
 [画面レビュー（Before/After・合成スクリーンショット）](../reviews/local-b-ui/README.md) は表示証拠の補助資料、方針・安全性の正本は本§19とIssue #488。本人にはまず配色/余白/入口、6ページ診断の密度、Planの目標→メモの書きやすさの3点を短時間で判断してもらう。今回はiPhone操作を求めない。UI採否/修正→11/1以降の必要CI→別のiOS固定HTML更新PR→新UIのWKWebView/Release/保存互換の差分受入が必要。#20/#22を変更・統合せず、12/1目標を公開準備完了の根拠にしない。
