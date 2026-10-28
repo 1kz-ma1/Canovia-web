@@ -140,6 +140,15 @@ try {
         await radio.locator("..").click();
         assert.equal(await question.locator("input:checked").count(), 1);
         assert.ok(await radio.isChecked());
+        await question
+            .locator(".scale-circle")
+            .evaluateAll((els) =>
+                Promise.all(
+                    els.flatMap((el) =>
+                        el.getAnimations().map((a) => a.finished),
+                    ),
+                ),
+            );
         const fills = await question.locator("input").evaluateAll((inputs) =>
             inputs.map((input) => {
                 const style = getComputedStyle(input.nextElementSibling);
