@@ -162,11 +162,11 @@ function home() {
         ? "小さな行動から、可能性が広がる未来へ。"
         : plans.length
           ? stored
-              ? "保存した目標と、次の一歩をここから。"
-              : "入力した目標と、次の一歩をここから。"
+              ? "保存したPlanから、次の一歩へ。"
+              : "入力したPlanから、次の一歩へ。"
           : n === 30
-            ? "30問を選択済み。いまの結果から、次の一歩を考えましょう。"
-            : `${n} / 30問を選択済み。前回の続きから、自分のペースで。`;
+            ? "いまの結果から、次の一歩へ。"
+            : "前回の続きから、自分のペースで。";
     const railArt = `<svg class="home-rails" viewBox="0 0 280 100" fill="none" aria-hidden="true" focusable="false"><g class="rail-lines"><path d="M18 22h70c24 0 24 28 48 28h62"></path><path d="M18 50h180"></path><path d="M18 78h70c24 0 24-28 48-28h62"></path></g><g class="rail-lights"><circle cx="18" cy="22" r="3"></circle><circle cx="42" cy="50" r="4"></circle><circle cx="18" cy="78" r="3"></circle></g><circle class="rail-halo" cx="222" cy="50" r="25"></circle><circle class="rail-hub" cx="222" cy="50" r="17"></circle><path class="rail-core" d="m222 40 2.7 7.3L232 50l-7.3 2.7L222 60l-2.7-7.3L212 50l7.3-2.7Z"></path></svg>`;
     const primary = plans.length
         ? `<a class="button button-primary" href="#plans" data-home-primary data-open-plan="${plans[0].id}">Planをひらく ${icon("arrow")}</a>`
