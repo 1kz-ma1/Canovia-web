@@ -143,22 +143,39 @@ function home() {
     const n = count(),
         plans = newest(),
         started = !!state.diagnosis;
+    const first = !started && !plans.length;
+    const homeState = plans.length
+        ? "plans"
+        : started
+          ? n === 30
+              ? "answered"
+              : "partial"
+          : "first";
     const title = plans.length
         ? "あなたの一歩が、ここに。"
         : started
           ? n === 30
               ? "気づきを、次の一歩に。"
               : "途中から、続けてみよう。"
-          : "自分の関心から、次の準備へ。";
-    const action = plans.length
-        ? link("plans", "Planをひらく")
-        : started && n === 30
-          ? link("plans", "自分のPlanを作る")
-          : link(
-                "diagnosis",
-                started ? "診断の続きをひらく" : "関心を見つける",
-            );
-    return `<section class="home-hero"><div class="orbit" aria-hidden="true">${icon("spark")}</div><p class="eyebrow">あなたの、これから。</p><h1 aria-label="${h(title)}">${title
+          : "すべての一歩が、未来につながる。";
+    const description = first
+        ? "小さな行動から、可能性が広がる未来へ。"
+        : plans.length
+          ? stored
+              ? "保存した目標と、次の一歩をここから。"
+              : "入力した目標と、次の一歩をここから。"
+          : n === 30
+            ? "30問を選択済み。いまの結果から、次の一歩を考えましょう。"
+            : `${n} / 30問を選択済み。前回の続きから、自分のペースで。`;
+    const railArt = `<svg class="home-rails" viewBox="0 0 280 100" fill="none" aria-hidden="true" focusable="false"><g class="rail-lines"><path d="M18 22h70c24 0 24 28 48 28h62"></path><path d="M18 50h180"></path><path d="M18 78h70c24 0 24-28 48-28h62"></path></g><g class="rail-lights"><circle cx="18" cy="22" r="3"></circle><circle cx="42" cy="50" r="4"></circle><circle cx="18" cy="78" r="3"></circle></g><circle class="rail-halo" cx="222" cy="50" r="25"></circle><circle class="rail-hub" cx="222" cy="50" r="17"></circle><path class="rail-core" d="m222 40 2.7 7.3L232 50l-7.3 2.7L222 60l-2.7-7.3L212 50l7.3-2.7Z"></path></svg>`;
+    const primary = plans.length
+        ? `<a class="button button-primary" href="#plans" data-home-primary data-open-plan="${plans[0].id}">Planをひらく ${icon("arrow")}</a>`
+        : `<a class="button button-primary" href="#${n === 30 ? "result" : "diagnosis"}" data-home-primary>${n === 30 ? "結果をふりかえる" : "診断の続きをひらく"} ${icon("arrow")}</a>`;
+    const secondary = plans.length
+        ? `<a class="button button-secondary" href="#diagnosis" data-home-secondary>関心の診断をひらく ${icon("spark")}</a>`
+        : `<a class="button button-secondary" href="#plans" data-home-secondary>診断なしでPlanを作る ${icon("plan")}</a>`;
+    const overview = `<section class="section-space"><div class="section-title"><h2>いまの準備</h2><span class="subtle">${stored ? "この端末の記録" : "この画面の入力"}</span></div><div class="overview-grid"><a class="overview-card" href="#${started ? "result" : "diagnosis"}">${icon("spark")}<span>関心の診断<strong>${started ? `${n}<small> / 30問を選択済み</small>` : "まだ記録なし"}</strong></span>${icon("arrow")}</a><a class="overview-card" href="#plans">${icon("plan")}<span>自分のPlan<strong>${plans.length}<small>件${stored ? "を保存" : "を入力"}</small></strong></span>${icon("arrow")}</a></div></section>`;
+    return `<div class="home-experience" data-home-state="${homeState}"><section class="home-hero ${first ? "home-hero-first" : "home-hero-returning"}"><div class="home-hero-top"><p class="eyebrow">${first ? "Canoviaが目指す未来" : "あなたの、これから。"}</p>${railArt}</div><h1 aria-label="${h(title)}">${title
         .split("、")
         .map(
             (part, i) =>
@@ -166,11 +183,11 @@ function home() {
         )
         .join(
             "",
-        )}</h1><p>関心を見つけて、目標を考える。<br>小さな準備を、自分のペースで。</p>${action}<a class="hero-link" href="#${started ? "result" : "plans"}">${started ? "今の結果をふりかえる" : "診断を使わずPlanを作る"}</a></section>
-  <section class="section-space"><div class="section-title"><h2>いまの準備</h2><span class="subtle">${stored ? "この端末の記録" : "この画面の入力"}</span></div><div class="overview-grid"><a class="overview-card" href="#${started ? "result" : "diagnosis"}">${icon("spark")}<span>関心の診断<strong>${started ? `${n}<small> / 30問を選択済み</small>` : "まだ記録なし"}</strong></span>${icon("arrow")}</a><a class="overview-card" href="#plans">${icon("plan")}<span>自分のPlan<strong>${plans.length}<small>件${stored ? "を保存" : "を入力"}</small></strong></span>${icon("arrow")}</a></div></section>
-  ${plans.length ? `<section class="section-space"><div class="section-title"><h2>最近のPlan</h2><a href="#plans">すべて見る</a></div><a class="recent-plan card" href="#plans" data-open-plan="${plans[0].id}"><span class="pill">${h(plans[0].category || "自分の目標")}</span><h3>${h(plans[0].title)}</h3><p class="line-clamp">${h(plans[0].description || "メモはまだありません。編集から次の一歩を残せます。")}</p><div class="card-bottom"><time datetime="${plans[0].updated_at}">${dateLabel(plans[0].updated_at)}に更新</time>${icon("arrow")}</div></a></section>` : `<section class="card invitation section-space"><span class="icon-bubble">${icon("plan")}</span><h2>まずは、小さな目標から。</h2><p>「ちょっと気になる」を、言葉にしてみる。<br>診断なしでも、目標と計画を残せます。</p><a class="text-link" href="#plans">自分の目標・Planへ ${icon("arrow")}</a></section>`}
-  <section class="section-space"><h2>Canoviaで、できること</h2><ol class="path-list"><li><span>01</span><div><h3>関心を見つける</h3><p>日常の選び方から、今の自分をふりかえる。</p></div></li><li><span>02</span><div><h3>気づきを、自分の言葉に</h3><p>結果と自分の感覚を、どちらも大切に。</p></div></li><li><span>03</span><div><h3>次の一歩をPlanに残す</h3><p>目標と、まず試したいことを書いておく。</p></div></li></ol></section>
-  <a class="future-teaser" href="#future"><span class="icon-bubble">${icon("future")}</span><span><strong>これからのCanovia</strong><small>開発中の体験と、未来の構想を見る</small></span>${icon("arrow")}</a>`;
+        )}</h1><p class="hero-description">${h(description)}</p>${first ? "" : `<div class="hero-resume-actions">${primary}${secondary}</div>`}</section>
+    ${first ? `<section class="home-now section-space" data-home-first aria-labelledby="home-now-heading"><div class="section-title"><h2 id="home-now-heading">先行版で、いまできること</h2></div><div class="home-choices"><a class="home-choice" href="#diagnosis" data-home-choice="diagnosis"><span class="icon-bubble">${icon("spark")}</span><span><small class="choice-kicker">01 · 30問の診断</small><strong>関心を見つける</strong><small>回答をヒントに、いまの自分を整理。</small></span>${icon("arrow")}</a><a class="home-choice" href="#plans" data-home-choice="plans"><span class="icon-bubble">${icon("plan")}</span><span><small class="choice-kicker">02 · 自分の目標・Plan</small><strong>目標と、次の一歩を書く</strong><small>診断なしで、ここから始められます。</small></span>${icon("arrow")}</a></div><p class="home-record-note">${icon("shield")}${stored ? "記録はこの端末に保存。クラウド同期はありません。" : "この画面だけのPreview。再読み込みで入力が消えます。"}</p></section>` : overview}
+    ${plans.length ? `<section class="section-space"><div class="section-title"><h2>最近のPlan</h2><a href="#plans">すべて見る</a></div><a class="recent-plan card" href="#plans" data-open-plan="${plans[0].id}"><span class="pill">${h(plans[0].category || "自分の目標")}</span><h3>${h(plans[0].title)}</h3><p class="line-clamp">${h(plans[0].description || "メモはまだありません。編集から次の一歩を残せます。")}</p><div class="card-bottom"><time datetime="${plans[0].updated_at}">${dateLabel(plans[0].updated_at)}に更新</time>${icon("arrow")}</div></a></section>` : ""}
+    <section class="home-future card section-space" aria-labelledby="home-future-heading"><span class="pill">将来構想</span><h2 id="home-future-heading">一歩が、つながる未来へ。</h2><p>関心や目標から、次の行動を支えられるCanoviaを目指しています。</p><p class="field-hint">AI支援・自動記録・外部サービス連携は、この先行版では提供していません。</p><a class="text-link" href="#future">これからのCanoviaを見る ${icon("arrow")}</a></section>
+    ${first ? `<details class="explanation home-guide"><summary>はじめての方へ：記録とバックアップ</summary><p>診断は任意です。Planから始めても大丈夫。${stored ? "記録はこの端末に保存され、別端末には同期されません。" : "保存なしのPreviewです。再読み込み・終了で入力は消えます。"}大切な記録は、データ管理からJSONをExportし、別の安全な場所へ保管してください。</p></details>` : ""}</div>`;
 }
 function diagnosis() {
     const answers = state.diagnosis?.answers || {},

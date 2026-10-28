@@ -85,7 +85,7 @@ try {
     await page.locator("#app h1").waitFor();
     assert.equal(
         await page.locator("#app h1").getAttribute("aria-label"),
-        "自分の関心から、次の準備へ。",
+        "すべての一歩が、未来につながる。",
     );
     await nav("diagnosis");
     await page.locator("input[name=Q01][value=unknown]").focus();

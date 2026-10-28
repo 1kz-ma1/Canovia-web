@@ -449,83 +449,164 @@ main {
 }
 .home-hero {
     position: relative;
-    isolation: isolate;
     overflow: hidden;
-    padding: 28px 26px 24px;
+    padding: 24px;
     border-radius: 24px;
     background: var(--night);
     color: #fff;
 }
-.home-hero h1 {
-    font-size: clamp(28px, 4.5vw, 42px);
-    max-width: 15em;
-    margin: 12px 0 14px;
-    line-height: 1.55;
-    letter-spacing: 0.025em;
+.home-hero-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
 .home-hero .eyebrow {
     color: #d5cffa;
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.7;
+    margin: 0;
+    max-width: 13em;
 }
-.home-hero > p:not(.eyebrow) {
-    color: #d7d7e9;
-    font-size: 14px;
-    line-height: 1.95;
-    margin-bottom: 22px;
-}
-.home-hero .button {
-    background: #f0edff;
-    color: #342b70;
-    position: relative;
-    z-index: 1;
-}
-.hero-link {
-    position: relative;
-    z-index: 1;
+.home-rails {
     display: block;
-    color: #ded9ff;
-    font-size: 12px;
-    margin: 13px 0 0;
-    min-height: 32px;
-}
-.orbit {
-    position: absolute;
-    z-index: -1;
-    right: -48px;
-    top: 8px;
-    width: 230px;
-    height: 230px;
-    border: 1px solid #aaa1e337;
-    border-radius: 50%;
-    transform: rotate(-24deg);
+    width: 140px;
+    height: 50px;
+    flex-shrink: 0;
     pointer-events: none;
 }
-.orbit:before {
-    content: "";
-    position: absolute;
-    inset: 26px -26px;
-    border: 1px solid #aaa1e32a;
-    border-radius: 50%;
-    transform: rotate(50deg);
+.rail-lines {
+    stroke: #a79ae8;
+    stroke-width: 1.5;
+    opacity: 0.7;
 }
-.orbit:after {
-    content: "";
-    position: absolute;
-    left: 20px;
-    top: 15px;
-    width: 17px;
-    height: 17px;
-    border-radius: 50%;
-    background: #b3a0f8;
-    box-shadow: 0 0 35px #b3a0f866;
+.rail-lights {
+    fill: #e4d9ff;
 }
-.orbit svg {
-    position: absolute;
-    width: 50px;
-    height: 50px;
-    top: 76px;
-    left: 88px;
-    color: #aba0e850;
+.rail-lights circle:nth-child(2) {
+    fill: #f0dfb6;
+}
+.rail-halo {
+    stroke: #a79ae8;
+    stroke-width: 1;
+    opacity: 0.65;
+}
+.rail-hub {
+    fill: #443b68;
+    stroke: #c4b4f5;
+    stroke-width: 1.5;
+}
+.rail-core {
+    stroke: #f1e9ff;
+    stroke-width: 1.4;
+}
+.home-hero h1 {
+    font-size: clamp(28px, 4.5vw, 42px);
+    max-width: 15em;
+    margin: 8px 0 10px;
+    line-height: 1.55;
+    letter-spacing: 0.025em;
+}
+.home-hero .hero-description {
+    color: #d7d7e9;
+    font-size: 14px;
+    line-height: 1.85;
+    margin: 0;
+    max-width: 36em;
+}
+.hero-resume-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 20px;
+}
+.home-hero .button-primary {
+    background: #f0edff;
+    color: #342b70;
+}
+.home-hero .button-secondary {
+    background: #353453;
+    color: #f0edff;
+    border-color: #77718f;
+}
+.home-choices {
+    display: grid;
+    gap: 12px;
+}
+.home-choice {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 20px;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px;
+    color: var(--ink);
+    background: var(--surface);
+    text-decoration: none;
+    min-height: 80px;
+}
+.home-choice > .icon {
+    width: 20px;
+    height: 20px;
+    color: var(--accent);
+}
+.home-choice .icon-bubble {
+    width: 40px;
+    height: 40px;
+    border-radius: 13px;
+}
+.home-choice strong {
+    display: block;
+    font-size: 16px;
+    line-height: 1.65;
+    margin: 2px 0;
+}
+.home-choice small {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.7;
+}
+.home-choice .choice-kicker {
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: 0.035em;
+    color: var(--accent-dark);
+}
+.home-choice:hover {
+    border-color: var(--accent);
+    background: #fcfbff;
+}
+.home-record-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.8;
+    margin: 12px 0 0;
+}
+.home-record-note .icon {
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+}
+.home-future {
+    background: #f1eff9;
+}
+.home-future h2 {
+    margin: 12px 0 8px;
+}
+.home-future p {
+    font-size: 14px;
+    color: var(--muted);
+}
+.home-future .field-hint {
+    font-size: 12px;
+}
+.home-guide {
+    margin-top: 18px;
 }
 .overview-grid {
     display: grid;
@@ -1465,18 +1546,6 @@ input::file-selector-button {
     .home-hero h1 {
         max-width: 13em;
     }
-    .orbit {
-        right: 40px;
-        top: -35px;
-        width: 370px;
-        height: 370px;
-    }
-    .orbit svg {
-        width: 85px;
-        height: 85px;
-        left: 125px;
-        top: 135px;
-    }
     .overview-card {
         padding: 22px;
     }
@@ -1685,4 +1754,44 @@ input::file-selector-button {
 }
 .diagnosis-progress .subtle {
     font-size: 11px;
+}
+
+@media (min-width: 760px) {
+    .home-hero-top .home-rails {
+        position: absolute;
+        right: 30px;
+        top: 38px;
+        width: 320px;
+        height: 120px;
+    }
+    .home-hero-top {
+        min-height: 20px;
+    }
+    .hero-resume-actions {
+        flex-direction: row;
+        max-width: 560px;
+    }
+    .hero-resume-actions .button {
+        flex: 1;
+    }
+    .home-choices {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+@media (max-width: 359px) {
+    .home-rails {
+        width: 124px;
+    }
+    .home-choice {
+        padding: 14px;
+        gap: 9px;
+        grid-template-columns: 34px minmax(0, 1fr) 18px;
+    }
+    .home-choice .icon-bubble {
+        width: 34px;
+        height: 34px;
+    }
+    .home-choice strong {
+        font-size: 15px;
+    }
 }
