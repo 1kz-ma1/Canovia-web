@@ -1414,3 +1414,5 @@ Linux / system Chromium `154.0.8037.57` / Playwright `1.56.1`。fixtureは合成
 同SourceのNeutral B ZIP SHA256は `96df35a77290eb57379f7bc752627b4be93ae2d720d1dc447887e8e9ba0b2ddb`、Cは `643ffb7e4f2cedba745071159c329286c874bb16761a9b861a8d1a9edf66f5eb`。両25file（manifest含む）・Origin null・release false。旧Bとのhash比較で24asset中UIの5件のみ変更、他19件は一致。Sourceを含むmanifestも再発行される。Bの2回生成ZIP一致・B/C ZIP検証もPASS。**これは新UIのオフライン候補の証拠で、旧固定Source/公開Buildパケット/iOS hashの差替え指示ではない**。文書/画像のみの後続commitはSource SHA/ZIPを変えるため、このhashをそのHEADのZIP値と記載しない。
 
 [画面レビュー（Before/After・合成スクリーンショット）](../reviews/local-b-ui/README.md) は表示証拠の補助資料、方針・安全性の正本は本§19とIssue #488。本人にはまず配色/余白/入口、6ページ診断の密度、Planの目標→メモの書きやすさの3点を短時間で判断してもらう。今回はiPhone操作を求めない。UI採否/修正→11/1以降の必要CI→別のiOS固定HTML更新PR→新UIのWKWebView/Release/保存互換の差分受入が必要。#20/#22を変更・統合せず、12/1目標を公開準備完了の根拠にしない。
+
+本UI候補は [Web Draft PR #918](https://github.com/1kz-ma1/Canovia-web/pull/918)。本人のUI採否待ちであり、mainへ統合しない。実装・画面証拠・ローカル検証・未検証事項を同PRへ集約する。
