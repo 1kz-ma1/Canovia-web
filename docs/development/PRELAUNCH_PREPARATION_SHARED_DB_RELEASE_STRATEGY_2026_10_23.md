@@ -1416,3 +1416,41 @@ Linux / system Chromium `154.0.8037.57` / Playwright `1.56.1`。fixtureは合成
 [画面レビュー（Before/After・合成スクリーンショット）](../reviews/local-b-ui/README.md) は表示証拠の補助資料、方針・安全性の正本は本§19とIssue #488。本人にはまず配色/余白/入口、6ページ診断の密度、Planの目標→メモの書きやすさの3点を短時間で判断してもらう。今回はiPhone操作を求めない。UI採否/修正→11/1以降の必要CI→別のiOS固定HTML更新PR→新UIのWKWebView/Release/保存互換の差分受入が必要。#20/#22を変更・統合せず、12/1目標を公開準備完了の根拠にしない。
 
 本UI候補は [Web Draft PR #918](https://github.com/1kz-ma1/Canovia-web/pull/918)。本人のUI採否待ちであり、mainへ統合しない。実装・画面証拠・ローカル検証・未検証事項を同PRへ集約する。
+
+### 2026-10-28 診断の円形スケール追補（PR #918継続・Draft）
+
+本人の追加依頼により、直前候補 `3edde97f424d6dd71bcac5a60dd82fe98385c192` の**診断の文字付き回答カードだけを円形スケールに置き換える**。Home/結果/Plan/Backup等の前項の方針は維持。既存worktreeを保持するため、独立worktree・local branch `feature/local-b-circular-scale` で作業し、同じPR #918のremote `feature/local-b-mobile-experience` へfast-forward追記する。iOS/OP動画作業領域は対象外。main統合・公開・配備の許可ではない。
+
+| 左からの位置 | 保存値（変更なし） | radioの完全なラベル | 色token | 円の直径 |
+| --- | --- | --- | --- | --- |
+| 1 | 数値 `3` | あてはまる | `--scale-positive: #34785b` | 44px |
+| 2 | 数値 `2` | ややあてはまる | 同上 | 32px |
+| 3 | 文字列 `unknown` | わからない | `--scale-neutral: #687181` | 22px |
+| 4 | 数値 `1` | あまりあてはまらない | `--scale-negative: #7160a4` | 32px |
+| 5 | 数値 `0` | あてはまらない | 同上 | 44px |
+
+円の中心を等間隔に配置し、通常は輪郭だけ、選択後は対応色の塗り＋白いcheckで示す。視覚上22pxの中央を含め、**native radioの実タップ領域は各44px以上×48px**。radioを `display:none` / `visibility:hidden` / `aria-hidden` にせず、透明な実入力をlabelの全面に置く。完全なラベルは視覚的に隠したtextで保持し、fieldset/legend・checked・nativeの矢印/Space操作を維持。focus-visibleは円の外側の濃色outlineで表示。塗り150ms・軽い選択180msは既存Reduce Motionのanimation/transition無効化を尊重する。外部asset/font/依存追加なし。
+
+中央は独立した「判断できない」であり、中立点/0点ではない。画面上の常設説明とunknown radioの `aria-describedby`、詳細の答え方で説明する。未回答はkey不在、unknownはstringの存在として区別し、既存採点・schema・保存実装を変更しない。下段の方向ラベルは左「あてはまる」/中央「わからない」/右「あてはまらない」。6ページ×5問、同意後の途中/移動時保存、選択解除、修正、再開を維持する。
+
+診断見出し/説明・進捗bar/余白・同意の上下間隔を短くし、先頭の回答を早く表示する。390×844pxの新規contextで先頭回答列は概ねy=556〜604px、下部navの上に全5択が入ることを確認。5問すべては同ページを縦スクロールして回答する設計で、5問全体が844px内に収まるとは主張しない。長い設問や320pxでも横方向に逃がさない。
+
+#### 円形UIの検証証拠
+
+製品/テストSource **`c5648a69e7987e369b89c5784b1728f6ec795ec6`**。Linux Chromium 154 / Playwright 1.56.1。前候補比の製品変更は `preparation-local/src/app.mjs` と `style.css` のみ。`tests/browser/preparation_mobile_ui.mjs` を拡張し、既存の判定を削除/緩和しない。採点/data/model/Repository/backup/codec/Headers/配布・公開wrapperはbyte不変。24asset中22assetは前候補とhash一致、2assetとSource入りmanifestを再発行する。
+
+| 判定 | 自動検証・実測範囲 |
+| --- | --- |
+| PASS | native radioの表示順 `3,2,unknown,1,0` と完全なaccessible name、1質問1選択、塗り/checkと非選択の輪郭。全5値を実操作で個別保存→reloadし、数値/文字列を厳密比較 |
+| PASS | unknown保存後の解除でkey不在、0とは別の扱い。前後/ページ移動、途中保存、Space/ArrowRightによる3→2→unknown、Reduce Motion時animation none |
+| PASS | 混在 `{Q01:3,Q02:2,Q03:'unknown',Q04:1,Q05:0,Q06:3}` をUI保存→JSONの実download→隔離contextのImport preview（非保存）→確認後Import→radio復元まで厳密比較 |
+| PASS | 幅320/375/390/430/1280で5問それぞれ1列5択・直径44/32/22/32/44・各入力44px以上・横overflowなし。アニメーション完了後の形状とnative inputのタップ寸法を別検査。390の先頭列がnavに隠れない |
+| PASS | 既存B/C browser回帰：30問/採点133参照/結果・同点/Plan編集/JSON往復/破損・quota・abort・conflict保持/Origin・CSP・SW・404等。Bのbrowser process再起動保持、Cの非保存も維持 |
+| PASS | core5＋backup5、配布security12＋Render offline計画11、B二重生成ZIP一致とB/C ZIP検証。PHP参照は同日生成済み133ケースを再利用し、今回不変の採点/bankと照合 |
+| PASS（限定） | 旧カード3edde実UIの専用persistent profileへ保存した合成の5値を、browser終了後に同じloopback Origin/profileの円形UIで再開。**全state（revision/時刻/ID含む）と各radio値が完全一致**、migration/clearなし。Web同一Originの証拠に限定 |
+| PASS（限定） | 主要5画面のaxe-core 4.11.0対象WCAG2 A/AA・2.1 AA tagsで検出違反0。画面撮影contextの診断でも0。既に開いた画面のoffline Plan保存/Exportの既存回帰もPASS |
+| NOT_RUN / NOT_TESTED | GitHub Actions（全commit `[skip ci]`、無料枠を消費するdispatch/re-runなし）。新UIのSafari/WebKit/WKWebView/iPhone/VoiceOver/Dynamic Type/native Files/iOS upgradeは未検証。既存受入やChromium結果を転用しない |
+
+同SourceのNeutral ZIP SHA256：B `595b3bb1e3a0c08c5574243e3dad00c5ebb9a4f855c508d00eb633e1ceb20b97`、C `79e170a5f651eb82e0be4d9d12f808bb8f4569597c407d9b89024463f997f748`。文書/画像のみの後続HEADのZIP値ではない。前項のf8d514b8 hash、既存固定Web/iOS pinや公開Buildパケットは当時の証拠として保持し、差し替えない。
+
+[円形UIの全6状態・320/390・5問全体・直前カードとの比較](../reviews/local-b-ui/README.md#円形スケールへの更新) を本人レビューに用いる。最初の4画面比較の診断Afterも更新し、直前カードを `circle-before-390.png` として保持。本人には円の大小/色、肯定左・否定右の方向、中央の独立した意味が伝わるかを画像で判断してもらう。実機操作は今回依頼しない。**Draft維持・main未統合・`PRODUCTION_NO_GO_HOLD` / `release_approved=false`**。read-access単独FAIL、Release/公開の既存未解決ゲートも維持する。
