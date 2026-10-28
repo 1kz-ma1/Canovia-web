@@ -85,6 +85,8 @@ jobs:
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=webkit node tests/browser/preparation_static.mjs
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-C" BROWSER_ENGINE=chromium node tests/browser/preparation_static.mjs
           PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-C" BROWSER_ENGINE=webkit node tests/browser/preparation_static.mjs
+          PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=chromium node tests/browser/preparation_mobile_ui.mjs
+          PREPARATION_DIRECTORY="$RUNNER_TEMP/preparation-one" BROWSER_ENGINE=webkit node tests/browser/preparation_mobile_ui.mjs
           BROWSER_ENGINE=chromium node tests/browser/preparation_static_release.mjs
           BROWSER_ENGINE=webkit node tests/browser/preparation_static_release.mjs
       - uses: actions/upload-artifact@v4
