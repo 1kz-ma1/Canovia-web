@@ -83,6 +83,15 @@ export async function homeStates({ browser, origin, stored }) {
                 state === "first" ? 1 : 0,
                 "Returning users do not receive the first-use guide",
             );
+            assert.equal(
+                await page.locator(".home-guide").count(),
+                state === "first" ? 1 : 0,
+            );
+            assert.equal(
+                await page.locator("video").count(),
+                0,
+                "Home does not implement OP playback",
+            );
             assert.ok(
                 await page
                     .getByText(
@@ -206,12 +215,36 @@ export async function homeStates({ browser, origin, stored }) {
             await page.getByLabel("目標", { exact: true }).inputValue(),
             plan.title,
         );
+        // A previously opened editor must not override the newest saved Plan on Home.
+        await page.locator("#new-plan").click();
+        await page
+            .getByLabel("目標", { exact: true })
+            .fill("Synthetic latest Plan");
+        await page.locator("#plan-form button[type=submit]").click();
+        await saved();
+        const latest = (await read()).plans.find(
+            (v) => v.title === "Synthetic latest Plan",
+        );
+        await page.locator(`[data-edit-plan="${plan.id}"]`).click();
+        await home("plans");
+        assert.equal(
+            await page
+                .locator("[data-home-primary]")
+                .getAttribute("data-open-plan"),
+            latest.id,
+        );
+        await page.locator("[data-home-primary]").click();
+        await page.locator("#plan-form").waitFor();
+        assert.equal(
+            await page.getByLabel("目標", { exact: true }).inputValue(),
+            latest.title,
+        );
         await home("plans");
         await page.reload();
         await page
             .locator(`[data-home-state="${stored ? "plans" : "first"}"]`)
             .waitFor();
-        assert.equal((await read()).plans.length, stored ? 1 : 0);
+        assert.equal((await read()).plans.length, stored ? 2 : 0);
         await page.keyboard.press("Tab");
         assert.ok(
             await page.evaluate(() => document.activeElement !== document.body),

@@ -1780,7 +1780,7 @@ input::file-selector-button {
 }
 @media (max-width: 359px) {
     .home-rails {
-        width: 124px;
+        width: 110px;
     }
     .home-choice {
         padding: 14px;
@@ -1794,4 +1794,22 @@ input::file-selector-button {
     .home-choice strong {
         font-size: 15px;
     }
+}
+
+.home-hero .eyebrow {
+    letter-spacing: 0.06em;
+}
+.home-experience .overview-card strong {
+    display: block;
+    font-size: 22px;
+    line-height: 1.5;
+}
+.home-experience .overview-card strong small {
+    display: block;
+    font-size: 10px;
+    margin: 1px 0 0;
+    line-height: 1.5;
+}
+.home-experience .overview-empty strong {
+    font-size: 13px;
 }
