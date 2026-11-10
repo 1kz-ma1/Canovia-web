@@ -697,6 +697,16 @@ Phase1 private B認可起点、Launcher/Opener/Adapter/PrivateWireのlive結線�
 
 ## 19. 2026-10-26 Local-first Preparation-only開発方針
 
+### 2026-11-10 iOS App Review前倒しとの境界（最新オーナー判断・計画のみ）
+
+- **iOS先行版の審査提出は11/19基本目標、11/17は全安全・署名・Store条件達成時のみの早期候補**。11/14に実測証拠でGO/AMBER/NO-GOを判断、11/20–24を審査対応、11/25–26は本人の試験・家族予定により開発/承認休止、12/1を一般公開目標とする。**Appleの審査通過日時は保証しない**。審査承認後は原則手動公開、別途オーナー判断が必要。
+- iOSの実装/受入・並行Lane A/B/C・11/14判定・17–19提出ゲートの詳細正本は [iOS PR #27](https://github.com/1kz-ma1/Canovia-iOS/pull/27)（既存 [iOS PR #26](https://github.com/1kz-ma1/Canovia-iOS/pull/26) の仕様書2件へ変更したDraft）。製品基準は従来の [iOS PR #25](https://github.com/1kz-ma1/Canovia-iOS/pull/25) の凍結HEAD、Web UIは [Web PR #918](https://github.com/1kz-ma1/Canovia-web/pull/918) の未統合候補。今回のGitHub再確認時点で両mainは変更なし。
+- **これはiOS側の予定調整のみ**。本§19のWeb B Static Site `https://start.rpf-canovia.com` の公開GO、Render Build設定・Deploy・DNS/TLS/停止受入、Canonical/e858/既存Laravel Production、Source pins、DB/Auth0等の境界は変更・解除しない。「iOS提出完了」を「Webサイト公開」や「他領域の本番受入」と同一視しない。Webの Render初回成功Deployはこの§19既存の独立ゲートを満たした別の本人承認までHOLD。
+- Apple実機の `file://` read-grant既知FAIL、missing-HTML STOPの過去FAIL/原因未特定、Mac新規/更新実測・Release package / 実機差分の未検証はそのまま `SECURITY_BLOCKED`。WebのHTTP/Chromium合成PASS、CI、Render offline receiptsをiOS WKWebView/default-store検証に転用しない。
+- Web側の今回の作業範囲は **仕様参照とIssue #488の相互リンク**だけ。製品UI、B/C配布、`AGENTS.md`、Render操作、Public roadmapのリリース表示は変更しない。11月14日に判断が出た際は実測/採否をiOS正本へ追記し、必要ならこの§19の将来予定参照だけ整合させる。PR統合は公開実績にならない。
+
+
+
 オーナーの新委任により、B: Local-firstを開発上の第一候補、C: 保存を保証しないStatic Previewをfallback候補とする。これは実装着手の判断で、外部公開・配備・Cへの正式切替のGOではない。Canonical A案/e858/独立監査/Backup/Writer Cutoverの未達は別トラックとして保持し、旧Web Suspended/Resume・HTTP禁止、実Aiven禁止、production/release不変更を維持する。
 
 配布対象は`preparation-local/`の必要な診断・グラフ・静的Future・任意Plan・端末内保存/再訪・明示Export/Importのみ。旧Study主体の`local-preview`全体を出荷せず、保存/backup primitiveを再利用する。Account/Login/Session/Canonical同期/AI/専門実行/投票/analytics/iOS native新機能は対象外。未来の本人認証・同意付きCanonical Importは未実装の別設計。
