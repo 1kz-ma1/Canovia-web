@@ -714,7 +714,7 @@ revision、各version、import_receiptsの形・意味を維持する。UUID/ins
 自動移行、アカウント紐付けは行わない。
 
 iOSの実装・将来同期契約の正本は既存
-[Phase0 §5](https://github.com/1kz-ma1/Canovia-iOS/blob/ffe96238e1c011d2167210d5b57eb51f220d599c/docs/PHASE0_LOCAL_FIRST_ORIGIN_DECISION_2026_10_27.md#5-march-v1-data-continuity-contract)
+[Phase0 §5](https://github.com/1kz-ma1/Canovia-iOS/blob/5e841ae412c9d4d2b5a42d48494b623215b355f8/docs/PHASE0_LOCAL_FIRST_ORIGIN_DECISION_2026_10_27.md#5-march-v1-data-continuity-contract)
 へ集約。新規ログイン/同期エンジン/APIは作らない。将来はアカウント切替時の送信停止、
 本人同意時点のowner/epoch/revision/内容固定snapshot、初回移行の冪等性、応答喪失の
 UNKNOWN保持とreceipt照合再開、所有者競合/重複排除、完全確認までのローカル保持、
@@ -725,6 +725,31 @@ iOS mainはBがDebug専用、Releaseは旧オンライン経路。Native N0/N1-A
 保存なし。今回の候補生成を自動保存/Native永続化/既存データ移行/製品採用の実装済み扱いにしない。
 自動保存の製品適用は部分入力・競合・中断を含む別の実装受入ゲートとして残す。
 既存iOS候補・PR #918・N1-Aを無断置換しない。
+
+#### v0.2次工程 — 隔離自動保存と原因切り分け（2026-11-15）
+
+本人が隔離環境での自動保存実装を許可。iOS #36の `--autosave` 候補だけに追加し、
+Web B/C・旧Debug builder・製品アプリには組み込まない。保存済みrootとメモリの編集中
+snapshotを分け、有効入力を250msでまとめ、1書込みずつ同じrevision CASへ渡す。
+schema/ID/DB名は不変。必須titleが空などの無効入力は保存せず、旧確定データを保持する。
+診断は既存の端末内保存同意を前提とし、未回答/unknown/0を区別。ページ/解除・結果や
+移動前のbarrier、競合停止、容量不足の明示再試行、保存中の新入力と遅い応答、未応答時の
+CAS再試行、終了時のbest-effort flushを検証対象とする。未保存の全入力や無効draftの
+再起動復元は約束しない。詳細状態遷移は既存iOS Phase0§5へ集約し、Native保存先や移行を新設しない。
+
+旧seed失敗は診断CIで、Origin一次条件通過後に元の
+`serviceWorker.getRegistrations()`がInvalidStateErrorを返し、catchがSTOPへ進むことを
+観測した。IDB呼出0、scriptが同APIまで実行され、CSP violation観測0。
+これはLinux Chromiumのfile実行条件の証拠であり、CSP/任意ファイル境界の安全性PASSや
+実WKWebViewの結果ではない。元APIはそのまま実行・例外を再throwし、ガードは一切緩和しない。
+
+Workspace Plan未検出は [比較CI43708943515](https://github.com/1kz-ma1/Canovia-web/actions/runs/43708943515)
+で固定main ed6a18aと提案68da578を同じUbuntu26.04/PHP8.4.27/Node22/
+composer・npm/build/元テスト3ファイルで再現した。両方とも同じtest:362のPlan
+ModelNotFoundException。対象テスト/Controller/phpunit.xml/lockのhashを照合し、
+期待値や無関係なPHPコードは変更しない。固定deadline 2026-11-10と実行日11-15・
+Controllerの「期限<開始日」拒否条件は原因候補として別記し、応答sessionの直接検証をせず
+断定しない。比較CIも元の非ゼロ終了を保持する。後続文書/隔離JS変更をこの失敗の修正と呼ばない。
 
 保存済み記録もアプリ削除・紛失/故障・保存領域消去等で失う場合がある。一般iOSには
 利用できないJSON操作を案内せず、アカウント/同期/自動backup/復旧を提供済みと表示しない。

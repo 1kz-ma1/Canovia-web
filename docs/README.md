@@ -3,6 +3,7 @@
 ## 2026-10-26 Local-first Preparation-only（開発候補・公開HOLD）
 
 - 2026-11-15: 同じ[§19](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#19-2026-10-26-local-first-preparation-only開発方針)にData Continuity v0.2のiOS限定方針を追記。一般iOSのJSON UI除外候補、schema/ID/CAS維持、内部復元試験と将来同期の認証/同意/snapshot/冪等性契約。Web B/Cの操作仕様・Sourceは不変。自動保存・Native永続化・Release統合/実機は未完了で、公開/DB安全ゲートは維持。
+  後続の本人承認によりiOSのオプトイン隔離候補へ自動保存を実装（製品未組込）。旧seedのSW拒否と、Workspace未検出の固定main/提案比較CIを同節に記録し、FAILや未実測を維持する。
 
 - [既存先行公開戦略 §19](development/PRELAUNCH_PREPARATION_SHARED_DB_RELEASE_STRATEGY_2026_10_23.md#19-2026-10-26-local-first-preparation-only開発方針): 専用IndexedDBのBと保存なしC、固定static配布/通信境界、Mac Safariの最小受入票、専用Render Static Site・start.rpf-canovia.comを本人が方式/長期Originとして選定（実配信未受入）、Welcome/Laravel構成・Cloudflare/AWS費用比較、段階移行と公開後Operations、Render Phase 1の固定SHA/ZIP設定票・オフラインstage/負例CI・作成前費用確認票。Hosting実効受入を合成PASSに昇格しない。Canonical/e858の安全ゲートは別に保持。2026-10-27本人申告のSafari基本操作・再起動保持・Export/Importは成功範囲限定で記録。取得済みrpf-canovia.com（本人申告）に合わせ、選定Originはstart.rpf-canovia.com／将来候補app.rpf-canovia.com。旧canovia.comは非所有で除外。Cookie/DNS・固定Source設定パケットと5承認ゲートを§19へ集約。初回成功Deploy前のSource/tree・Neutral ZIP・Origin適用候補の独立hash/全25files検証、負例CI、本人操作/停止票も同節に集約。新専用Siteのoff/off・標準URLdisabled・Build exit2はread-only確認、成功Deployなし。B・選定Origin限定のソースBuild認可と使い捨てcheckoutでの実CLI検証も同節へ記録。ソース有効化はRender設定変更/Deployの承認ではない。実HTTPS/未実施実機項目/公開GOは未受入。
 
