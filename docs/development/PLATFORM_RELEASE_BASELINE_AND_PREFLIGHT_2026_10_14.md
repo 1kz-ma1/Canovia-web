@@ -101,3 +101,11 @@ python3 scripts/ops/platform_backup_ciphertext_check.py \
 Missing, identical-inode, altered, symlinked, group-readable or non-.age files return BLOCK and exit 2. Matching copies return **REVIEW_REQUIRED**, exit 0 solely for further human inspection. The result **always** preserves offsite_source_provenance_verified=false, age_decryption_verified=false, isolated_restore_verified=false and release_authorized=false. This is a ciphertext hash/access-mode classifier, **not proof that age encryption is valid or the SQL dump can be restored**.
 
 Do not pass private age identities, database passwords or dumps into CI. This script needs no credentials, does not create backups, does not grant backup account privileges, does not connect to Aiven and does not upload files. A real owner-approved recovery drill remains a separate gate. Existing path-scoped Platform preflight CI is reused for its eight synthetic-file tests (rather than creating a duplicate workflow).
+
+## 7. 2026-11-16 follow-up — owner-run legacy backup restore
+
+The 2026-10-14 owner-reported backup/recovery baseline above has now been followed by an owner-run verification of the retained `.age` copy: same-size SHA-256-matching Mac/iCloud-labeled ciphertext copies (2,802,646 bytes each), working `age` decryption and gzip integrity, successful import into a network-disabled disposable MySQL 8.4 container, 91 base tables, 94 migration rows, and exact `COUNT(*)` sum of 48,916 rows. The owner reported the isolated container removed, source backup unchanged. The SQL dump footer timestamp is `2026-10-14 12:34:37` with timezone unknown.
+
+**Evidence classification:** OWNER-REPORTED LOCAL RESTORE PASS, not independently executed GitHub/CI or current Aiven attestation. The manual check did not run `platform_backup_ciphertext_check.py`, verify a backup-time expected SHA-256, prove iCloud download provenance or archive freshness, test a password-manager copy of the age private key, or demonstrate full application recovery. The owner believes no old-Web DB edits occurred after October 14, but this remains unverified. Security/release HOLD and production/Aiven change prohibitions remain unchanged.
+
+Canonical dated evidence and open acceptance items: [Security Audit v1 legacy backup restore evidence (2026-11-16)](SECURITY_AUDIT_V1_LEGACY_BACKUP_RESTORE_EVIDENCE_2026_11_16.md).
