@@ -697,6 +697,47 @@ Phase1 private B認可起点、Launcher/Opener/Adapter/PrivateWireのlive結線�
 
 ## 19. 2026-10-26 Local-first Preparation-only開発方針
 
+### 2026-11-15 Data Continuity v0.2 — iOSのJSON操作UI分離
+
+本人決定：先行iOSはアカウント不要・端末内保存・クラウド同期なし。
+一般利用者へJSON Export/Importを操作させない。これは**iOS限定の後続方針**であり、
+既存Web B/CのExport/Import導線・HTTP配布・固定Sourceや過去の検証記録を削除しない。
+CSS非表示ではなく、iOS配布候補からUI依存、navigation、直接data routeを除く。
+内部serializer/strict validation/隔離復元試験は開発機能として維持する。
+
+データ正本は `preparation-local/src/model.mjs` / `backup.mjs` と、B builderが
+`local-preview/src/repository.mjs`から生成する既存CAS repository。
+`schema_version=1`、installation_id、source_installation_id、レコードUUID、
+revision、各version、import_receiptsの形・意味を維持する。UUID/installation_idは
+本人認証ではない。DBは既存 `canovia-preparation-v1` / version1 / state/root。
+失敗時に空stateへ置換しない。保存先・Origin・WKWebsiteDataStoreの変更や消去、
+自動移行、アカウント紐付けは行わない。
+
+iOSの実装・将来同期契約の正本は既存
+[Phase0 §5](https://github.com/1kz-ma1/Canovia-iOS/blob/ffe96238e1c011d2167210d5b57eb51f220d599c/docs/PHASE0_LOCAL_FIRST_ORIGIN_DECISION_2026_10_27.md#5-march-v1-data-continuity-contract)
+へ集約。新規ログイン/同期エンジン/APIは作らない。将来はアカウント切替時の送信停止、
+本人同意時点のowner/epoch/revision/内容固定snapshot、初回移行の冪等性、応答喪失の
+UNKNOWN保持とreceipt照合再開、所有者競合/重複排除、完全確認までのローカル保持、
+同期と独立backupの区別を必須とする。別の本人認証・同意・厳格検証なしにCanonicalへ送らない。
+
+**現状差分と停止条件：** Web mainのフォームは明示保存で、入力ごとの自動保存ではない。
+iOS mainはBがDebug専用、Releaseは旧オンライン経路。Native N0/N1-Aは製品未接続でN1-Aは
+保存なし。今回の候補生成を自動保存/Native永続化/既存データ移行/製品採用の実装済み扱いにしない。
+自動保存の製品適用は部分入力・競合・中断を含む別の実装受入ゲートとして残す。
+既存iOS候補・PR #918・N1-Aを無断置換しない。
+
+保存済み記録もアプリ削除・紛失/故障・保存領域消去等で失う場合がある。一般iOSには
+利用できないJSON操作を案内せず、アカウント/同期/自動backup/復旧を提供済みと表示しない。
+新しい候補のSource/変換元/HTML/CSP hashと検証範囲を再発行し、旧SHAのPASSを流用しない。
+初回保存/再読込、ID/内容一致、stale revision/容量不足の非破壊拒否、未知schema拒否、内部Export→
+隔離Importでrecord一致（宛先installation/revisionは別）、二重/破損Import拒否を合成で検査する。
+ブラウザ再起動・file候補置換と、iOSの同Bundle ID更新/default store・実機は別証拠。
+
+WKWebView read-access FAILはJSON UI除去では解消しない。
+`DO_NOT_PROMOTE_CURRENT_B0 / P0_PROOF_DESIGN_BLOCKED / SECURITY_BLOCKED /
+PRODUCTION_NO_GO_HOLD / release_approved=false` を維持。
+DB/e858/Canonical/Render/Auth0/production/実配信/実機・Store公開ゲートは一切解除しない。
+
 オーナーの新委任により、B: Local-firstを開発上の第一候補、C: 保存を保証しないStatic Previewをfallback候補とする。これは実装着手の判断で、外部公開・配備・Cへの正式切替のGOではない。Canonical A案/e858/独立監査/Backup/Writer Cutoverの未達は別トラックとして保持し、旧Web Suspended/Resume・HTTP禁止、実Aiven禁止、production/release不変更を維持する。
 
 配布対象は`preparation-local/`の必要な診断・グラフ・静的Future・任意Plan・端末内保存/再訪・明示Export/Importのみ。旧Study主体の`local-preview`全体を出荷せず、保存/backup primitiveを再利用する。Account/Login/Session/Canonical同期/AI/専門実行/投票/analytics/iOS native新機能は対象外。未来の本人認証・同意付きCanonical Importは未実装の別設計。
