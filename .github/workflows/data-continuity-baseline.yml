@@ -1,0 +1,49 @@
+name: Data Continuity Workspace baseline comparison (diagnostic)
+on:
+  pull_request:
+    branches: [main]
+    paths: ['.github/workflows/data-continuity-baseline.yml']
+permissions:
+  contents: read
+jobs:
+  same-condition-reproduction:
+    name: Original Workspace test / ${{ matrix.source }}
+    runs-on: ubuntu-latest # identical to original Workspace job, including image
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [main-ed6a18a, proposal]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.source == 'main-ed6a18a' && 'ed6a18a63dac1efbba81999fa0a9611f1c3be104' || github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run build
+      - name: Record identical toolchain and immutable source identities
+        run: |
+          git rev-parse HEAD
+          php --version
+          node --version
+          date -u
+          sha256sum composer.lock phpunit.xml tests/Feature/PersonalizationBootstrapV5825Test.php app/Http/Controllers/PlanController.php
+      - name: Original failing Workspace command; preserve its exit code
+        shell: bash
+        run: |
+          set -o pipefail
+          php artisan test tests/Feature/PersonalizationBootstrapV5825Test.php tests/Feature/FirstRunUxV4123Test.php tests/Feature/ConversationalOnboardingV4116Test.php 2>&1 | tee "$RUNNER_TEMP/workspace-original.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workspace-original-${{ matrix.source }}-NOT-ACCEPTANCE
+          path: ${{ runner.temp }}/workspace-original.log
+          if-no-files-found: warn
