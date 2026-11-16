@@ -166,4 +166,16 @@ class FutureNativeSupportTest extends TestCase
         $this->assertSame($count, RoadmapFeature::count());
         $this->assertSame(1, RoadmapVote::count());
     }
+    public function test_lab_bootstrap_rejects_database_url_before_framework_boot(): void
+    {
+        $process = new \Symfony\Component\Process\Process(
+            [PHP_BINARY, base_path('scripts/ci/future_support_lab.php'), 'init'], base_path(),
+            ['APP_ENV' => 'testing', 'DB_CONNECTION' => 'sqlite',
+             'DB_DATABASE' => sys_get_temp_dir().'/canovia-future-negative/lab.sqlite',
+             'DB_URL' => 'mysql://localhost/not-a-lab'],
+        );
+        $process->run();
+        $this->assertFalse($process->isSuccessful());
+        $this->assertStringContainsString('FUTURE_DISPOSABLE_ENV_REQUIRED', $process->getErrorOutput());
+    }
 }

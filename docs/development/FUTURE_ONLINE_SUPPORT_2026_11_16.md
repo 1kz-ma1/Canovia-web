@@ -114,7 +114,10 @@ redirects refused (including same-origin), normal TLS validation, cancellation s
 
 ## Verification and release stop conditions
 
-Disposable SQLite only (parallel loopback workers use IMMEDIATE transactions/busy timeout): existing Web+Native aggregate equality, two Native clients,
+Disposable SQLite only (parallel loopback workers use IMMEDIATE transactions/busy timeout):
+the lab rejects existing.env/config cache, DB_URL/read-write split/unsafe path and
+verifies effective SQLite configuration before migrations/requests. An exclusive fresh
+worktree is required; never copy a real.env or cached configuration into it. existing Web+Native aggregate equality, two Native clients,
 duplicate add/cancel, foreign-actor isolation, hidden/paused/invalid candidates, malformed
 bearers/body spoofing, expiry/revoke, exact OFF/production/preparation gates, rate limits,
 DB failure, persistent reload, ambiguous writes and cache isolation. Unique indexes and
