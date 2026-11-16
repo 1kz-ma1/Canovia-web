@@ -85,11 +85,12 @@ class FutureNativeSupportTest extends TestCase
         $stopped = RoadmapFeature::where('feature_key', 'social.goal_peers')->firstOrFail();
         $stopped->update(['voting_enabled' => false]);
         DB::table('roadmap_features')->where('feature_key', 'economy.gift')->update(['status' => 'INTERNAL']);
+        RoadmapFeature::where('feature_key', 'social.progress_feed')->update(['title' => '   ']);
         $rows = $this->client($a)->getJson($this->base.'/features')->assertOk()->json('features');
         $this->assertNotContains('social.cheer', array_column($rows, 'feature_key'));
         $this->assertNotContains('economy.gift', array_column($rows, 'feature_key'));
         $this->assertFalse(collect($rows)->firstWhere('feature_key', 'social.goal_peers')['voting_enabled']);
-        foreach (['social.cheer', 'social.goal_peers', 'economy.gift', 'missing.key'] as $key) {
+        foreach (['social.cheer', 'social.goal_peers', 'economy.gift', 'social.progress_feed', 'missing.key'] as $key) {
             $this->client($a)->postJson($this->base.'/features/'.$key.'/support')->assertNotFound();
             $this->client($a)->deleteJson($this->base.'/features/'.$key.'/support')->assertNotFound();
         }

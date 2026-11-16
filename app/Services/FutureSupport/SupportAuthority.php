@@ -81,7 +81,7 @@ final class SupportAuthority
             // Recheck with lock: a concurrent revocation cannot leave a new orphan vote.
             $actor = $this->actor($request, true, true);
             $feature = RoadmapFeature::query()->where('feature_key', $key)->lockForUpdate()->first();
-            if (! $feature || ! $feature->is_published || ! $feature->voting_enabled
+            if (! $feature || ! $feature->is_published || ! $feature->voting_enabled || trim($feature->title) === ''
                 || ! in_array($feature->getRawOriginal('status'), array_column(RoadmapFeatureStatus::cases(), 'value'), true)) {
                 self::reject('FUTURE_NOT_FOUND', 404);
             }
