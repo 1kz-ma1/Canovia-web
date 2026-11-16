@@ -119,6 +119,10 @@ class FutureNativeSupportTest extends TestCase
         $response = $this->getJson($this->base.'/features')->assertOk()->assertHeader('Vary', 'Authorization');
         $this->assertFalse($response->headers->has('Set-Cookie'));
         $this->assertFalse($response->headers->has('Access-Control-Allow-Origin'));
+        $preflight = $this->withHeaders(['Origin' => 'https://untrusted.example', 'Access-Control-Request-Method' => 'POST'])
+            ->options($this->base.'/actors')->assertNotFound();
+        $this->assertFalse($preflight->headers->has('Access-Control-Allow-Origin'));
+        $this->flushHeaders();
         $this->assertStringNotContainsString('voter_key', $response->getContent());
         $this->assertStringNotContainsString('actor_token', $response->getContent());
     }
