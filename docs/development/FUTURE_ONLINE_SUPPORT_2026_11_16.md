@@ -114,7 +114,7 @@ redirects refused (including same-origin), normal TLS validation, cancellation s
 
 ## Verification and release stop conditions
 
-Disposable SQLite only: existing Web+Native aggregate equality, two Native clients,
+Disposable SQLite only (parallel loopback workers use IMMEDIATE transactions/busy timeout): existing Web+Native aggregate equality, two Native clients,
 duplicate add/cancel, foreign-actor isolation, hidden/paused/invalid candidates, malformed
 bearers/body spoofing, expiry/revoke, exact OFF/production/preparation gates, rate limits,
 DB failure, persistent reload, ambiguous writes and cache isolation. Unique indexes and

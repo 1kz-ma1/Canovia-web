@@ -16,6 +16,8 @@ final class FutureSupportLabBoundary
 {
     public function handle(Request $request, Closure $next): Response
     {
+        $requestID = (string) Str::uuid();
+        $request->attributes->set('future_request_id', $requestID);
         try {
             if (! app()->environment('local', 'testing') || config('future_support.enabled') !== true
                 || app(ReleaseLevelService::class)->preparationOnly()) {
@@ -57,7 +59,7 @@ final class FutureSupportLabBoundary
         }
         $response->headers->set('Cache-Control', 'private, no-store');
         $response->headers->set('Vary', 'Authorization');
-        $response->headers->set('X-Request-ID', (string) Str::uuid());
+        $response->headers->set('X-Request-ID', $requestID);
 
         return $response;
     }

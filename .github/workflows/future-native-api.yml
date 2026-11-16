@@ -33,4 +33,9 @@ jobs:
       - name: Native authority negatives and existing Web Support regression
         run: |
           set -euo pipefail
-          php artisan test tests/Feature/FutureNativeSupportTest.php tests/Feature/CanoviaFutureV407Test.php tests/Feature/CanoviaFutureCarouselTest.php
+          python3 - <<'PYENV'
+          from pathlib import Path
+          with Path('.env').open('x') as output:
+              output.write('APP_ENV=testing\n')
+          PYENV
+          php artisan test --display-warnings --fail-on-warning tests/Feature/FutureNativeSupportTest.php tests/Feature/CanoviaFutureV407Test.php tests/Feature/CanoviaFutureCarouselTest.php

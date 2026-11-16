@@ -15,6 +15,9 @@ config()->set('session.driver', 'array');
 config()->set('cache.default', 'file');
 config()->set('cache.stores.file.path', dirname(getenv('DB_DATABASE')).'/cache');
 config()->set('app.debug', false);
+// Real parallel lab workers serialize SQLite writers; hosted DB semantics remain separate.
+config()->set('database.connections.sqlite.transaction_mode', 'IMMEDIATE');
+config()->set('database.connections.sqlite.busy_timeout', 5000);
 if (PHP_SAPI === 'cli-server') {
     $app->handleRequest(Illuminate\Http\Request::capture());
     return;

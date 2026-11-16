@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Services\FutureSupport\SupportAuthority;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Str;
 
 final class FutureSupportController extends Controller
 {
@@ -27,17 +26,17 @@ final class FutureSupportController extends Controller
     public function index(Request $request, SupportAuthority $authority)
     {
         return $this->storage(fn () => ['features' => $authority->features($request->attributes->get('future_actor')),
-            'fetched_at' => now()->toISOString(), 'request_id' => (string) Str::uuid()]);
+            'fetched_at' => now()->toISOString(), 'request_id' => $request->attributes->get('future_request_id')]);
     }
 
     public function support(Request $request, string $featureKey, SupportAuthority $authority)
     {
-        return $this->storage(fn () => ['feature' => $authority->set($request, $featureKey, true), 'request_id' => (string) Str::uuid()]);
+        return $this->storage(fn () => ['feature' => $authority->set($request, $featureKey, true), 'request_id' => $request->attributes->get('future_request_id')]);
     }
 
     public function unsupport(Request $request, string $featureKey, SupportAuthority $authority)
     {
-        return $this->storage(fn () => ['feature' => $authority->set($request, $featureKey, false), 'request_id' => (string) Str::uuid()]);
+        return $this->storage(fn () => ['feature' => $authority->set($request, $featureKey, false), 'request_id' => $request->attributes->get('future_request_id')]);
     }
     private function storage(callable $operation, int $status = 200)
     {
