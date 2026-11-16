@@ -26,6 +26,12 @@ class FutureNativeSupportTest extends TestCase
         (require base_path('experiments/FutureSupport/database/credentials.php'))->up();
     }
 
+    public function json($method, $uri, array $data = [], array $headers = [], $options = 0)
+    {
+        // Laravel defaults to [] for an empty payload; the wire contract is {}.
+        return parent::json($method, $uri, $data, $headers, $options | JSON_FORCE_OBJECT);
+    }
+
     private function actor(): string
     {
         return $this->postJson($this->base.'/actors')->assertCreated()->assertHeader('Cache-Control', 'no-store, private')->json('credential');

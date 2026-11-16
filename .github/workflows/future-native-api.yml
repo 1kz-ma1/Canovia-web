@@ -26,6 +26,10 @@ jobs:
           extensions: mbstring, sqlite3, pdo_sqlite
           coverage: none
       - run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts && npm run build
       - name: Native authority negatives and existing Web Support regression
         run: |
           set -euo pipefail
