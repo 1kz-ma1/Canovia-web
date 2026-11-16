@@ -89,12 +89,13 @@ class PersonalizationBootstrapV5825Test extends TestCase
 
     public function test_multi_domain_diagnosis_persists_self_reported_context_and_keeps_observed_inferred_separate(): void
     {
+        $deadline = now()->addMonths(2)->toDateString();
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post(route('personalization.store'), [
                 'domains' => ['study', 'development'],
-                'deadline' => '2026-11-10',
+                'deadline' => $deadline,
                 'weekly_capacity' => '5_10',
                 'study_goal' => '応用情報技術者試験 合格',
                 'study_kind' => 'qualification',
@@ -308,12 +309,13 @@ class PersonalizationBootstrapV5825Test extends TestCase
 
     public function test_seed_acceptance_reuses_existing_plan_form_and_plan_creation_records_seed_event(): void
     {
+        $deadline = now()->addMonths(2)->toDateString();
         $user = User::factory()->create();
 
         $this->actingAs($user)
             ->post(route('personalization.store'), [
                 'domains' => ['study'],
-                'deadline' => '2026-11-10',
+                'deadline' => $deadline,
                 'weekly_capacity' => '5_10',
                 'study_goal' => '応用情報技術者試験 合格',
                 'study_kind' => 'qualification',
@@ -335,7 +337,7 @@ class PersonalizationBootstrapV5825Test extends TestCase
             ]))
             ->assertOk()
             ->assertSee('value="応用情報技術者試験 合格"', false)
-            ->assertSee('value="2026-11-10"', false)
+            ->assertSee('value="'.$deadline.'"', false)
             ->assertSee(
                 'name="personalization_seed_key" value="study_qualification"',
                 false,
@@ -349,12 +351,13 @@ class PersonalizationBootstrapV5825Test extends TestCase
                 'title' => '応用情報技術者試験 合格',
                 'description' => "おすすめの初期骨格:\n- 現在地確認\n- 弱点探索",
                 'category' => '資格学習',
-                'deadline' => '2026-11-10',
+                'deadline' => $deadline,
                 'workspace_mode' => 'study',
                 'create_request_id' => $createRequestId,
                 'personalization_seed_key' => 'study_qualification',
                 'personalization_seed_domain' => 'study',
             ])
+            ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $plan = Plan::query()
