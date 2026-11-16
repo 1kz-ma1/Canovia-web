@@ -1,0 +1,32 @@
+name: Future Native API isolated lab
+on:
+  push:
+    branches: [feature/future-support-native-api-20261116]
+    paths:
+      - 'app/**'
+      - 'config/future_support.php'
+      - 'experiments/FutureSupport/**'
+      - 'routes/api.php'
+      - 'tests/Feature/FutureNativeSupportTest.php'
+      - 'scripts/ci/future_support_lab.php'
+      - '.github/workflows/future-native-api.yml'
+permissions:
+  contents: read
+jobs:
+  disposable-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, sqlite3, pdo_sqlite
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Native authority negatives and existing Web Support regression
+        run: |
+          set -euo pipefail
+          php artisan test tests/Feature/FutureNativeSupportTest.php tests/Feature/CanoviaFutureV407Test.php tests/Feature/CanoviaFutureCarouselTest.php
