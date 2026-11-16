@@ -1,15 +1,18 @@
 <?php
 
 // Synthetic loopback only. Never bootstrap an existing .env or hosted DB.
+$temporaryRoot = realpath(sys_get_temp_dir());
 if (getenv('APP_ENV') !== 'testing' || getenv('DB_CONNECTION') !== 'sqlite'
     || ! in_array(getenv('DB_URL'), [false, ''], true)
-    || ! str_starts_with((string) getenv('DB_DATABASE'), sys_get_temp_dir().'/canovia-future-')) {
+    || ! str_starts_with((string) getenv('DB_DATABASE'), $temporaryRoot.'/canovia-future-')) {
     throw new LogicException('FUTURE_DISPOSABLE_ENV_REQUIRED');
 }
 $root = dirname(__DIR__, 2);
 $db = (string) getenv('DB_DATABASE');
 if (is_file($root.'/.env') || is_file($root.'/bootstrap/cache/config.php')
-    || getenv('APP_CONFIG_CACHE') || realpath(dirname($db)) !== dirname($db)
+    || getenv('APP_CONFIG_CACHE') || getenv('APP_ROUTES_CACHE')
+    || getenv('APP_SERVICES_CACHE') || getenv('APP_PACKAGES_CACHE') || getenv('APP_EVENTS_CACHE')
+    || glob($root.'/bootstrap/cache/routes*.php') || realpath(dirname($db)) !== dirname($db)
     || basename($db) !== 'lab.sqlite' || is_link($db)) {
     throw new LogicException('FUTURE_LAB_FRESH_CHECKOUT_REQUIRED');
 }
