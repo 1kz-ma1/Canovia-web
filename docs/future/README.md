@@ -190,6 +190,8 @@ Spatial exploration / user-controlled presentation of authorized Context, distin
 
 Developer Pro remains a dedicated Future Design because its development-orchestration details are substantial.
 
+A dated, scope-limited owner direction also preserves [Personal Context × possibility discovery × AI development-support options](../development/decisions/2026-11-17_PERSONAL_CONTEXT_POSSIBILITY_AI_DEVELOPMENT_DIRECTION.md). It refines the optional micro-experience loop and A-first/B-conditional validation order **without promoting Developer Pro, shared Context, or specialized Workspaces into current implementation requirements**.
+
 ## Current-vs-Future Rule
 
 Do not use a Future document to redefine current behavior.
