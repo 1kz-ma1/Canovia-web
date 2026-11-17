@@ -1,5 +1,9 @@
 # Canovia documentation index (2026-10-13)
 
+## 2026-11-17 Long-term strategy — Personal Context / possibility / AI development (record only)
+
+- [Personal Context × 可能性発見 × AI開発支援の長期方針](development/decisions/2026-11-17_PERSONAL_CONTEXT_POSSIBILITY_AI_DEVELOPMENT_DIRECTION.md): 既存のProduct Vision・Personalization・Developer Proと重複しない差分のみ記録。可能性→小体験→振り返り→任意Plan、A案を先行検証候補/B案を条件付き将来候補、Context有用性の仮説。**実装・検証・料金設定・ロードマップ変更・公開承認なし。**
+
 ## 2026-11-16 Security Audit v1 — Legacy DB archive restore evidence（オーナー実行）
 
 - [旧Canovia .age バックアップ・独立MySQL 8.4復元検証](development/SECURITY_AUDIT_V1_LEGACY_BACKUP_RESTORE_EVIDENCE_2026_11_16.md): MacとiCloud由来として選択したコピーの暗号文一致（取得経路は未検証）、age/gzip、91 tables / 94 migrations / 48,916 rowsの隔離復元、検証コンテナ破棄をオーナー提示結果として記録。鮮度、予備鍵の独立復号、DB以外の復旧資産・APP_KEYなどは未確認。**本番公開・Aiven変更の許可ではない。**
