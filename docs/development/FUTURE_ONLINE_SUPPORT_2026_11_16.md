@@ -4,6 +4,8 @@
 This is an implementation candidate. On2026-11-17 the owner accepted option A as the preferred architecture direction; identity/product adoption remains unapproved. No main
 merge, Render/Aiven/DDL/deploy, real actors or iOS product integration is authorized.
 
+2026-11-17 specification stage: the owner accepted the fixed iOS `ceeb2449b7a227d5fa6e693a1d0758c389ce690f` + Web `a7b2a1a32b07b78e7f67df46f060535dcdbf1b4f` Linux integration as PASS_SCOPED. Further implementation, product UI wiring and main integration are paused. See [P01–P08 product policy options](FUTURE_SUPPORT_PRODUCT_POLICY_OPTIONS_2026_11_17.md) for proposed current-support semantics, renewal/expiry/deletion, migration, API changes and synthetic acceptance. All policy choices remain OPEN; this frozen v1 description is observed implementation, not unconditional approval of retained votes after loss of deletion authority. New policy APIs/tests are NOT_IMPLEMENTED / NOT_RUN. Both PRs remain Draft.
+
 ## Audit and choice
 
 Source: Web main a84dda3a91d07ca32e7ffe0e1c9a4cac77733c5f; iOS main
