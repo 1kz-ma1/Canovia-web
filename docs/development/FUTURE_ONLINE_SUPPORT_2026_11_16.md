@@ -1,7 +1,7 @@
 # Future Online Support — F-0 contract / isolated F-1 candidate
 
 2026-11-16 JST. **SECURITY_BLOCKED / PRODUCTION_NO_GO_HOLD / release_approved=false**.
-This is an implementation candidate, not backend/identity/product adoption. No main
+This is an implementation candidate. On2026-11-17 the owner accepted option A as the preferred architecture direction; identity/product adoption remains unapproved. No main
 merge, Render/Aiven/DDL/deploy, real actors or iOS product integration is authorized.
 
 ## Audit and choice
@@ -19,7 +19,7 @@ config/canovia_public_roadmap.php is a separate editorial projection, never join
 
 | Option | Assessment |
 | --- | --- |
-| A existing Laravel ledger + Native API | Recommended candidate; reuse schema/order/status/count and existing Web counts; needs isolated credentials, abuse controls and production DB/release acceptance |
+| A existing Laravel ledger + Native API | Owner-approved preferred direction (2026-11-17), not product/production adoption; reuse schema/order/status/count and existing Web counts; needs isolated credentials, abuse controls and production DB/release acceptance |
 | B separate API, same authority | Extra service/secret/network/transaction operations, no safety advantage yet; never copy aggregate/candidate databases |
 | C new backend/DB | Rejected for this slice: splits votes/identity and adds migration/operating costs unless an explicitly approved single-authority migration exists |
 
@@ -135,3 +135,19 @@ Render/Aiven calls or purchases in this task. One existing authority avoids dupl
 service costs; actual hosting plan/limits are not inferred. API failure must leave all
 local diagnosis/Plan actions available. No public roadmap status is changed for this
 unadopted isolated capability.
+
+## 2026-11-17 — architecture priority approved; adoption remains blocked
+
+The owner accepted **A: existing Laravel as single authority**. [Decision record and
+open90-day/retention/deletion/reinstall/account-merge decisions](decisions/2026-11-17_FUTURE_SUPPORT_LARAVEL_AUTHORITY.md)
+are the current decision reference. No new vote ledger, product connection, main merge,
+production activation, billing/runner configuration, Render/Aiven change or deploy.
+Both PRs remain Draft; SECURITY_BLOCKED / PRODUCTION_NO_GO_HOLD / release_approved=false.
+
+Original Actions43810007997 was refused before execution (both runner_id0/steps0);
+no retry or account changes. On an already-equipped Linux host, the exact pair
+iOSa46d9d9e31cd53f057683b8a61894c2a1a0bd110 + Web3e8d4f05cb9857e3733bea6924171ea3e7b0bd2d
+actually passed scoped unit and real loopback integration using existing Swift6.1.3,
+cached PHP8.4.26 Docker, fresh SQLite and four PHP workers. This is local synthetic
+evidence, not an Actions/Mac/device/TLS or production DB PASS. Final post-documentation
+HEADs/results are recorded in the PR bodies; an unexecuted latest pair remains NOT_TESTED.
