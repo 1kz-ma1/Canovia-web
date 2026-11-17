@@ -20,3 +20,7 @@ Route::post('/execution/activities', ProviderActivityIntakeController::class)
 Route::match(['GET', 'POST', 'DELETE'], '/mcp', McpReadOnlyResourceController::class)
     ->middleware('throttle:30,1')
     ->name('api.mcp.auth_probe');
+
+// Isolated Future Native candidate. Its middleware additionally hard-denies
+// hosted production, disabled config and preparation mode before DB access.
+require __DIR__.'/../experiments/FutureSupport/routes.php';

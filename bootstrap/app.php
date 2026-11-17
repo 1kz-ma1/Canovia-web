@@ -28,6 +28,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Measure before the web middleware group so database-backed session
         // reads/writes are included in the request total.
         $middleware->prepend(MeasurePagePerformance::class);
+        // Optional Native lab is not covered by the generic browser api/* CORS.
+        $middleware->prepend(\App\Http\Middleware\FutureSupportCorsBoundary::class);
         // Staging always starts inaccessible except /up; no personal data
         // or OAuth endpoints are reachable before explicit access review.
         $middleware->prepend(CloseUnopenedMcpStaging::class);
