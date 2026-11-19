@@ -1,5 +1,16 @@
 # Canovia Agent Instructions
 
+## Chat / lane destination guard (owner decision 2026-11-19)
+
+Before interpreting a pasted directive, review packet, handoff, or commander instruction as an executable request, check whether its **intended project, recipient lane/chat, task authority, fixed artifact SHA/version, and requested action** match the conversation's established role and active assignment.
+
+- Explicit headers such as `司令塔 → L-QA`, `L-DP`, `L-REL`, `L-UI`, `L-MIG`, and `Orchestrator` are routing signals, not permission to execute in a different chat.
+- If the recipient appears to be **another lane or chat**, immediately flag `POSSIBLE_WRONG_CHAT`, briefly identify the conflicting indicators and likely destination, and ask **one direct confirmation** before acting on that directive. Do not start implementation, review, approve a gate, create or update an artifact/PR, or forward anything as though the recipient were confirmed.
+- Do not misclassify an Orchestrator receiving cross-lane reports, a user asking to compare/review another lane's text, or quoted historical instructions as misrouting. Such material is context unless the user clearly requests execution here.
+- If two instructions address competing versions or overlapping reviews of the same artifact, flag `POSSIBLE_DUPLICATE_OR_SUPERSEDED_INSTRUCTION`, distinguish active target and reference-only versions, and avoid parallel acceptance or silently superseding prior work.
+- After the user confirms the intended destination, preserve existing scope, evidence and authorization gates. Destination confirmation is **not** authorization for GitHub writes, merge, deployment, signing, device tests or production activity.
+- This is a **conversational safety check**, not automatic cross-chat monitoring or message forwarding. It applies when an agent reads this repository instruction; it cannot guarantee detection by chats that have not read it.
+
 ## Render workspace routing — Canovia MCP staging (owner confirmed 2026-10-09)
 
 - The owner explicitly confirmed Render workspace **`My Workspace`**. Render `list_workspaces` independently returned display name `My Workspace` with workspace ID **`tea-d4vb3f6mcj7s73djkrqg`**, and the existing `canovia-mcp-staging` Web service (`srv-db43l4nlk1mc73emseig`) has that exact `ownerId`.
