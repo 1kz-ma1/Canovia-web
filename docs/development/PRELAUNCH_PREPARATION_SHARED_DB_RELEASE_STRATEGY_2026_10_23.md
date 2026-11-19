@@ -1377,3 +1377,116 @@ main統合前後に、読み取り可能なRender一覧から**同repo/mainを�
 未完了: 実Render Build環境/25 body/HTTPS/Header/Cookie/404/Cache/alias、停止権限/効果、最新費用・帯域/通知、本人Safari新HTTPS。今回はソースBuild有効化まで、**SOURCE_BUILD_B_ONLY_AUTHORIZED / RENDER_BUILD_STILL_EXIT2 / FIRST_DEPLOY_NOT_APPROVED / PRODUCTION_NO_GO_HOLD**。12/1の残るcritical pathはこの新固定パケットへの限定GO→実配備/実効受入→一般公開GOであり、未確認の停止/実機を日付だけでPASSにしない。
 
 CIの初回runはAzure Ubuntu mirrorの依存取得が長時間続き、ブラウザ試験前にcancelして同じHEADを再実行した。取得遅延へのCI限定対処として、既存Ubuntu sources内のazure.archive.ubuntu.comだけを公式archive.ubuntu.comへ置換する。署名検証・package・Playwright版・全テストは維持し、Render build環境/設定とは分離する。最終HEADで全required CI成功を再確認してから統合する。
+
+### 2026-10-28 Local-first B UI/UX刷新候補（Experience、Draft限定）
+
+本人の新しい依頼により、元固定B Source **`ed6a18a63dac1efbba81999fa0a9611f1c3be104`** を基準に、`feature/local-b-mobile-experience` で新UIを検証する。今回の許可は **実装・ローカル検証・Draft PRまで、main統合不可**。過去の統合許可を適用しない。iOS #20/#22、Web pin、Release同梱HTML・hashは変更しない。公開Origin/Render/DNS/Canonical/課金設定は対象外。`PRODUCTION_NO_GO_HOLD` / `release_approved=false` を維持する。
+
+デザインの軸は「自分の関心から、次の準備へ」。元のCanoviaロゴを紺の台座に置き、紙に近い明るい背景・淡いラベンダー・藍色の操作色を使う。system日本語フォント、色/余白/角丸/入力/カード/通知/フォーカスをCSS tokenと共有classで統一。light themeに絞り、外部CDN・フォント・実行時依存を追加しない。
+
+| 監査した画面・旧UIの実測上の課題 | 新UIでの対応 |
+| --- | --- |
+| Home：案内とリンク中心で、保存済みPlanや診断の続きが入口で分からない | 未開始・途中・30問選択済み・Planありを実データで分岐。最近更新したPlanと実件数を表示。診断を使わないPlan作成も維持 |
+| 診断：radio中心で進捗/移動/保存の関係が弱い | 6ページ×5問は維持。進捗・大きな選択タイル・ページ番号・前後移動・途中保存。**同意がある場合だけ、ページ移動時にも保存してから進む**。unknown/0/未回答を区別し、未回答への戻し操作も明示 |
+| 結果：数値/大きい分野画像と次操作が離れる | 8分野のmeter・材料不足・回答内訳を整理。要約の同点判定は丸め前のscoreを使い、表示上の13%/12%を関心の差と解釈しない（30問同点の負例を追加）。任意の関心修正/希望は採点とは別に保持し、Planへの導線を設置。能力/性格/妥当性の断定なし |
+| Plan：一覧と入力の優先順位、保存済み/編集中が曖昧 | 空状態では入力を先に表示、既存Planでは一覧から編集にフォーカス。最新Planの再表示、保存済み/未保存表示、未保存切替の確認、transaction完了後だけ成功を表示。目標/メモ/分野/目標日は同じschema |
+| Future/データ：構想と利用可能機能、ファイル検証と保存確定の区別が弱い | Futureを構想/開発中/検証中に区分し、現在の機能を説明。Export/Importを別カードにし、平文・別保管・検証後も未保存・本人確認後のみImportを明示 |
+| 共通：上部リンク中心、空/起動失敗の説明や操作継続が弱い | mobile下部4項目nav、データ管理はheader。loading/empty/error/STOP/retry、aria-current/aria-busy/live通知、画面見出しへのfocus、reduced-motion、小幅320pxを追加 |
+
+変更の中心は `preparation-local/index.html`, `style.css`, `src/app.mjs`, `plan-ui.mjs`, `backup-ui.mjs`。scoring/data/model、BのRepository、memory Repository、backup/codec、allowlist/manifest/ZIP生成、Headers、公開Build wrapperは**byte変更なし**。診断の保存タイミングと未保存入力の扱いはUI側の意図的変更であり、単なる配色変更とは扱わない。削除・Importの確認、quota/conflict時の入力・既存記録保持を既存回帰で検証する。Future公開roadmapのstatusは更新しない（未統合・未提供の候補のため）。
+
+#### ローカル検証証拠（製品/テストSource `f8d514b88d5b038133e712ba458126541948099f`）
+
+Linux / system Chromium `154.0.8037.57` / Playwright `1.56.1`。fixtureは合成データ専用127.0.0.1、全HTTPに既存CSPを設定し、別Originのrequestは拒否。実ユーザーデータ/外部公開サーバー/実サービスへアクセスしない。
+
+| 判定 | 実施範囲・根拠 |
+| --- | --- |
+| PASS | pure PHP 8.4の `preparation_static_data.php --data` と現行bankが一致。`--vectors` で新規133ケースを生成。Dockerは既存PHP image、network none/read-only/署名や本番環境なし。Nodeのcore 5件＋backup 5件を直接実行してPASS |
+| PASS | `tests/browser/preparation_static.mjs` をB/CそれぞれChromiumで実行。30問/採点133件/meter/任意修正/Future/Plan作成編集/Export実bytes/Import preview-confirm/破損・duplicate・衝突拒否。Bはquota・abort・別tab競合・browser process再起動保持も確認 |
+| PASS | 新規 `tests/browser/preparation_mobile_ui.mjs`：同意前に非保存、前後/ページ番号で保存して復元、unknown/0/未回答、dirty切替cancel、保存遅延中の遷移拒否、幅320/375/390/430/1280で横overflowなし、active nav/keyboard focus。CIへの実行stepは追加済みだが**未実行** |
+| PASS（限定） | 全moduleを読み込んだ同じ開いた画面をofflineにし、Plan編集/IndexedDB保存/JSON downloadを確認。Webのcold offline起動/reloadは保証せず、SW/Cache-Control変更で見かけの保証を追加しない |
+| PASS（限定） | axe-core 4.11.0（検証専用、製品依存に含めない）でhome/diagnosis/plans/future/dataと別の30問回答済みresultをWCAG2 A/AA・2.1 AA tagsで検査、検出違反0。手動VoiceOver/WCAG全適合の証明にはしない |
+| PASS | `preparation_static_security_test.py` 12件、`preparation_static_render_test.py` 11件。既存browser境界回帰でCSP通信API/OriginのIDB前STOP/SW拒否/404/no-store/Cookie/asset閉包等の合成・loopback範囲を確認。実Render/全通信不存在のPASSにはしない |
+| PASS（Web・同一Origin限定） | **旧ed6の実UI**で専用Chromium persistent profileに合成30回答＋Planを保存しbrowserを終了。同じ127.0.0.1 Origin・profileでf8d514b8の新UIを開き、`repo.read()`全stateのJSONを比較して完全一致（schema/ID/timestamp/revisionも同じ）。以後の画面撮影はその合成データのみ。DB migration/clearを行わない |
+| NOT_TESTED | 新UIのSafari/WebKit/iPhone/WKWebView、Dynamic Type/VoiceOver、実iOS upgrade default store、native Files UI、実Render。既存の旧UI本人受入やiOS #21のPASSは新UIへ拡張しない。read-access単独FAIL/全DNS・UDP未観測等の既存ゲートも未解決のまま |
+| NOT_RUN | GitHub Actions。本人申告の無料枠消費済み・11/1 reset予定を尊重し、全push commitに `[skip ci]`、手動dispatch/re-run/課金変更なし。ローカルPASSをrequired CI成功と読み替えない |
+
+同SourceのNeutral B ZIP SHA256は `96df35a77290eb57379f7bc752627b4be93ae2d720d1dc447887e8e9ba0b2ddb`、Cは `643ffb7e4f2cedba745071159c329286c874bb16761a9b861a8d1a9edf66f5eb`。両25file（manifest含む）・Origin null・release false。旧Bとのhash比較で24asset中UIの5件のみ変更、他19件は一致。Sourceを含むmanifestも再発行される。Bの2回生成ZIP一致・B/C ZIP検証もPASS。**これは新UIのオフライン候補の証拠で、旧固定Source/公開Buildパケット/iOS hashの差替え指示ではない**。文書/画像のみの後続commitはSource SHA/ZIPを変えるため、このhashをそのHEADのZIP値と記載しない。
+
+[画面レビュー（Before/After・合成スクリーンショット）](../reviews/local-b-ui/README.md) は表示証拠の補助資料、方針・安全性の正本は本§19とIssue #488。本人にはまず配色/余白/入口、6ページ診断の密度、Planの目標→メモの書きやすさの3点を短時間で判断してもらう。今回はiPhone操作を求めない。UI採否/修正→11/1以降の必要CI→別のiOS固定HTML更新PR→新UIのWKWebView/Release/保存互換の差分受入が必要。#20/#22を変更・統合せず、12/1目標を公開準備完了の根拠にしない。
+
+本UI候補は [Web Draft PR #918](https://github.com/1kz-ma1/Canovia-web/pull/918)。本人のUI採否待ちであり、mainへ統合しない。実装・画面証拠・ローカル検証・未検証事項を同PRへ集約する。
+
+### 2026-10-28 診断の円形スケール追補（PR #918継続・Draft）
+
+本人の追加依頼により、直前候補 `3edde97f424d6dd71bcac5a60dd82fe98385c192` の**診断の文字付き回答カードだけを円形スケールに置き換える**。Home/結果/Plan/Backup等の前項の方針は維持。既存worktreeを保持するため、独立worktree・local branch `feature/local-b-circular-scale` で作業し、同じPR #918のremote `feature/local-b-mobile-experience` へfast-forward追記する。iOS/OP動画作業領域は対象外。main統合・公開・配備の許可ではない。
+
+| 左からの位置 | 保存値（変更なし） | radioの完全なラベル | 色token | 円の直径 |
+| --- | --- | --- | --- | --- |
+| 1 | 数値 `3` | あてはまる | `--scale-positive: #34785b` | 44px |
+| 2 | 数値 `2` | ややあてはまる | 同上 | 32px |
+| 3 | 文字列 `unknown` | わからない | `--scale-neutral: #687181` | 22px |
+| 4 | 数値 `1` | あまりあてはまらない | `--scale-negative: #7160a4` | 32px |
+| 5 | 数値 `0` | あてはまらない | 同上 | 44px |
+
+円の中心を等間隔に配置し、通常は輪郭だけ、選択後は対応色の塗り＋白いcheckで示す。視覚上22pxの中央を含め、**native radioの実タップ領域は各44px以上×48px**。radioを `display:none` / `visibility:hidden` / `aria-hidden` にせず、透明な実入力をlabelの全面に置く。完全なラベルは視覚的に隠したtextで保持し、fieldset/legend・checked・nativeの矢印/Space操作を維持。focus-visibleは円の外側の濃色outlineで表示。塗り150ms・軽い選択180msは既存Reduce Motionのanimation/transition無効化を尊重する。外部asset/font/依存追加なし。
+
+中央は独立した「判断できない」であり、中立点/0点ではない。画面上の常設説明とunknown radioの `aria-describedby`、詳細の答え方で説明する。未回答はkey不在、unknownはstringの存在として区別し、既存採点・schema・保存実装を変更しない。下段の方向ラベルは左「あてはまる」/中央「わからない」/右「あてはまらない」。6ページ×5問、同意後の途中/移動時保存、選択解除、修正、再開を維持する。
+
+診断見出し/説明・進捗bar/余白・同意の上下間隔を短くし、先頭の回答を早く表示する。390×844pxの新規contextで先頭回答列は概ねy=556〜604px、下部navの上に全5択が入ることを確認。5問すべては同ページを縦スクロールして回答する設計で、5問全体が844px内に収まるとは主張しない。長い設問や320pxでも横方向に逃がさない。
+
+#### 円形UIの検証証拠
+
+製品/テストSource **`c5648a69e7987e369b89c5784b1728f6ec795ec6`**。Linux Chromium 154 / Playwright 1.56.1。前候補比の製品変更は `preparation-local/src/app.mjs` と `style.css` のみ。`tests/browser/preparation_mobile_ui.mjs` を拡張し、既存の判定を削除/緩和しない。採点/data/model/Repository/backup/codec/Headers/配布・公開wrapperはbyte不変。24asset中22assetは前候補とhash一致、2assetとSource入りmanifestを再発行する。
+
+| 判定 | 自動検証・実測範囲 |
+| --- | --- |
+| PASS | native radioの表示順 `3,2,unknown,1,0` と完全なaccessible name、1質問1選択、塗り/checkと非選択の輪郭。全5値を実操作で個別保存→reloadし、数値/文字列を厳密比較 |
+| PASS | unknown保存後の解除でkey不在、0とは別の扱い。前後/ページ移動、途中保存、Space/ArrowRightによる3→2→unknown、Reduce Motion時animation none |
+| PASS | 混在 `{Q01:3,Q02:2,Q03:'unknown',Q04:1,Q05:0,Q06:3}` をUI保存→JSONの実download→隔離contextのImport preview（非保存）→確認後Import→radio復元まで厳密比較 |
+| PASS | 幅320/375/390/430/1280で5問それぞれ1列5択・直径44/32/22/32/44・各入力44px以上・横overflowなし。アニメーション完了後の形状とnative inputのタップ寸法を別検査。390の先頭列がnavに隠れない |
+| PASS | 既存B/C browser回帰：30問/採点133参照/結果・同点/Plan編集/JSON往復/破損・quota・abort・conflict保持/Origin・CSP・SW・404等。Bのbrowser process再起動保持、Cの非保存も維持 |
+| PASS | core5＋backup5、配布security12＋Render offline計画11、B二重生成ZIP一致とB/C ZIP検証。PHP参照は同日生成済み133ケースを再利用し、今回不変の採点/bankと照合 |
+| PASS（限定） | 旧カード3edde実UIの専用persistent profileへ保存した合成の5値を、browser終了後に同じloopback Origin/profileの円形UIで再開。**全state（revision/時刻/ID含む）と各radio値が完全一致**、migration/clearなし。Web同一Originの証拠に限定 |
+| PASS（限定） | 主要5画面のaxe-core 4.11.0対象WCAG2 A/AA・2.1 AA tagsで検出違反0。画面撮影contextの診断でも0。既に開いた画面のoffline Plan保存/Exportの既存回帰もPASS |
+| NOT_RUN / NOT_TESTED | GitHub Actions（全commit `[skip ci]`、無料枠を消費するdispatch/re-runなし）。新UIのSafari/WebKit/WKWebView/iPhone/VoiceOver/Dynamic Type/native Files/iOS upgradeは未検証。既存受入やChromium結果を転用しない |
+
+同SourceのNeutral ZIP SHA256：B `595b3bb1e3a0c08c5574243e3dad00c5ebb9a4f855c508d00eb633e1ceb20b97`、C `79e170a5f651eb82e0be4d9d12f808bb8f4569597c407d9b89024463f997f748`。文書/画像のみの後続HEADのZIP値ではない。前項のf8d514b8 hash、既存固定Web/iOS pinや公開Buildパケットは当時の証拠として保持し、差し替えない。
+
+[円形UIの全6状態・320/390・5問全体・直前カードとの比較](../reviews/local-b-ui/README.md#円形スケールへの更新) を本人レビューに用いる。最初の4画面比較の診断Afterも更新し、直前カードを `circle-before-390.png` として保持。本人には円の大小/色、肯定左・否定右の方向、中央の独立した意味が伝わるかを画像で判断してもらう。実機操作は今回依頼しない。**Draft維持・main未統合・`PRODUCTION_NO_GO_HOLD` / `release_approved=false`**。read-access単独FAIL、Release/公開の既存未解決ゲートも維持する。
+
+### 2026-10-28 UI-2：OP世界観とホーム体験（PR #918継続・Draft）
+
+本人は円形5択UIの**デザインを承認済み**。保存値 `3→2→unknown→1→0` を含む描画/操作を再設計しない。この承認をSafari/iOS受入・Release/公開承認へ拡張しない。UI-2はCanovia-webのHomeだけを対象とし、独立worktree `Canovia-local-b-home-ui2` / local branch `feature/local-b-home-ui2` から、同PR #918のremote `feature/local-b-mobile-experience` へfast-forwardで追記する。
+
+OPの本人提示コンセプト「**すべての一歩が、未来につながる。**」を初回Homeの見出しへ採用し、小さな光が3本のレールで中心へ集まる静的SVGを添える。明るいcanvas・紺のhero・藍の操作色は維持。図案は装飾（aria-hidden/focus不可）で、animation/自動記録/通信は追加しない。既存の円形UI・保存schema・IndexedDB・JSON・採点・CSP・外部依存は変更しない。OP/Remotion project、iOS再生/SKIP、iOS #20/#22、固定HTML/pin/hashには触れない。
+
+**理念と現在の提供範囲を別に示す**。heroを「Canoviaが目指す未来」、入口を「先行版で、いまできること」と分け、初回の主要選択肢を「30問で関心を整理」と「診断なしで目標・Planを書く」の2つにする。下段のFutureカードは「将来構想」と明示し、AI支援/自動記録/外部サービス連携は先行版で未提供と説明する。これらを起動可能な機能として表示しない。公開roadmapのstatusは更新しない（本UIは未統合/未提供の候補のため）。
+
+| 実データから導く状態 | Homeの主操作 / 副操作 | 初回向け説明 |
+| --- | --- | --- |
+| 診断記録なし・Planなし | 30問の診断 / 診断なしでPlan | 上記2入口、保存範囲の短い説明、閉じた任意のBackupガイド。modal/同意強制なし |
+| 診断記録あり・選択数0〜29・Planなし | 前回の診断ページへ続ける / 診断なしでPlan | 初回ガイドは出さず、実際の選択数を表示 |
+| 30問選択済み・Planなし | 結果をふりかえる / 自分のPlan | unknownも選択数に含む。30選択を採点材料充足や能力判定完了とは表現しない |
+| Planあり（診断有無を問わない） | 最新更新Planをひらく / 関心の診断 | 実件数・最近のPlanを表示。過去に別Planのeditorを開いていても、Home主操作は表示対象の最新Planを明示指定 |
+
+状態は既存の診断/Planから算出するだけで、新しい初回flag/保存項目や個人の行動履歴を作らない。Home表示・320/390のlayout検査・装飾描画の前後で全state/revision/時刻が変わらないことを確認。Cは「入力したPlan」「この画面だけのPreview」と区別し、reloadで消える既存仕様を保持する。
+
+#### UI-2ローカル検証証拠
+
+製品/テストSource **`3c2d46e0baa794feb69b0319dc7fe59cd31003cb`**。Linux Chromium 154 / Playwright 1.56.1。前候補30bda7b5比の製品差分は `preparation-local/src/app.mjs`（Home）/`style.css`（Home専用）の2件。診断描画・bindDiagnosis・円形CSSをbyte比較し一致。採点/data/model/Repository/backup/codec/Headers/配布・公開wrapperもbyte不変、24asset中22asset hash一致。見出し変更に追随する既存4試験の期待値は新しい全文へ厳密更新し、境界/FAIL判定を削除しない。
+
+| 判定 | 根拠・範囲 |
+| --- | --- |
+| PASS | 新 `tests/browser/preparation_static_home.mjs` を既存B/C browser回帰から呼び出す。実UI操作で初回→Plan入口（診断非作成）→2回答/前回ページ→30問→結果→Plan保存を検証。各状態320/390で2入口がnavより上・44px以上・横overflowなし、レールanimation 0、初回ガイドは初回だけ |
+| PASS | 2件の合成Planで最新更新Planを選び、以前開いたeditorよりHome主操作の指定Planが優先される。B reloadで2件保持、C reloadで0件/初回へ戻る。Home描画前後で全stateが同一 |
+| PASS | 主要4 Home状態×B/Cをaxe-core 4.11.0対象WCAG2 A/AA・2.1 AA tagsで検査、検出違反0。既存mobile UI試験の主要5画面・320/375/390/430/1280・Space/矢印/Reduce Motion・円形値/混在JSON往復もPASS。VoiceOver実受入の証明ではない |
+| PASS | B/Cの30問・採点133参照・結果・Plan編集・JSON実download/preview/confirm・quota/abort/conflict保持・B browser process再起動・C非保存・Origin/CSP/SW/404/no-store等の既存回帰 |
+| PASS | core5＋backup5、配布security12＋Render offline計画11、B二重生成ZIP一致とB/C ZIP検証。PHP参照133ケースは同日生成済み・不変のbank/scorerに対応するものを再利用 |
+| PASS（Web限定） | 旧30bda7b5の実UIで作った専用の合成「2回答/step2」profileと「診断なし/Plan1件」profileをbrowser終了後に同一loopback Originで新Homeへ再開。**全state/ID/revision/時刻が完全一致**。DB clear/migrationなし。iOS default store upgradeの証明にはしない |
+| PASS（限定） | 読み込み済み画面でoffline Plan保存/Exportの既存試験を維持。cold offline起動/reloadを保証せずSWを追加しない |
+| NOT_RUN / NOT_TESTED | GitHub Actions（無料枠を尊重し全commit `[skip ci]`、dispatch/re-run/課金変更なし）。新HomeのSafari/WebKit/WKWebView/VoiceOver/実機、実Render、最終OP映像との色/カット接続・OP終了/SKIP→Homeは未検証。再生/遷移callbacks自体を今回は実装しない |
+
+新Neutral ZIP SHA256はB `488512fa65c5d72ac2ec6f1cbae7a64dcd983041bc70916e9bf6e210e990abaa` / C `4fa591200c4726ab4ab12f10d0929679d06e5bb92ea155a3b9a3b4466e30248d`、各25file（manifest含む）・Origin null・release false。これは同Sourceのオフライン候補で、文書/画像のみの後続HEADのZIP値やiOS/公開パケットの置換値ではない。旧Source/hashの証拠は保持する。
+
+[Homeの3状態・320/390 Before/After・診断済み・desktop](../reviews/local-b-ui/README.md#ui-2op世界観とホーム体験) は実アプリ/合成データの画面証拠。OP映像は別sessionで制作中であり、提示されたコンセプトからHomeの静的図案を実装した。最終映像のasset/Remotionにはアクセス・変更していない。本人の最終判断は **レールの控えめさ/OPとの調和、理念と現機能の区別、初回と既存利用の優先順位**。実機操作は今回は依頼しない。**Draft維持・main未統合・`PRODUCTION_NO_GO_HOLD` / `release_approved=false`**、既存read-access単独FAILやRelease/一般公開の未解決ゲートは維持する。

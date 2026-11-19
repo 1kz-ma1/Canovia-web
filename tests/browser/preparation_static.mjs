@@ -1,4 +1,5 @@
 import {boundaries} from './preparation_static_boundaries.mjs';
+import {homeStates} from './preparation_static_home.mjs';
 import {chromium,webkit} from 'playwright';
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
@@ -26,7 +27,7 @@ try{
   browser=await engine.launch(launch);
   const context=await watch(await browser.newContext({viewport:{width:390,height:844}}));
   const page=await context.newPage();
-  await page.goto(origin);await page.getByRole('heading',{name:'自分の関心から、次の準備へ。'}).waitFor();
+  await page.goto(origin);await page.getByRole('heading',{name:'すべての一歩が、未来につながる。'}).waitFor();
   await page.getByRole('link',{name:'関心を見つける',exact:true}).first().click();
   await page.locator('input[name=Q01][value=unknown]').focus();await page.keyboard.press('Space');assert.ok(await page.locator('input[name=Q01][value=unknown]').isChecked());await shot(page,'01-diagnosis-390');
   const vectors=JSON.parse(await readFile(process.env.PREPARATION_VECTOR_PATH,'utf8'));
@@ -48,6 +49,7 @@ try{
   assert.equal(await page.locator('input[type=radio]:checked').count(),30,'ALL_ANSWERS_BEFORE_RESULT');
   await page.getByRole('button',{name:'今の回答で結果を見る',exact:true}).click();
   await page.getByText('回答 30問 ／ わからない 0問 ／ 未回答 0問',{exact:true}).waitFor();
+  await page.getByText('8つの分野が同じ得点で並んでいます。',{exact:true}).waitFor();
   assert.equal(await page.locator('meter').count(),8);await shot(page,'02-graph-390');
   assert.equal(await page.locator('meter').evaluateAll(m=>m.reduce((n,v)=>n+Number(v.value),0)),100);
   await page.locator('input[name=confirmed][value=ST]').check();
@@ -130,6 +132,7 @@ try{
   await imported.close();
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
   await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
+  await homeStates({browser,origin,stored});
   await boundaries({browser,origin,stored,directory});
   assert.equal(Buffer.concat(serverOutput).toString(),'','Local server must not log URLs/inputs/errors');
   assert.deepEqual(errors,[]);assert.ok(traffic.every(r=>new URL(r.url).origin===origin&&!new URL(r.url).search&&r.method==='GET'));

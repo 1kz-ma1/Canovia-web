@@ -58,7 +58,7 @@ export async function boundaries({browser,origin,stored,directory}){
   const unavailable=await browser.newContext();await unavailable.addInitScript(()=>{Object.defineProperty(window,'indexedDB',{get(){throw Error('SYNTHETIC_UNAVAILABLE');}});});
   const up=await unavailable.newPage();await up.goto(origin);
   if(stored){await up.getByText('保存領域を開けませんでした。記録を削除せず、設定や対応する版を確認してください。',{exact:true}).waitFor();assert.equal(await up.locator('#app h1').count(),0);}
-  else{await up.getByRole('heading',{name:'自分の関心から、次の準備へ。'}).waitFor();}
+  else{await up.getByRole('heading',{name:'すべての一歩が、未来につながる。'}).waitFor();}
   await unavailable.close();
   await hostingDifferences({browser,origin,directory});
 }

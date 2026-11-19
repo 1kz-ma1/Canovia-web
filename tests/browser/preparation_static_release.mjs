@@ -35,7 +35,7 @@ async function model({securityHeaders=true,parentCookie=false,init}={}){
 try{
   // Origin-bound B preserves diagnosis -> Future -> edit Plan -> JSON handover.
   const good=await model(),{page,context}=good;
-  await page.goto(origin);await page.getByRole('heading',{name:'自分の関心から、次の準備へ。'}).waitFor();
+  await page.goto(origin);await page.getByRole('heading',{name:'すべての一歩が、未来につながる。'}).waitFor();
   assert.equal(await page.evaluate(()=>window.idbCalls),1);
   await page.getByRole('link',{name:'関心を見つける',exact:true}).first().click();
   for(let step=1;step<=6;step++){
