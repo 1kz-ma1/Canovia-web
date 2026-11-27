@@ -10,6 +10,7 @@ import re
 import stat
 import subprocess
 import sys
+import uuid
 
 SYNTHETIC_MARKER = 'GATE_S_SYNTHETIC_FIXTURE_NOT_FOR_PUBLICATION'
 BASELINE_SHA = 'a84dda3a91d07ca32e7ffe0e1c9a4cac77733c5f'
@@ -55,6 +56,22 @@ REPO = Path(__file__).resolve().parents[2]
 RUN_RE = re.compile(r'[A-Za-z0-9][A-Za-z0-9_-]{3,63}\Z')
 HEX40 = re.compile(r'[0-9a-f]{40}\Z')
 MAX_BYTES = 64 * 1024
+# Gate S is *one fixed synthetic fixture*, never a general CSS or public build.
+FIXED_CSS_SHA256 = '843d0307076b6fd7e3c5606f4d98b86cfd5af4614635066e5938f142e298c3c4'
+FIXED_PUBLIC_SHA256 = {
+    '404.html': '0a4f74100e937075b8d83de32c10edffa0d53351fddb995db021520ee6d3fb3f',
+    'legal/legal.css': FIXED_CSS_SHA256,
+    'legal/privacy.html': '43407e6d2bec05dfbff313d8032c42b0efda7c24a5a1b1f07a6a9f58fd8d480f',
+    'legal/support.html': 'a1c6a19b9e54eb77d09b78bddad8dbf4e8aafaaf13aad10e2e023a14fea08b80',
+}
+FIXED_PUBLIC_BYTES = {'404.html': 509, 'legal/legal.css': 259,
+                      'legal/privacy.html': 605, 'legal/support.html': 635}
+ATTEMPT_RE = re.compile(r'[0-9a-f]{32}\Z')
+EXPECTATION_KEYS = frozenset({
+    'kind', 'source_sha', 'source_tree', 'inputs_sha256', 'files_sha256',
+    'files_bytes', 'run_id', 'attempt_id', 'isolation_root', 'out_root',
+    'b25_inventory_sha256', 'synthetic_only', 'not_deployable', 'release_approved',
+})
 
 
 def deny(message):
@@ -143,7 +160,9 @@ def check_asset(name, raw):
     elif name.endswith('.css'):
         if not s.startswith('/* ' + SYNTHETIC_MARKER + ' */'):
             deny('INVALID_SYNTHETIC_CSS')
-        if re.search(r'@import|url\s*\(|expression\s*\(|javascript:|behavior\s*:', s, re.I):
+        # Exact bytes, not a regex parser: reject escape obfuscation, image-set
+        # string URLs and *every* unapproved modification, including comments.
+        if sha(raw) != FIXED_CSS_SHA256 or len(raw) != FIXED_PUBLIC_BYTES[name]:
             deny('UNAPPROVED_CSS_RESOURCE')
     else:
         deny('UNAPPROVED_ASSET_TYPE')
@@ -211,8 +230,8 @@ def git(repo, *args):
     return subprocess.check_output(['git', *args], cwd=repo, stderr=subprocess.DEVNULL)
 
 
-def source_snapshot(repo, source_sha, source_tree):
-    if not HEX40.fullmatch(source_sha) or not HEX40.fullmatch(source_tree):
+def source_snapshot(repo, source_sha, source_tree, expected_inputs=None):
+    if not isinstance(source_sha, str) or not HEX40.fullmatch(source_sha) or not isinstance(source_tree, str) or not HEX40.fullmatch(source_tree):
         deny('FULL_SOURCE_IDENTITY_REQUIRED')
     if git(repo, 'rev-parse', 'HEAD').decode().strip() != source_sha:
         deny('SOURCE_HEAD_MOVED')
@@ -220,6 +239,8 @@ def source_snapshot(repo, source_sha, source_tree):
         deny('SOURCE_TREE_MOVED')
     if git(repo, 'status', '--porcelain', '--untracked-files=all').strip():
         deny('SOURCE_NOT_CLEAN')
+    if expected_inputs is not None and (not isinstance(expected_inputs, dict) or set(expected_inputs) != set(INPUTS)):
+        deny('EXPECTED_INPUT_INVENTORY_INVALID')
     result = {}
     for path in INPUTS:
         entry = git(repo, 'ls-tree', 'HEAD', '--', path).decode().strip().split()
@@ -232,81 +253,305 @@ def source_snapshot(repo, source_sha, source_tree):
         blob = git(repo, 'cat-file', 'blob', entry[2])
         if target.read_bytes() != blob:
             deny('SOURCE_BYTES_MISMATCH')
+        if expected_inputs is not None and (not isinstance(expected_inputs[path], str) or sha(blob) != expected_inputs[path]):
+            deny('INDEPENDENT_INPUT_HASH_MISMATCH')
         result[path] = blob
     return result
 
 
-def verify_receipt(manifest, receipt, current_run):
-    if manifest.get('run_id') != current_run or receipt.get('run_id') != current_run:
-        deny('RUN_ID_MISMATCH')
-    if manifest.get('synthetic_only') is not True or manifest.get('not_deployable') is not True:
-        deny('SYNTHETIC_GATE_REMOVED')
-    if receipt.get('synthetic_only') is not True or receipt.get('not_deployable') is not True:
-        deny('SYNTHETIC_RECEIPT_REMOVED')
-    if receipt.get('manifest_sha256') != sha(canonical(manifest)) or receipt.get('status') != 'SYNTHETIC_PASS_NOT_DEPLOYABLE':
-        deny('RECEIPT_MISMATCH')
+def _is_hex_sha(value, length):
+    return type(value) is str and re.fullmatch(r'[a-f0-9]{%d}' % length, value) is not None
 
 
-def build(repo, source_sha, source_tree, inventory_sha, run_id, out_root, mode='synthetic'):
+def _canonical_absolute(path):
+    if type(path) is not str or not path.startswith('/') or '\x00' in path or '\\' in path or '//' in path:
+        deny('NONCANONICAL_ROOT')
+    parts = path.split('/')
+    if any(item in ('.', '..') for item in parts):
+        deny('NONCANONICAL_ROOT')
+    return Path(path)
+
+
+def _ancestors_no_symlinks(path):
+    current = Path('/')
+    for component in path.parts[1:]:
+        current = current / component
+        st = current.lstat()
+        if not stat.S_ISDIR(st.st_mode):
+            deny('ISOLATION_ANCESTOR_NOT_DIRECTORY')
+    return path
+
+
+def isolation_boundary(repo, isolation_root, out_root, *, must_be_new):
+    """Externally selected private root; reject *every* symlinked ancestor.
+
+    Assumption: the calling OS user and the private directory are not controlled
+    by a concurrent malicious writer. This is not an OS-level concurrency proof.
+    """
+    root = _canonical_absolute(isolation_root)
+    out = _canonical_absolute(out_root)
+    if out.parent != root or out.name in ('', '.', '..') or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_-]{0,63}', out.name):
+        deny('OUTPUT_OUTSIDE_ISOLATION_ROOT')
+    repo_real = repo.resolve(strict=True)
+    _ancestors_no_symlinks(root)
+    if root.resolve(strict=True) != root or root == repo_real or root in repo_real.parents or repo_real in root.parents:
+        deny('ISOLATION_REPOSITORY_OVERLAP')
+    st = root.lstat()
+    if st.st_uid != os.getuid() or (stat.S_IMODE(st.st_mode) & 0o077) != 0:
+        deny('ISOLATION_ROOT_NOT_PRIVATE')
+    if must_be_new:
+        if out.exists() or out.is_symlink():
+            deny('NEW_ISOLATED_OUTPUT_REQUIRED')
+        return root, out, st
+    st_out = out.lstat()
+    if not stat.S_ISDIR(st_out.st_mode) or st_out.st_uid != os.getuid() or (stat.S_IMODE(st_out.st_mode) & 0o077):
+        deny('OUTPUT_DIRECTORY_IDENTITY')
+    return root, out, st_out
+
+
+def validate_expected(expected):
+    """External input is a review condition, not proof of owner authorization."""
+    if type(expected) is not dict or set(expected) != EXPECTATION_KEYS:
+        deny('EXPECTED_SCHEMA_INVALID')
+    if expected['kind'] != 'CANOVIA_GATE_S_EXTERNAL_EXPECTED_V1':
+        deny('EXPECTED_KIND_INVALID')
+    if not _is_hex_sha(expected['source_sha'], 40) or not _is_hex_sha(expected['source_tree'], 40):
+        deny('EXPECTED_SOURCE_INVALID')
+    if type(expected['run_id']) is not str or not RUN_RE.fullmatch(expected['run_id']):
+        deny('EXPECTED_RUN_INVALID')
+    if type(expected['attempt_id']) is not str or not ATTEMPT_RE.fullmatch(expected['attempt_id']):
+        deny('EXPECTED_ATTEMPT_INVALID')
+    if expected['synthetic_only'] is not True or expected['not_deployable'] is not True or expected['release_approved'] is not False:
+        deny('EXPECTED_GATE_INVALID')
+    if expected['b25_inventory_sha256'] != B_INVENTORY_SHA256:
+        deny('EXPECTED_B25_INVALID')
+    for field, names in (('inputs_sha256', INPUTS), ('files_sha256', PUBLIC)):
+        x = expected[field]
+        if type(x) is not dict or set(x) != set(names) or not all(_is_hex_sha(v, 64) for v in x.values()):
+            deny('EXPECTED_HASH_SET_INVALID')
+    if expected['files_sha256'] != FIXED_PUBLIC_SHA256:
+        deny('EXPECTED_FIXTURE_HASH_INVALID')
+    if type(expected['files_bytes']) is not dict or expected['files_bytes'] != FIXED_PUBLIC_BYTES or any(type(v) is not int for v in expected['files_bytes'].values()):
+        deny('EXPECTED_FIXTURE_SIZE_INVALID')
+    _canonical_absolute(expected['isolation_root'])
+    _canonical_absolute(expected['out_root'])
+    return expected
+
+
+def _identity(path):
+    st = path.lstat()
+    if not stat.S_ISDIR(st.st_mode) or stat.S_IMODE(st.st_mode) & 0o077 or st.st_uid != os.getuid():
+        deny('OUTPUT_DIRECTORY_IDENTITY')
+    return {'device': st.st_dev, 'inode': st.st_ino}
+
+
+def _as_exact_identity(value):
+    if type(value) is not dict or set(value) != {'device', 'inode'}:
+        deny('IDENTITY_SCHEMA_INVALID')
+    if any(type(v) is not int or v <= 0 for v in value.values()):
+        deny('IDENTITY_VALUE_INVALID')
+    return value
+
+
+def _check_actual_output(repo, expected, output_identity):
+    _, out, _ = isolation_boundary(repo, expected['isolation_root'], expected['out_root'], must_be_new=False)
+    if _identity(out) != _as_exact_identity(output_identity):
+        deny('CURRENT_OUTPUT_IDENTITY_MISMATCH')
+    if set(x.name for x in out.iterdir()) != {'.render-legal-only', 'evidence'}:
+        deny('OUTPUT_EXTRA_OR_MISSING')
+    publish = out / '.render-legal-only'
+    real = check_regular_tree(publish)
+    if {n: sha(b) for n, b in real.items()} != expected['files_sha256'] or {n: len(b) for n, b in real.items()} != expected['files_bytes']:
+        deny('CURRENT_OUTPUT_BYTES_MISMATCH')
+    evidence = out / 'evidence'
+    if evidence.is_symlink() or not evidence.is_dir() or set(x.name for x in evidence.iterdir()) != {'manifest.json', 'receipt.json'}:
+        deny('OUTPUT_EVIDENCE_SET_INVALID')
+    for name in ('manifest.json', 'receipt.json'):
+        st = (evidence / name).lstat()
+        if not stat.S_ISREG(st.st_mode) or st.st_nlink != 1:
+            deny('EVIDENCE_SPECIAL_FILE')
+    return real
+
+
+def verify_receipt(manifest, receipt, expected, observed_exit_code=None, process_exited=None, *, observed_attempt=None, repo=REPO):
+    """Post-process verifier. The external supervisor MUST capture actual exit.
+
+    Never derive expected source, attempt or output from receipt/current checkout.
+    Passing an untrusted observed_exit_code is not an independent guarantee.
+    """
+    expected = validate_expected(expected)
+    # The observation is supplied by an *external* process supervisor after wait().
+    # Receipt metadata cannot substitute for exit/wait observation.
+    if type(observed_attempt) is not dict or set(observed_attempt) != {
+            'attempt_id', 'run_id', 'source_sha', 'source_tree', 'out_root',
+            'exit_code', 'process_exited'}:
+        deny('EXTERNAL_EXECUTION_OBSERVATION_REQUIRED')
+    for key in ('attempt_id', 'run_id', 'source_sha', 'source_tree', 'out_root'):
+        if type(observed_attempt[key]) is not str or observed_attempt[key] != expected[key]:
+            deny('EXTERNAL_ATTEMPT_IDENTITY_MISMATCH')
+    if (type(observed_exit_code) is not int or observed_exit_code != 0 or process_exited is not True or
+            type(observed_attempt['exit_code']) is not int or observed_attempt['exit_code'] != observed_exit_code or
+            observed_attempt['process_exited'] is not True):
+        deny('CURRENT_ATTEMPT_NOT_SUCCESSFULLY_EXITED')
+    if type(manifest) is not dict or type(receipt) is not dict:
+        deny('INVALID_EVIDENCE_TYPES')
+    if set(manifest) != MANIFEST_KEYS or set(receipt) != RECEIPT_KEYS:
+        deny('EVIDENCE_SCHEMA_MISMATCH')
+    if manifest['kind'] != 'CANOVIA_LEGAL_GATE_S_SYNTHETIC_V1':
+        deny('UNAPPROVED_EVIDENCE_KIND')
+    for field in ('run_id', 'attempt_id', 'source_sha', 'source_tree', 'isolation_root', 'out_root'):
+        if type(manifest[field]) is not str or manifest[field] != expected[field] or receipt[field] != expected[field]:
+            deny('CURRENT_ATTEMPT_SOURCE_OR_LOCATION_MISMATCH')
+    if manifest['inputs_sha256'] != expected['inputs_sha256'] or manifest['files_sha256'] != expected['files_sha256'] or manifest['files_bytes'] != expected['files_bytes']:
+        deny('EVIDENCE_EXPECTED_HASH_MISMATCH')
+    if receipt['inputs_sha256'] != expected['inputs_sha256'] or receipt['files_sha256'] != expected['files_sha256'] or receipt['files_bytes'] != expected['files_bytes']:
+        deny('RECEIPT_EXPECTED_HASH_MISMATCH')
+    if any(manifest[k] is not True for k in ('synthetic_only', 'not_deployable', 'b24_other_paths_excluded', 'legal404_independently_sourced')):
+        deny('MANIFEST_SAFETY_FLAG_INVALID')
+    if any(receipt[k] is not True for k in ('synthetic_only', 'not_deployable')):
+        deny('RECEIPT_SAFETY_FLAG_INVALID')
+    if manifest['release_approved'] is not False or manifest['render_connected'] is not False or receipt['release_approved'] is not False:
+        deny('RELEASE_SAFETY_INVALID')
+    if manifest['allowed_modes'] != ['synthetic'] or manifest['publish_directory'] != '.render-legal-only' or manifest['public_path_count'] != 4:
+        deny('MANIFEST_PUBLIC_BOUNDARY_INVALID')
+    if manifest['b25_inventory_sha256'] != B_INVENTORY_SHA256 or manifest['b25_count'] != 25 or manifest['b25_path_overlap'] != ['404.html']:
+        deny('B25_RECORD_INVALID')
+    if manifest['b25_source_sha'] != B_SOURCE_SHA or manifest['b25_tree_sha'] != B_TREE_SHA or manifest['b404_sha256'] != B_404_SHA256:
+        deny('B25_REFERENCE_INVALID')
+    if manifest['legal404_source'] != PUBLIC['404.html'] or manifest['legal404_sha256'] != expected['files_sha256']['404.html']:
+        deny('LEGAL_404_SOURCE_INVALID')
+    if manifest['baseline_source_sha'] != BASELINE_SHA or manifest['live_headers_routes_cookie_sw_cache'] != 'NOT_VERIFIED':
+        deny('UNSUPPORTED_LIVE_CLAIM')
+    if receipt['status'] != 'SYNTHETIC_PASS_NOT_DEPLOYABLE' or receipt['render_deploy'] != 'NOT_RUN' or receipt['policy_publication'] != 'HOLD' or receipt['publish_path_count'] != 4:
+        deny('RECEIPT_GATE_INVALID')
+    if type(receipt['manifest_sha256']) is not str or receipt['manifest_sha256'] != sha(canonical(manifest)):
+        deny('RECEIPT_MANIFEST_HASH_MISMATCH')
+    for k in ('output_identity', 'publish_identity'):
+        if _as_exact_identity(manifest[k]) != _as_exact_identity(receipt[k]):
+            deny('RECEIPT_OUTPUT_IDENTITY_MISMATCH')
+    # Independently re-read *current* checkout and current output; no stale fallback.
+    sources = source_snapshot(repo, expected['source_sha'], expected['source_tree'], expected['inputs_sha256'])
+    if {k: sha(v) for k, v in sources.items()} != manifest['inputs_sha256']:
+        deny('CURRENT_INPUTS_MISMATCH')
+    raw = _check_actual_output(repo, expected, manifest['output_identity'])
+    # The provided candidate must be exactly what is on disk for this output identity.
+    evidence_dir = Path(expected['out_root']) / 'evidence'
+    if (evidence_dir / 'manifest.json').read_bytes() != canonical(manifest) or (evidence_dir / 'receipt.json').read_bytes() != canonical(receipt):
+        deny('CURRENT_EVIDENCE_BYTES_MISMATCH')
+    if _identity(Path(expected['out_root']) / '.render-legal-only') != manifest['publish_identity']:
+        deny('CURRENT_PUBLISH_IDENTITY_MISMATCH')
+    if {k: sha(v) for k, v in raw.items()} != manifest['files_sha256']:
+        deny('CURRENT_PUBLISH_HASH_MISMATCH')
+    return True
+
+
+MANIFEST_KEYS = frozenset({
+    'kind', 'run_id', 'attempt_id', 'source_sha', 'source_tree', 'baseline_source_sha',
+    'synthetic_only', 'not_deployable', 'release_approved', 'render_connected',
+    'allowed_modes', 'publish_directory', 'b25_source_sha', 'b25_tree_sha',
+    'b25_inventory_sha256', 'b25_count', 'b25_path_overlap', 'b24_other_paths_excluded',
+    'b404_sha256', 'legal404_source', 'legal404_sha256', 'legal404_independently_sourced',
+    'inputs_sha256', 'files_sha256', 'files_bytes', 'public_path_count',
+    'live_headers_routes_cookie_sw_cache', 'isolation_root', 'out_root',
+    'output_identity', 'publish_identity',
+})
+RECEIPT_KEYS = frozenset({
+    'status', 'synthetic_only', 'not_deployable', 'release_approved', 'run_id',
+    'attempt_id', 'source_sha', 'source_tree', 'manifest_sha256',
+    'publish_path_count', 'render_deploy', 'policy_publication',
+    'isolation_root', 'out_root', 'output_identity', 'publish_identity',
+    'inputs_sha256', 'files_sha256', 'files_bytes',
+})
+
+
+def build(repo, source_sha, source_tree, inventory_sha, run_id, out_root, mode='synthetic', *, expected=None, isolation_root=None, attempt_id=None):
     if mode != 'synthetic':
         deny('PUBLICATION_MODE_FORBIDDEN')
-    if not RUN_RE.fullmatch(run_id):
+    if expected is None:
+        deny('INDEPENDENT_EXPECTED_REQUIRED')
+    expected = validate_expected(expected)
+    if not RUN_RE.fullmatch(run_id) or run_id != expected['run_id']:
         deny('RUN_ID_INVALID')
-    if inventory_sha != B_INVENTORY_SHA256:
+    if attempt_id is None or attempt_id != expected['attempt_id']:
+        deny('ATTEMPT_ID_MISMATCH')
+    if inventory_sha != B_INVENTORY_SHA256 or inventory_sha != expected['b25_inventory_sha256']:
         deny('B25_INVENTORY_INPUT_MISMATCH')
+    if source_sha != expected['source_sha'] or source_tree != expected['source_tree']:
+        deny('INDEPENDENT_SOURCE_IDENTITY_MISMATCH')
+    if isolation_root != expected['isolation_root'] or str(out_root) != expected['out_root']:
+        deny('INDEPENDENT_OUTPUT_LOCATION_MISMATCH')
     inventory_identity()
-    # Validation before any output creation.
-    sources = source_snapshot(repo, source_sha, source_tree)
+    repo = Path(repo).resolve(strict=True)
+    # Reject everything before creating the output, including symlinked parent.
+    root, out, root_stat = isolation_boundary(repo, isolation_root, str(out_root), must_be_new=True)
+    sources = source_snapshot(repo, source_sha, source_tree, expected['inputs_sha256'])
     payload = {p: sources[src] for p, src in PUBLIC.items()}
     check_payload(payload)
-    out_root = Path(out_root).absolute()
-    if out_root.exists() or out_root.is_symlink() or (repo.resolve() in out_root.parents) or not out_root.parent.is_dir():
-        deny('NEW_ISOLATED_OUTPUT_REQUIRED')
-    out_root.mkdir(mode=0o700, parents=False, exist_ok=False)
+    if {k: sha(v) for k, v in payload.items()} != expected['files_sha256'] or {k: len(v) for k, v in payload.items()} != expected['files_bytes']:
+        deny('INDEPENDENT_FIXTURE_HASH_MISMATCH')
+    # Exclusive creation relative to the verified private parent fd.
+    flags = os.O_RDONLY | os.O_DIRECTORY | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(str(root), flags)
     try:
-        publish = out_root / '.render-legal-only'
-        publish.mkdir(mode=0o700)
-        (publish / 'legal').mkdir(mode=0o700)
-        for p, raw in payload.items():
-            with (publish / p).open('xb') as f:
-                f.write(raw)
-        actual = check_regular_tree(publish)
-        if actual != payload:
-            deny('PUBLISH_BYTES_MISMATCH')
-        manifest = {
-            'kind': 'CANOVIA_LEGAL_GATE_S_SYNTHETIC_V1',
-            'run_id': run_id, 'source_sha': source_sha, 'source_tree': source_tree,
-            'baseline_source_sha': BASELINE_SHA,
-            'synthetic_only': True, 'not_deployable': True, 'release_approved': False,
-            'render_connected': False, 'allowed_modes': ['synthetic'],
-            'publish_directory': '.render-legal-only',
-            'b25_source_sha': B_SOURCE_SHA, 'b25_tree_sha': B_TREE_SHA,
-            'b25_inventory_sha256': B_INVENTORY_SHA256, 'b25_count': len(B_INVENTORY),
-            'b25_path_overlap': ['404.html'], 'b24_other_paths_excluded': True,
-            'b404_sha256': B_404_SHA256, 'legal404_source': PUBLIC['404.html'],
-            'legal404_sha256': sha(actual['404.html']), 'legal404_independently_sourced': True,
-            'inputs_sha256': {p: sha(data) for p, data in sorted(sources.items())},
-            'files_sha256': {p: sha(data) for p, data in sorted(actual.items())},
-            'files_bytes': {p: len(data) for p, data in sorted(actual.items())},
-            'public_path_count': 4,
-            'live_headers_routes_cookie_sw_cache': 'NOT_VERIFIED',
-        }
-        evidence = out_root / 'evidence'
-        evidence.mkdir(mode=0o700)
-        (evidence / 'manifest.json').write_bytes(canonical(manifest))
-        receipt = {
-            'status': 'SYNTHETIC_PASS_NOT_DEPLOYABLE', 'synthetic_only': True,
-            'not_deployable': True, 'release_approved': False, 'run_id': run_id,
-            'source_sha': source_sha, 'source_tree': source_tree,
-            'manifest_sha256': sha(canonical(manifest)), 'publish_path_count': 4,
-            'render_deploy': 'NOT_RUN', 'policy_publication': 'HOLD',
-        }
-        verify_receipt(manifest, receipt, run_id)
-        (evidence / 'receipt.json').write_bytes(canonical(receipt))
-        return manifest, receipt
-    except BaseException:
-        # Preserve any partial output for forensic diagnosis, never write a valid receipt.
-        raise
+        if (os.fstat(fd).st_dev, os.fstat(fd).st_ino) != (root_stat.st_dev, root_stat.st_ino):
+            deny('ISOLATION_ROOT_CHANGED')
+        os.mkdir(out.name, 0o700, dir_fd=fd)
+    finally:
+        os.close(fd)
+    publish = out / '.render-legal-only'
+    publish.mkdir(mode=0o700)
+    (publish / 'legal').mkdir(mode=0o700)
+    for p, raw in payload.items():
+        with (publish / p).open('xb') as f:
+            f.write(raw)
+    actual = check_regular_tree(publish)
+    if actual != payload:
+        deny('PUBLISH_BYTES_MISMATCH')
+    out_identity, publish_identity = _identity(out), _identity(publish)
+    manifest = {
+        'kind': 'CANOVIA_LEGAL_GATE_S_SYNTHETIC_V1',
+        'run_id': run_id, 'attempt_id': attempt_id, 'source_sha': source_sha, 'source_tree': source_tree,
+        'baseline_source_sha': BASELINE_SHA, 'isolation_root': str(root), 'out_root': str(out),
+        'output_identity': out_identity, 'publish_identity': publish_identity,
+        'synthetic_only': True, 'not_deployable': True, 'release_approved': False,
+        'render_connected': False, 'allowed_modes': ['synthetic'],
+        'publish_directory': '.render-legal-only',
+        'b25_source_sha': B_SOURCE_SHA, 'b25_tree_sha': B_TREE_SHA,
+        'b25_inventory_sha256': B_INVENTORY_SHA256, 'b25_count': len(B_INVENTORY),
+        'b25_path_overlap': ['404.html'], 'b24_other_paths_excluded': True,
+        'b404_sha256': B_404_SHA256, 'legal404_source': PUBLIC['404.html'],
+        'legal404_sha256': sha(actual['404.html']), 'legal404_independently_sourced': True,
+        'inputs_sha256': {p: sha(data) for p, data in sorted(sources.items())},
+        'files_sha256': {p: sha(data) for p, data in sorted(actual.items())},
+        'files_bytes': {p: len(data) for p, data in sorted(actual.items())},
+        'public_path_count': 4, 'live_headers_routes_cookie_sw_cache': 'NOT_VERIFIED',
+    }
+    evidence = out / 'evidence'
+    evidence.mkdir(mode=0o700)
+    receipt = {
+        'status': 'SYNTHETIC_PASS_NOT_DEPLOYABLE', 'synthetic_only': True,
+        'not_deployable': True, 'release_approved': False, 'run_id': run_id,
+        'attempt_id': attempt_id, 'source_sha': source_sha, 'source_tree': source_tree,
+        'isolation_root': str(root), 'out_root': str(out),
+        'output_identity': out_identity, 'publish_identity': publish_identity,
+        'inputs_sha256': manifest['inputs_sha256'],
+        'files_sha256': manifest['files_sha256'], 'files_bytes': manifest['files_bytes'],
+        'manifest_sha256': sha(canonical(manifest)), 'publish_path_count': 4,
+        'render_deploy': 'NOT_RUN', 'policy_publication': 'HOLD',
+    }
+    # Builder receipt is *only a candidate*: process has not exited yet.
+    (evidence / 'manifest.json').write_bytes(canonical(manifest))
+    (evidence / 'receipt.json').write_bytes(canonical(receipt))
+    return manifest, receipt
+
+
+def _no_duplicate_json(pairs):
+    data = {}
+    for k, v in pairs:
+        if k in data:
+            deny('DUPLICATE_EXPECTED_KEY')
+        data[k] = v
+    return data
 
 
 def main():
@@ -316,14 +561,26 @@ def main():
     parser.add_argument('--source-tree', required=True)
     parser.add_argument('--b-inventory-sha256', required=True)
     parser.add_argument('--run-id', required=True)
+    parser.add_argument('--attempt-id', required=True)
+    parser.add_argument('--isolation-root', required=True)
     parser.add_argument('--out-root', required=True)
+    parser.add_argument('--expected-file', required=True,
+                        help='Caller-pinned independent expectations; NEVER derive from current receipt')
     args = parser.parse_args()
     try:
+        exp_path = _canonical_absolute(args.expected_file)
+        if exp_path.is_symlink() or not exp_path.is_file() or exp_path.stat().st_nlink != 1 or exp_path.stat().st_size > 16384:
+            deny('INVALID_EXTERNAL_EXPECTATION_FILE')
+        if REPO.resolve(strict=True) in exp_path.resolve(strict=True).parents:
+            deny('EXPECTATION_MUST_BE_OUTSIDE_SOURCE')
+        expected = json.loads(exp_path.read_text(encoding='utf-8'), object_pairs_hook=_no_duplicate_json)
         manifest, receipt = build(REPO, args.source_sha, args.source_tree,
                                   args.b_inventory_sha256, args.run_id,
-                                  args.out_root, args.mode)
+                                  args.out_root, args.mode, expected=expected,
+                                  isolation_root=args.isolation_root, attempt_id=args.attempt_id)
         print(canonical({'manifest_sha256': receipt['manifest_sha256'],
-                         'run_id': receipt['run_id'], 'status': receipt['status'],
+                         'run_id': receipt['run_id'], 'attempt_id': receipt['attempt_id'],
+                         'status': 'CANDIDATE_REQUIRES_INDEPENDENT_EXIT_AND_OUTPUT_VERIFICATION',
                          'synthetic_only': True, 'not_deployable': True}).decode(), end='')
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         print('LEGAL_GATE_S_BLOCK:' + type(exc).__name__ + ':' + str(exc), file=sys.stderr)
