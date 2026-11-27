@@ -1,0 +1,5 @@
+/* GATE_S_SYNTHETIC_FIXTURE_NOT_FOR_PUBLICATION */
+:root { color-scheme: light; font-family: system-ui, sans-serif; }
+body { margin: 2rem auto; padding: 0 1rem; max-width: 42rem; line-height: 1.6; }
+h1 { font-size: 1.4rem; }
+a { text-decoration: underline; }
